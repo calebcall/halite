@@ -1,0 +1,23 @@
+services:
+  app:
+    build:
+      context: .
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:////data/halite.db
+      COOKIE_SECRET: ${COOKIE_SECRET:?Run scripts/gen-bootstrap-secret.sh and set COOKIE_SECRET}
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-changeme}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      - halite-sqlite:/data
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+volumes:
+  halite-sqlite:
