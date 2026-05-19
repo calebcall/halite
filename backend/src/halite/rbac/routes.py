@@ -9,6 +9,7 @@ from halite.db import SessionDep
 from halite.deps import CurrentUser, require_perm
 from halite.rbac.schemas import (
     PermissionOut,
+    PermissionPayload,  # NEW
     RoleCreatePayload,
     RoleDetail,
     RoleListOut,
@@ -18,11 +19,13 @@ from halite.rbac.schemas import (
 from halite.rbac.service import (
     BuiltinRoleError,
     DuplicateRoleNameError,
+    add_permission,  # NEW
     create_role,
     delete_role,
     get_role,
     list_permissions,
     list_roles,
+    remove_permission,  # NEW
     update_role,
 )
 
@@ -174,5 +177,64 @@ async def delete_role_route(role_id: uuid.UUID, db: SessionDep, actor: CurrentUs
         salt_jid=None,
         decision="allow",
         result_code=204,
+    )
+    await db.commit()
+
+
+@router.post(
+    "/{role_id}/permissions",
+    response_model=PermissionOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[require_perm("manage_role", "role:*")],
+)
+async def add_permission_route(
+    role_id: uuid.UUID,
+    payload: PermissionPayload,
+    db: SessionDep,
+    actor: CurrentUser,
+) -> PermissionOut:
+    role = await get_role(db, role_id)
+    if role is None:
+        await audit_record(
+            db, user_id=actor.id, action="role.permission_add",
+            resource=f"role:{role_id}", args_json=payload.model_dump(),
+            salt_jid=None, decision="deny", result_code=404,
+        )
+        await db.commit()
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Role not found")
+    perm = await add_permission(db, role_id, payload)
+    await audit_record(
+        db, user_id=actor.id, action="role.permission_add",
+        resource=f"role:{role.name}", args_json=payload.model_dump(),
+        salt_jid=None, decision="allow", result_code=201,
+    )
+    await db.commit()
+    return PermissionOut.model_validate(perm, from_attributes=True)
+
+
+@router.delete(
+    "/{role_id}/permissions/{permission_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[require_perm("manage_role", "role:*")],
+)
+async def remove_permission_route(
+    role_id: uuid.UUID,
+    permission_id: uuid.UUID,
+    db: SessionDep,
+    actor: CurrentUser,
+):
+    ok = await remove_permission(db, role_id, permission_id)
+    if not ok:
+        await audit_record(
+            db, user_id=actor.id, action="role.permission_remove",
+            resource=f"role:{role_id}/permission:{permission_id}",
+            args_json=None, salt_jid=None, decision="deny", result_code=404,
+        )
+        await db.commit()
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Permission not found on this role")
+    await audit_record(
+        db, user_id=actor.id, action="role.permission_remove",
+        resource=f"role:{role_id}/permission:{permission_id}",
+        args_json=None, salt_jid=None, decision="allow", result_code=204,
     )
     await db.commit()
