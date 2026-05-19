@@ -7,6 +7,7 @@ from fastapi import Depends, HTTPException, Request, status
 from halite.auth.cookies import CookieCodec
 from halite.auth.models import User
 from halite.auth.service import lookup_session
+from halite.config import Settings
 from halite.db import SessionDep
 
 
@@ -17,7 +18,7 @@ def get_codec(request: Request) -> CookieCodec:
     return codec
 
 
-def get_settings_state(request: Request):
+def get_settings_state(request: Request) -> Settings:
     return request.app.state.settings
 
 
@@ -25,7 +26,7 @@ async def current_user(
     request: Request,
     db: SessionDep,
     codec: Annotated[CookieCodec, Depends(get_codec)],
-    settings = Depends(get_settings_state),
+    settings: Annotated[Settings, Depends(get_settings_state)],
 ) -> User:
     cookie_value = request.cookies.get(settings.cookie_name)
     if cookie_value is None:

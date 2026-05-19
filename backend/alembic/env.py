@@ -1,29 +1,24 @@
 import asyncio
+import contextlib
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from alembic import context
 from halite.config import get_settings
 from halite.db import Base
 
 # Import every model module so metadata is populated.
 # Modules are added by later plan tasks; wrap to keep env.py importable
 # while the project skeleton is still incomplete.
-try:
+with contextlib.suppress(ImportError):
     from halite.auth import models as _auth_models  # noqa: F401
-except ImportError:
-    pass
 
-try:
+with contextlib.suppress(ImportError):
     from halite.rbac import models as _rbac_models  # noqa: F401
-except ImportError:
-    pass
 
-try:
+with contextlib.suppress(ImportError):
     from halite.audit import models as _audit_models  # noqa: F401
-except ImportError:
-    pass
 
 config = context.config
 

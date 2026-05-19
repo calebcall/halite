@@ -7,7 +7,8 @@ from pydantic import BaseModel
 
 from halite.audit.writer import record as audit_record
 from halite.auth.cookies import CookieCodec
-from halite.auth.service import end_session, login as _login
+from halite.auth.service import end_session
+from halite.auth.service import login as _login
 from halite.config import Settings
 from halite.db import SessionDep
 from halite.deps import CurrentUser, get_codec, get_settings_state
