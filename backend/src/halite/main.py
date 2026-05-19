@@ -28,8 +28,13 @@ def create_app(
     app = FastAPI(title="Halite", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.cookie_codec = codec
+
+    from halite.auth.routes import router as auth_router
     app.include_router(health_router)
+    app.include_router(auth_router)
     return app
 
 
-app = create_app()
+# Module-level `app` is intentionally NOT created here — Settings() reads env
+# vars and would fail at import time when env isn't set (e.g. during tests).
+# Uvicorn launches via the factory pattern: `uvicorn halite.main:create_app --factory`.
