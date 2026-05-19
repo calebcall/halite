@@ -20,7 +20,12 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.create_table(
         "audit_log",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
+        sa.Column(
+            "id",
+            sa.BigInteger().with_variant(sa.Integer(), "sqlite"),
+            primary_key=True,
+            autoincrement=True,
+        ),
         sa.Column("at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=True),
         sa.Column("action", sa.String(128), nullable=False),

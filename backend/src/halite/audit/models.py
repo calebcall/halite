@@ -9,11 +9,16 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from halite.db import Base
 
+# SQLite only auto-increments INTEGER PRIMARY KEY (not BIGINT). Use a dialect
+# variant so we get a real BIGINT on Postgres and INTEGER on SQLite, both
+# autoincrementing.
+_audit_pk_type = BigInteger().with_variant(Integer(), "sqlite")
+
 
 class AuditEntry(Base):
     __tablename__ = "audit_log"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(_audit_pk_type, primary_key=True, autoincrement=True)
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True, index=True)
     action: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
