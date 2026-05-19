@@ -29,9 +29,11 @@ def create_app(
     app.state.settings = settings
     app.state.cookie_codec = codec
 
+    from halite.audit.routes import router as audit_router
     from halite.auth.routes import router as auth_router
     app.include_router(health_router)
     app.include_router(auth_router)
+    app.include_router(audit_router)
     return app
 
 
