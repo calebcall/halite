@@ -1,7 +1,10 @@
-# ---- frontend stage (stubbed; populated in Plan 3) ----
+# ---- frontend build stage ----
 FROM node:20-alpine AS frontend
 WORKDIR /app/frontend
-RUN mkdir -p dist && echo '<!doctype html><title>Halite</title>' > dist/index.html
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
 
 # ---- python runtime ----
 FROM python:3.13-slim AS runtime
