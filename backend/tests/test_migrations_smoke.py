@@ -23,3 +23,4 @@ def test_migrations_create_users_and_sessions(tmp_path, monkeypatch):
     assert "roles" in names
     assert "permissions" in names
     assert "user_roles" in names
+    assert "audit_log" in names
