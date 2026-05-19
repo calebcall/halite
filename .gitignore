@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Node (future)
+node_modules/
+frontend/dist/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Runtime / local
+.env
+.env.*
+!.env.example
+data/
+*.db
+*.sqlite
+*.sqlite-journal
+
+# Misc
+.superpowers/
