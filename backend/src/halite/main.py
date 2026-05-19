@@ -44,10 +44,12 @@ def create_app(
 
     from halite.audit.routes import router as audit_router
     from halite.auth.routes import router as auth_router
+    from halite.rbac.routes import router as rbac_router
     from halite.users.routes import router as users_router
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(audit_router)
+    app.include_router(rbac_router)
     app.include_router(users_router)
     return app
 
