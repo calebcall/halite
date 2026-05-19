@@ -23,6 +23,7 @@ services:
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-changeme}
       LOG_FORMAT: ${LOG_FORMAT:-json}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      HALITE_STATIC_DIR: /app/frontend/dist
     depends_on:
       db:
         condition: service_healthy

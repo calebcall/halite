@@ -51,6 +51,28 @@ def create_app(
     app.include_router(audit_router)
     app.include_router(rbac_router)
     app.include_router(users_router)
+
+    if settings.static_dir:
+        from pathlib import Path
+
+        from fastapi.responses import FileResponse
+        from fastapi.staticfiles import StaticFiles
+
+        static_path = Path(settings.static_dir)
+        if static_path.is_dir():
+            assets_dir = static_path / "assets"
+            if assets_dir.is_dir():
+                app.mount(
+                    "/assets",
+                    StaticFiles(directory=assets_dir),
+                    name="assets",
+                )
+
+            @app.get("/{full_path:path}", include_in_schema=False)
+            async def serve_spa(full_path: str):  # noqa: ARG001
+                # SPA fallback — any non-API path returns index.html for client routing.
+                return FileResponse(static_path / "index.html")
+
     return app
 
 

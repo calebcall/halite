@@ -30,6 +30,9 @@ class Settings(BaseSettings):
 
     audit_audit_reads: bool = False
 
+    # Static SPA — path to the built frontend dist. None disables SPA serving.
+    static_dir: str | None = Field(default=None, validation_alias="HALITE_STATIC_DIR")
+
     @field_validator("cookie_secret")
     @classmethod
     def _validate_secret(cls, v: str) -> str:
