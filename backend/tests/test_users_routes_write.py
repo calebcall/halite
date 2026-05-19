@@ -123,3 +123,99 @@ async def test_create_user_writes_audit_with_redacted_password(app_db, session):
     assert len(rows) == 1
     assert rows[0].args_json["password"] == "[REDACTED]"
     assert rows[0].decision == "allow"
+
+
+@pytest.mark.asyncio
+async def test_update_user_changes_display_name(app_db, session):
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    admin = await _admin_user(session, [("manage_user", "user:*")])
+    sess = await create_session(session, admin, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        cookies = {settings.cookie_name: codec.sign(sess.id)}
+        created = await ac.post(
+            "/api/users", json={"username": "alice", "password": "hunter2-strong"}, cookies=cookies
+        )
+        user_id = created.json()["id"]
+        upd = await ac.patch(
+            f"/api/users/{user_id}", json={"display_name": "Alice Smith"}, cookies=cookies
+        )
+    assert upd.status_code == 200
+    assert upd.json()["display_name"] == "Alice Smith"
+
+
+@pytest.mark.asyncio
+async def test_update_user_404_for_unknown(app_db, session):
+    import uuid
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    admin = await _admin_user(session, [("manage_user", "user:*")])
+    sess = await create_session(session, admin, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.patch(
+            f"/api/users/{uuid.uuid4()}",
+            json={"display_name": "X"},
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_user_204(app_db, session):
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    admin = await _admin_user(session, [("manage_user", "user:*")])
+    sess = await create_session(session, admin, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        cookies = {settings.cookie_name: codec.sign(sess.id)}
+        created = await ac.post(
+            "/api/users", json={"username": "alice", "password": "hunter2-strong"}, cookies=cookies
+        )
+        user_id = created.json()["id"]
+        d = await ac.delete(f"/api/users/{user_id}", cookies=cookies)
+        check = await ac.get(f"/api/users/{user_id}", cookies=cookies)
+    assert d.status_code == 204
+    assert check.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_user_409_on_self(app_db, session):
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    admin = await _admin_user(session, [("manage_user", "user:*")])
+    sess = await create_session(session, admin, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.delete(
+            f"/api/users/{admin.id}", cookies={settings.cookie_name: codec.sign(sess.id)}
+        )
+    assert r.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_delete_user_409_on_builtin(app_db, session):
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    admin = await _admin_user(session, [("manage_user", "user:*")])
+    sess = await create_session(session, admin, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+
+    builtin = User(
+        username_lower="builtin", username="builtin",
+        password_hash=hash_password("pw"),
+        is_active=True, is_builtin=True, created_at=datetime.now(tz=UTC),
+    )
+    session.add(builtin)
+    await session.commit()
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.delete(
+            f"/api/users/{builtin.id}", cookies={settings.cookie_name: codec.sign(sess.id)}
+        )
+    assert r.status_code == 409

@@ -7,14 +7,17 @@ from fastapi import APIRouter, HTTPException, Query, status
 
 from halite.audit.writer import record as audit_record
 from halite.db import SessionDep
-from halite.deps import CurrentUser, require_perm
-from halite.users.schemas import UserCreatePayload, UserListOut, UserSummary
+from halite.deps import CurrentUser, require_any_perm, require_perm
+from halite.users.schemas import UserCreatePayload, UserListOut, UserSummary, UserUpdatePayload
 from halite.users.service import (
+    BuiltinDeletionError,
     DuplicateUsernameError,
     UnknownRoleError,
     create_user,
+    delete_user,
     get_user,
     list_users,
+    update_user,
 )
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -34,7 +37,9 @@ async def list_users_route(
 
 
 @router.get(
-    "/{user_id}", response_model=UserSummary, dependencies=[require_perm("view", "user:*")]
+    "/{user_id}",
+    response_model=UserSummary,
+    dependencies=[require_any_perm(("view", "user:*"), ("manage_user", "user:*"))],
 )
 async def get_user_route(user_id: uuid.UUID, db: SessionDep) -> UserSummary:
     user = await get_user(db, user_id)
@@ -96,3 +101,106 @@ async def create_user_route(
     )
     await db.commit()
     return UserSummary.model_validate(user, from_attributes=True)
+
+
+@router.patch(
+    "/{user_id}",
+    response_model=UserSummary,
+    dependencies=[require_perm("manage_user", "user:*")],
+)
+async def update_user_route(
+    user_id: uuid.UUID,
+    payload: UserUpdatePayload,
+    db: SessionDep,
+    actor: CurrentUser,
+) -> UserSummary:
+    user = await update_user(db, user_id, payload)
+    if user is None:
+        await audit_record(
+            db,
+            user_id=actor.id,
+            action="user.update",
+            resource=f"user:{user_id}",
+            args_json=payload.model_dump(),
+            salt_jid=None,
+            decision="deny",
+            result_code=404,
+        )
+        await db.commit()
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    await audit_record(
+        db,
+        user_id=actor.id,
+        action="user.update",
+        resource=f"user:{user.username}",
+        args_json=payload.model_dump(),
+        salt_jid=None,
+        decision="allow",
+        result_code=200,
+    )
+    await db.commit()
+    return UserSummary.model_validate(user, from_attributes=True)
+
+
+@router.delete(
+    "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[require_perm("manage_user", "user:*")],
+)
+async def delete_user_route(
+    user_id: uuid.UUID,
+    db: SessionDep,
+    actor: CurrentUser,
+):
+    if actor.id == user_id:
+        await audit_record(
+            db,
+            user_id=actor.id,
+            action="user.delete",
+            resource=f"user:{user_id}",
+            args_json=None,
+            salt_jid=None,
+            decision="deny",
+            result_code=409,
+        )
+        await db.commit()
+        raise HTTPException(status.HTTP_409_CONFLICT, "Cannot delete yourself")
+    try:
+        ok = await delete_user(db, user_id)
+    except BuiltinDeletionError:
+        await audit_record(
+            db,
+            user_id=actor.id,
+            action="user.delete",
+            resource=f"user:{user_id}",
+            args_json=None,
+            salt_jid=None,
+            decision="deny",
+            result_code=409,
+        )
+        await db.commit()
+        raise HTTPException(status.HTTP_409_CONFLICT, "Cannot delete a built-in user") from None
+    if not ok:
+        await audit_record(
+            db,
+            user_id=actor.id,
+            action="user.delete",
+            resource=f"user:{user_id}",
+            args_json=None,
+            salt_jid=None,
+            decision="deny",
+            result_code=404,
+        )
+        await db.commit()
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    await audit_record(
+        db,
+        user_id=actor.id,
+        action="user.delete",
+        resource=f"user:{user_id}",
+        args_json=None,
+        salt_jid=None,
+        decision="allow",
+        result_code=204,
+    )
+    await db.commit()
