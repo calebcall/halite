@@ -63,7 +63,7 @@ async def test_create_user_assigns_initial_roles(session):
     links = (
         await session.execute(select(UserRole).where(UserRole.user_id == user.id))
     ).scalars().all()
-    assert [l.role_id for l in links] == [role.id]
+    assert [link.role_id for link in links] == [role.id]
 
 
 @pytest.mark.asyncio
