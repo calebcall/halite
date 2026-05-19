@@ -126,6 +126,40 @@ async def test_create_user_writes_audit_with_redacted_password(app_db, session):
 
 
 @pytest.mark.asyncio
+async def test_create_user_with_role_ids_serializes_audit_args(app_db, session):
+    """Regression: payload.model_dump() must serialize UUIDs as strings or audit insert fails."""
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    admin = await _admin_user(session, [("manage_user", "user:*")])
+    sess = await create_session(session, admin, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    grantable = Role(name="ops", is_builtin=False, description="")
+    session.add(grantable)
+    await session.commit()
+    await session.refresh(grantable)
+
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.post(
+            "/api/users",
+            json={
+                "username": "alice",
+                "password": "hunter2-strong",
+                "role_ids": [str(grantable.id)],
+            },
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
+    assert r.status_code == 201
+    rows = (
+        await session.execute(
+            select(AuditEntry).where(AuditEntry.action == "user.create")
+        )
+    ).scalars().all()
+    assert len(rows) == 1
+    # UUID was serialized as a string, not left as a UUID object
+    assert rows[0].args_json["role_ids"] == [str(grantable.id)]
+
+
+@pytest.mark.asyncio
 async def test_update_user_changes_display_name(app_db, session):
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)

@@ -74,7 +74,7 @@ async def create_role_route(
             user_id=actor.id,
             action="role.create",
             resource=f"role:{payload.name}",
-            args_json=payload.model_dump(),
+            args_json=payload.model_dump(mode="json"),
             salt_jid=None,
             decision="deny",
             result_code=409,
@@ -86,7 +86,7 @@ async def create_role_route(
         user_id=actor.id,
         action="role.create",
         resource=f"role:{role.name}",
-        args_json=payload.model_dump(),
+        args_json=payload.model_dump(mode="json"),
         salt_jid=None,
         decision="allow",
         result_code=201,
@@ -113,7 +113,7 @@ async def update_role_route(
             user_id=actor.id,
             action="role.update",
             resource=f"role:{role_id}",
-            args_json=payload.model_dump(),
+            args_json=payload.model_dump(mode="json"),
             salt_jid=None,
             decision="deny",
             result_code=404,
@@ -125,7 +125,7 @@ async def update_role_route(
         user_id=actor.id,
         action="role.update",
         resource=f"role:{role.name}",
-        args_json=payload.model_dump(),
+        args_json=payload.model_dump(mode="json"),
         salt_jid=None,
         decision="allow",
         result_code=200,
@@ -197,7 +197,7 @@ async def add_permission_route(
     if role is None:
         await audit_record(
             db, user_id=actor.id, action="role.permission_add",
-            resource=f"role:{role_id}", args_json=payload.model_dump(),
+            resource=f"role:{role_id}", args_json=payload.model_dump(mode="json"),
             salt_jid=None, decision="deny", result_code=404,
         )
         await db.commit()
@@ -205,7 +205,7 @@ async def add_permission_route(
     perm = await add_permission(db, role_id, payload)
     await audit_record(
         db, user_id=actor.id, action="role.permission_add",
-        resource=f"role:{role.name}", args_json=payload.model_dump(),
+        resource=f"role:{role.name}", args_json=payload.model_dump(mode="json"),
         salt_jid=None, decision="allow", result_code=201,
     )
     await db.commit()

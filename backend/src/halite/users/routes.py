@@ -77,7 +77,7 @@ async def create_user_route(
             user_id=actor.id,
             action="user.create",
             resource=f"user:{payload.username}",
-            args_json=payload.model_dump(),
+            args_json=payload.model_dump(mode="json"),
             salt_jid=None,
             decision="deny",
             result_code=409,
@@ -90,7 +90,7 @@ async def create_user_route(
             user_id=actor.id,
             action="user.create",
             resource=f"user:{payload.username}",
-            args_json=payload.model_dump(),
+            args_json=payload.model_dump(mode="json"),
             salt_jid=None,
             decision="deny",
             result_code=400,
@@ -104,7 +104,7 @@ async def create_user_route(
         user_id=actor.id,
         action="user.create",
         resource=f"user:{user.username}",
-        args_json=payload.model_dump(),
+        args_json=payload.model_dump(mode="json"),
         salt_jid=None,
         decision="allow",
         result_code=201,
@@ -131,7 +131,7 @@ async def update_user_route(
             user_id=actor.id,
             action="user.update",
             resource=f"user:{user_id}",
-            args_json=payload.model_dump(),
+            args_json=payload.model_dump(mode="json"),
             salt_jid=None,
             decision="deny",
             result_code=404,
@@ -143,7 +143,7 @@ async def update_user_route(
         user_id=actor.id,
         action="user.update",
         resource=f"user:{user.username}",
-        args_json=payload.model_dump(),
+        args_json=payload.model_dump(mode="json"),
         salt_jid=None,
         decision="allow",
         result_code=200,
@@ -232,7 +232,7 @@ async def reset_password_route(
         await audit_record(
             db, user_id=actor.id, action="user.password_reset",
             resource=f"user:{user_id}",
-            args_json=payload.model_dump(), salt_jid=None,
+            args_json=payload.model_dump(mode="json"), salt_jid=None,
             decision="deny", result_code=404,
         )
         await db.commit()
@@ -241,7 +241,7 @@ async def reset_password_route(
     await audit_record(
         db, user_id=actor.id, action="user.password_reset",
         resource=f"user:{user.username}",
-        args_json=payload.model_dump(), salt_jid=None,
+        args_json=payload.model_dump(mode="json"), salt_jid=None,
         decision="allow", result_code=204,
     )
     await db.commit()
