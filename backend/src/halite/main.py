@@ -19,7 +19,17 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        from halite import db as db_module
+        from halite.bootstrap import bootstrap_admin
+        from halite.rbac.seed import seed_builtin_roles
+
         init_engine(settings.database_url)
+        assert db_module._sessionmaker is not None
+        async with db_module._sessionmaker() as s:
+            await seed_builtin_roles(s)
+            await s.commit()
+            await bootstrap_admin(s, settings)
+            await s.commit()
         try:
             yield
         finally:
