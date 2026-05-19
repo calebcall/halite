@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from halite.audit.writer import record as audit_record
 from halite.db import SessionDep
@@ -51,7 +51,6 @@ async def get_user_route(user_id: uuid.UUID, db: SessionDep) -> UserSummary:
 )
 async def create_user_route(
     payload: UserCreatePayload,
-    request: Request,
     db: SessionDep,
     actor: CurrentUser,
 ) -> UserSummary:
