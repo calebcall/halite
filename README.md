@@ -10,13 +10,16 @@ See [design doc](../SaltGUI/docs/superpowers/specs/2026-05-18-halite-design.md) 
 
 ```bash
 cd backend
-uv sync
-./scripts/dev.sh
+python3.13 -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+../scripts/dev.sh
 ```
 
 ## Tests
 
 ```bash
 cd backend
-uv run pytest -v
+source .venv/bin/activate
+pytest -v
 ```
