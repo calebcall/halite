@@ -2,15 +2,14 @@
 
 Modern self-hosted web UI for managing SaltStack. Green-field replacement for SaltGUI.
 
-**Status: Stage 1 backend foundation complete.** This release provides:
+**Status: Stage 1 backend foundation + users/roles admin + frontend foundation complete.** This release provides:
 
-- `POST /api/auth/login` / `POST /api/auth/logout` / `GET /api/auth/me`
-- `GET /api/audit` with column filters and pagination
-- `GET /healthz` and `GET /readyz`
+- Full backend REST surface for auth, users, roles, permissions, audit, health
+- React SPA login + app shell, served by FastAPI when `HALITE_STATIC_DIR` is set
 - Bootstrap admin via env vars on first start
 - Three built-in roles (admin / operator / viewer)
 
-The frontend and salt-facing feature pages arrive in later plans.
+The salt-facing feature pages arrive in later plans.
 
 ## Quick start (Docker)
 
@@ -50,6 +49,26 @@ python3.13 -m venv .venv
 source .venv/bin/activate
 pip install -e '.[dev]'
 ../scripts/dev.sh
+```
+
+## Frontend dev
+
+```bash
+# Terminal 1 — backend
+cd backend
+source .venv/bin/activate
+../scripts/dev.sh
+
+# Terminal 2 — frontend
+cd frontend
+npm install
+npm run dev   # opens http://localhost:5173, proxies /api to :8080
+```
+
+To regenerate the OpenAPI TypeScript types after backend schema changes:
+
+```bash
+./scripts/gen-types.sh
 ```
 
 ## Tests
