@@ -68,7 +68,14 @@ async def create_session(
 
 
 async def lookup_session(session: AsyncSession, session_id: str) -> User | None:
-    """Return the User for an active session, or None if expired/missing."""
+    """Return the User for an active session, or None if expired/missing.
+
+    Attaches the user's accumulated RBAC permissions as a transient
+    `permissions_cache` attribute so subsequent permission checks during the
+    request don't re-query the DB.
+    """
+    from halite.auth.permissions_cache import load_permissions_for
+
     now = datetime.now(tz=UTC)
     stmt = (
         select(Session, User)
@@ -82,6 +89,7 @@ async def lookup_session(session: AsyncSession, session_id: str) -> User | None:
     sess, user = row
     if not user.is_active:
         return None
+    user.permissions_cache = await load_permissions_for(session, user)
     sess.last_seen_at = now
     await session.commit()
     return user

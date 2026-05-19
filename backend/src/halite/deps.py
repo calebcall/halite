@@ -40,3 +40,15 @@ async def current_user(
 
 
 CurrentUser = Annotated[User, Depends(current_user)]
+
+
+def require_perm(verb: str, resource: str):
+    """Dependency factory that 403s if current_user lacks (verb, resource)."""
+    from halite.rbac.engine import check as _rbac_check
+
+    async def _checker(user: CurrentUser):
+        if not _rbac_check(user, verb, resource):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Forbidden")
+        return user
+
+    return Depends(_checker)

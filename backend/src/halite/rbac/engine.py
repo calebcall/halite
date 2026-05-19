@@ -26,7 +26,8 @@ def matches_glob(pattern: str, value: str) -> bool:
 def check(user: _UserLike, verb: str, resource: str) -> bool:
     if not user.is_active:
         return False
-    for p_verb, p_resource in user.permissions_cache:
+    perms = getattr(user, "permissions_cache", [])
+    for p_verb, p_resource in perms:
         if matches_glob(p_verb, verb) and matches_glob(p_resource, resource):
             return True
     return False
