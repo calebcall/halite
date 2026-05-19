@@ -112,3 +112,58 @@ async def set_password(
     user.password_hash = hash_password(payload.new_password)
     user.must_change_pw = payload.must_change_pw
     return user
+
+
+async def list_user_role_ids(session: AsyncSession, user_id: uuid.UUID) -> list[uuid.UUID]:
+    rows = (
+        await session.execute(
+            select(UserRole.role_id).where(UserRole.user_id == user_id)
+        )
+    ).scalars().all()
+    return list(rows)
+
+
+async def add_user_role(
+    session: AsyncSession, user_id: uuid.UUID, role_id: uuid.UUID
+) -> str:
+    """Returns 'created' if new, 'exists' if already present, 'unknown_role' if role missing,
+    'unknown_user' if user missing."""
+    user = await get_user(session, user_id)
+    if user is None:
+        return "unknown_user"
+    role = (
+        await session.execute(select(Role).where(Role.id == role_id))
+    ).scalar_one_or_none()
+    if role is None:
+        return "unknown_role"
+    existing = (
+        await session.execute(
+            select(UserRole)
+            .where(UserRole.user_id == user_id)
+            .where(UserRole.role_id == role_id)
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return "exists"
+    session.add(UserRole(user_id=user_id, role_id=role_id))
+    return "created"
+
+
+async def remove_user_role(
+    session: AsyncSession, user_id: uuid.UUID, role_id: uuid.UUID
+) -> bool:
+    link = (
+        await session.execute(
+            select(UserRole)
+            .where(UserRole.user_id == user_id)
+            .where(UserRole.role_id == role_id)
+        )
+    ).scalar_one_or_none()
+    if link is None:
+        return False
+    await session.execute(
+        sa_delete(UserRole)
+        .where(UserRole.user_id == user_id)
+        .where(UserRole.role_id == role_id)
+    )
+    return True
