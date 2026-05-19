@@ -10,7 +10,18 @@ from halite.audit.models import AuditEntry
 
 _REDACTED = "[REDACTED]"
 _SECRET_KEYS = frozenset(
-    {"password", "passwd", "pw", "secret", "token", "api_key", "apikey", "authorization"}
+    {
+        "password",
+        "passwd",
+        "pw",
+        "secret",
+        "token",
+        "api_key",
+        "apikey",
+        "authorization",
+        "new_password",
+        "current_password",
+    }
 )
 
 

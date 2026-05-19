@@ -6,9 +6,16 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, status
 
 from halite.audit.writer import record as audit_record
+from halite.auth.service import end_sessions_for_user
 from halite.db import SessionDep
 from halite.deps import CurrentUser, require_perm
-from halite.users.schemas import UserCreatePayload, UserListOut, UserSummary, UserUpdatePayload
+from halite.users.schemas import (
+    PasswordResetPayload,
+    UserCreatePayload,
+    UserListOut,
+    UserSummary,
+    UserUpdatePayload,
+)
 from halite.users.service import (
     BuiltinDeletionError,
     DuplicateUsernameError,
@@ -17,6 +24,7 @@ from halite.users.service import (
     delete_user,
     get_user,
     list_users,
+    set_password,
     update_user,
 )
 
@@ -200,5 +208,36 @@ async def delete_user_route(
         salt_jid=None,
         decision="allow",
         result_code=204,
+    )
+    await db.commit()
+
+
+@router.post(
+    "/{user_id}/password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[require_perm("manage_user", "user:*")],
+)
+async def reset_password_route(
+    user_id: uuid.UUID,
+    payload: PasswordResetPayload,
+    db: SessionDep,
+    actor: CurrentUser,
+):
+    user = await set_password(db, user_id, payload)
+    if user is None:
+        await audit_record(
+            db, user_id=actor.id, action="user.password_reset",
+            resource=f"user:{user_id}",
+            args_json=payload.model_dump(), salt_jid=None,
+            decision="deny", result_code=404,
+        )
+        await db.commit()
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    await end_sessions_for_user(db, user_id)
+    await audit_record(
+        db, user_id=actor.id, action="user.password_reset",
+        resource=f"user:{user.username}",
+        args_json=payload.model_dump(), salt_jid=None,
+        decision="allow", result_code=204,
     )
     await db.commit()

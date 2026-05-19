@@ -12,7 +12,7 @@ from halite.auth.models import User
 from halite.auth.password import hash_password
 from halite.db_dialect import lower_eq
 from halite.rbac.models import Role, UserRole
-from halite.users.schemas import UserCreatePayload, UserUpdatePayload
+from halite.users.schemas import PasswordResetPayload, UserCreatePayload, UserUpdatePayload
 
 
 class DuplicateUsernameError(Exception):
@@ -101,3 +101,14 @@ async def delete_user(session: AsyncSession, user_id: uuid.UUID) -> bool:
         raise BuiltinDeletionError(str(user_id))
     await session.execute(sa_delete(User).where(User.id == user_id))
     return True
+
+
+async def set_password(
+    session: AsyncSession, user_id: uuid.UUID, payload: PasswordResetPayload
+) -> User | None:
+    user = await get_user(session, user_id)
+    if user is None:
+        return None
+    user.password_hash = hash_password(payload.new_password)
+    user.must_change_pw = payload.must_change_pw
+    return user

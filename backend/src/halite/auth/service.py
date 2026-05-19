@@ -97,3 +97,12 @@ async def lookup_session(session: AsyncSession, session_id: str) -> User | None:
 
 async def end_session(session: AsyncSession, session_id: str) -> None:
     await session.execute(delete(Session).where(Session.id == session_id))
+
+
+async def end_sessions_for_user(
+    session: AsyncSession, user_id, *, except_session_id: str | None = None
+) -> None:
+    stmt = delete(Session).where(Session.user_id == user_id)
+    if except_session_id is not None:
+        stmt = stmt.where(Session.id != except_session_id)
+    await session.execute(stmt)
