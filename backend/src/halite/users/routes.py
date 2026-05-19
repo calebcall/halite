@@ -68,7 +68,7 @@ async def create_user_route(
             result_code=409,
         )
         await db.commit()
-        raise HTTPException(status.HTTP_409_CONFLICT, "Username already exists")
+        raise HTTPException(status.HTTP_409_CONFLICT, "Username already exists") from None
     except UnknownRoleError as e:
         await audit_record(
             db,
@@ -83,7 +83,7 @@ async def create_user_route(
         await db.commit()
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, f"Unknown role IDs: {list(e.args[0])}"
-        )
+        ) from None
     await audit_record(
         db,
         user_id=actor.id,

@@ -1,11 +1,10 @@
 # backend/tests/test_users_service.py
-from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import select
 
 from halite.auth.models import User
-from halite.auth.password import hash_password, verify_password
+from halite.auth.password import verify_password
 from halite.rbac.models import Role, UserRole
 from halite.users.schemas import UserCreatePayload, UserUpdatePayload
 from halite.users.service import (
