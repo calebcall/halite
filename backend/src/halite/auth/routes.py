@@ -3,11 +3,13 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from halite.audit.writer import record as audit_record
 from halite.auth.cookies import CookieCodec
-from halite.auth.service import end_session
+from halite.auth.password import hash_password as _hash_password
+from halite.auth.password import verify_password as _verify_password
+from halite.auth.service import end_session, end_sessions_for_user
 from halite.auth.service import login as _login
 from halite.config import Settings
 from halite.db import SessionDep
@@ -112,3 +114,44 @@ async def me_route(user: CurrentUser) -> UserOut:
         display_name=user.display_name,
         must_change_pw=user.must_change_pw,
     )
+
+
+class ChangePasswordPayload(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8, max_length=1024)
+
+
+@router.post("/change-password", status_code=204)
+async def change_password_route(
+    payload: ChangePasswordPayload,
+    request: Request,
+    db: SessionDep,
+    actor: CurrentUser,
+    codec: Annotated[CookieCodec, Depends(get_codec)],
+    settings: Annotated[Settings, Depends(get_settings_state)],
+):
+    if not _verify_password(actor.password_hash, payload.current_password):
+        await audit_record(
+            db, user_id=actor.id, action="auth.change_password",
+            resource=f"user:{actor.username}",
+            args_json={"current_password": payload.current_password, "new_password": payload.new_password},
+            salt_jid=None, decision="deny", result_code=403,
+        )
+        await db.commit()
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Current password is incorrect")
+    actor.password_hash = _hash_password(payload.new_password)
+    actor.must_change_pw = False
+
+    # Revoke all OTHER sessions; keep the current one (the caller's).
+    current_cookie = request.cookies.get(settings.cookie_name)
+    current_sid = codec.unsign(current_cookie) if current_cookie else None
+    await end_sessions_for_user(db, actor.id, except_session_id=current_sid)
+
+    await audit_record(
+        db, user_id=actor.id, action="auth.change_password",
+        resource=f"user:{actor.username}",
+        args_json={"current_password": payload.current_password, "new_password": payload.new_password},
+        salt_jid=None, decision="allow", result_code=204,
+    )
+    await db.commit()
+    return Response(status_code=204)
