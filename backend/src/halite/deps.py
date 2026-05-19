@@ -53,16 +53,3 @@ def require_perm(verb: str, resource: str):
         return user
 
     return Depends(_checker)
-
-
-def require_any_perm(*pairs: tuple[str, str]):
-    """Dependency factory that 403s unless the user has at least one of the given (verb, resource) pairs."""
-    from halite.rbac.engine import check as _rbac_check
-
-    async def _checker(user: CurrentUser):
-        for verb, resource in pairs:
-            if _rbac_check(user, verb, resource):
-                return user
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Forbidden")
-
-    return Depends(_checker)

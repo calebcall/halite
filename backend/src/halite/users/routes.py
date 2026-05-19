@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 
 from halite.audit.writer import record as audit_record
 from halite.db import SessionDep
-from halite.deps import CurrentUser, require_any_perm, require_perm
+from halite.deps import CurrentUser, require_perm
 from halite.users.schemas import UserCreatePayload, UserListOut, UserSummary, UserUpdatePayload
 from halite.users.service import (
     BuiltinDeletionError,
@@ -37,9 +37,7 @@ async def list_users_route(
 
 
 @router.get(
-    "/{user_id}",
-    response_model=UserSummary,
-    dependencies=[require_any_perm(("view", "user:*"), ("manage_user", "user:*"))],
+    "/{user_id}", response_model=UserSummary, dependencies=[require_perm("view", "user:*")]
 )
 async def get_user_route(user_id: uuid.UUID, db: SessionDep) -> UserSummary:
     user = await get_user(db, user_id)

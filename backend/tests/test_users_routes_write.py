@@ -168,7 +168,7 @@ async def test_update_user_404_for_unknown(app_db, session):
 async def test_delete_user_204(app_db, session):
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
-    admin = await _admin_user(session, [("manage_user", "user:*")])
+    admin = await _admin_user(session, [("manage_user", "user:*"), ("view", "user:*")])
     sess = await create_session(session, admin, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
     await session.commit()
     app = create_app(settings=settings, codec=codec)
