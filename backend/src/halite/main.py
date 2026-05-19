@@ -17,6 +17,9 @@ def create_app(
     settings = settings or get_settings()
     codec = codec or CookieCodec(settings.cookie_secret)
 
+    from halite.logging_setup import setup_logging
+    setup_logging(level=settings.log_level, fmt=settings.log_format)
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         from halite import db as db_module
