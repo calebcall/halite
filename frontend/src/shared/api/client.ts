@@ -76,5 +76,11 @@ export const api = {
         method: 'GET',
         path: '/api/auth/me',
       }),
+    changePassword: (body: { current_password: string; new_password: string }) =>
+      request<void>({
+        method: 'POST',
+        path: '/api/auth/change-password',
+        body,
+      }),
   },
 }

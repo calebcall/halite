@@ -36,3 +36,17 @@ export function useAuthActions() {
     },
   }
 }
+
+export function useChangePassword() {
+  const qc = useQueryClient()
+  return async function changePassword(currentPassword: string, newPassword: string) {
+    await authApi.changePassword({
+      current_password: currentPassword,
+      new_password: newPassword,
+    })
+    // The backend cleared must_change_pw — refresh the cached me response so
+    // the MustChangePassword guard releases the user back to the app.
+    const fresh = await authApi.me()
+    qc.setQueryData(ME_QUERY_KEY, fresh)
+  }
+}
