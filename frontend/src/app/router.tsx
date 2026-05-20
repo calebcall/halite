@@ -7,7 +7,8 @@ import {
 } from '@tanstack/react-router'
 
 import { LoginPage } from '@/features/auth/login-page'
-import { LoginRequired, PublicOnly } from '@/features/auth/guards'
+import { ChangePasswordPage } from '@/features/auth/change-password-page'
+import { LoginRequired, MustChangePassword, PublicOnly } from '@/features/auth/guards'
 import { AppShell } from './layout/AppShell'
 
 const rootRoute = createRootRoute({ component: Outlet })
@@ -32,21 +33,32 @@ const appRoute = createRoute({
   ),
 })
 
+const changePasswordRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/change-password',
+  component: () => <ChangePasswordPage />,
+})
+
 const homeRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/',
   component: () => (
-    <div className="prose">
-      <h2 className="text-xl font-semibold">Welcome to Halite</h2>
-      <p className="text-muted-foreground">
-        Feature pages arrive in subsequent plans. For now this is a working app shell on top of
-        Plan&nbsp;1+2&apos;s backend.
-      </p>
-    </div>
+    <MustChangePassword>
+      <div className="prose">
+        <h2 className="text-xl font-semibold">Welcome to Halite</h2>
+        <p className="text-muted-foreground">
+          Feature pages arrive in subsequent plans. For now this is a working app shell on top of
+          Plan&nbsp;1+2&apos;s backend.
+        </p>
+      </div>
+    </MustChangePassword>
   ),
 })
 
-const routeTree = rootRoute.addChildren([loginRoute, appRoute.addChildren([homeRoute])])
+const routeTree = rootRoute.addChildren([
+  loginRoute,
+  appRoute.addChildren([changePasswordRoute, homeRoute]),
+])
 
 export const router = createRouter({ routeTree })
 

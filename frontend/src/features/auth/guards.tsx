@@ -24,3 +24,11 @@ export function PublicOnly({ children }: { children: ReactNode }) {
   if (data) return <Navigate to="/" replace />
   return <>{children}</>
 }
+
+export function MustChangePassword({ children }: { children: ReactNode }) {
+  const { data } = useCurrentUser()
+  if (data?.must_change_pw) {
+    return <Navigate to="/change-password" replace />
+  }
+  return <>{children}</>
+}
