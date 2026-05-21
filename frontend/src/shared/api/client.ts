@@ -83,4 +83,80 @@ export const api = {
         body,
       }),
   },
+  users: {
+    list: (query: { limit?: number; offset?: number } = {}) =>
+      request<paths['/api/users']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/users',
+        query,
+      }),
+    get: (userId: string) =>
+      request<paths['/api/users/{user_id}']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: `/api/users/${encodeURIComponent(userId)}`,
+      }),
+    create: (
+      body: paths['/api/users']['post']['requestBody']['content']['application/json'],
+    ) =>
+      request<paths['/api/users']['post']['responses']['201']['content']['application/json']>({
+        method: 'POST',
+        path: '/api/users',
+        body,
+      }),
+    update: (
+      userId: string,
+      body: paths['/api/users/{user_id}']['patch']['requestBody']['content']['application/json'],
+    ) =>
+      request<paths['/api/users/{user_id}']['patch']['responses']['200']['content']['application/json']>({
+        method: 'PATCH',
+        path: `/api/users/${encodeURIComponent(userId)}`,
+        body,
+      }),
+    delete: (userId: string) =>
+      request<void>({
+        method: 'DELETE',
+        path: `/api/users/${encodeURIComponent(userId)}`,
+      }),
+    resetPassword: (
+      userId: string,
+      body: paths['/api/users/{user_id}/password']['post']['requestBody']['content']['application/json'],
+    ) =>
+      request<void>({
+        method: 'POST',
+        path: `/api/users/${encodeURIComponent(userId)}/password`,
+        body,
+      }),
+    listRoles: (userId: string) =>
+      request<paths['/api/users/{user_id}/roles']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: `/api/users/${encodeURIComponent(userId)}/roles`,
+      }),
+    addRole: (
+      userId: string,
+      body: paths['/api/users/{user_id}/roles']['post']['requestBody']['content']['application/json'],
+    ) =>
+      request<void>({
+        method: 'POST',
+        path: `/api/users/${encodeURIComponent(userId)}/roles`,
+        body,
+      }),
+    removeRole: (userId: string, roleId: string) =>
+      request<void>({
+        method: 'DELETE',
+        path: `/api/users/${encodeURIComponent(userId)}/roles/${encodeURIComponent(roleId)}`,
+      }),
+  },
+  roles: {
+    list: (query: { limit?: number; offset?: number } = {}) =>
+      request<paths['/api/roles']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/roles',
+        query,
+      }),
+    get: (roleId: string) =>
+      request<paths['/api/roles/{role_id}']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: `/api/roles/${encodeURIComponent(roleId)}`,
+      }),
+  },
 }
