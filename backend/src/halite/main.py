@@ -21,10 +21,11 @@ def create_app(
     setup_logging(level=settings.log_level, fmt=settings.log_format)
 
     @asynccontextmanager
-    async def lifespan(_app: FastAPI):
+    async def lifespan(app: FastAPI):
         from halite import db as db_module
         from halite.bootstrap import bootstrap_admin
         from halite.rbac.seed import seed_builtin_roles
+        from halite.salt.client import SaltAPIClient
 
         init_engine(settings.database_url)
         assert db_module._sessionmaker is not None
@@ -33,9 +34,28 @@ def create_app(
             await s.commit()
             await bootstrap_admin(s, settings)
             await s.commit()
+
+        # Optional salt-api client. Only instantiate when fully configured.
+        salt_client: SaltAPIClient | None = None
+        if (
+            settings.salt_api_url
+            and settings.salt_api_username
+            and settings.salt_api_password
+        ):
+            salt_client = SaltAPIClient(
+                base_url=settings.salt_api_url,
+                username=settings.salt_api_username,
+                password=settings.salt_api_password,
+                eauth=settings.salt_api_eauth,
+                verify=_parse_verify(settings.salt_api_verify),
+            )
+        app.state.salt_client = salt_client
+
         try:
             yield
         finally:
+            if salt_client is not None:
+                await salt_client.aclose()
             await dispose_engine()
 
     app = FastAPI(title="Halite", version="0.1.0", lifespan=lifespan)
@@ -74,6 +94,15 @@ def create_app(
                 return FileResponse(static_path / "index.html")
 
     return app
+
+
+def _parse_verify(value: str) -> bool | str:
+    """SALT_API_VERIFY can be 'true', 'false', or a path to a CA bundle."""
+    if value.lower() == "true":
+        return True
+    if value.lower() == "false":
+        return False
+    return value
 
 
 # Module-level `app` is intentionally NOT created here — Settings() reads env
