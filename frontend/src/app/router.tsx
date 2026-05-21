@@ -9,6 +9,7 @@ import {
 import { LoginPage } from '@/features/auth/login-page'
 import { ChangePasswordPage } from '@/features/auth/change-password-page'
 import { LoginRequired, MustChangePassword, PublicOnly } from '@/features/auth/guards'
+import { RolesListPage } from '@/features/roles/roles-list-page'
 import { UsersListPage } from '@/features/users/users-list-page'
 import { AppShell } from './layout/AppShell'
 
@@ -62,9 +63,15 @@ const usersRoute = createRoute({
   component: () => <UsersListPage />,
 })
 
+const rolesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/roles',
+  component: () => <RolesListPage />,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  appRoute.addChildren([changePasswordRoute, homeRoute, usersRoute]),
+  appRoute.addChildren([changePasswordRoute, homeRoute, usersRoute, rolesRoute]),
 ])
 
 export const router = createRouter({ routeTree })
