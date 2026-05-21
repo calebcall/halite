@@ -158,5 +158,41 @@ export const api = {
         method: 'GET',
         path: `/api/roles/${encodeURIComponent(roleId)}`,
       }),
+    create: (
+      body: paths['/api/roles']['post']['requestBody']['content']['application/json'],
+    ) =>
+      request<paths['/api/roles']['post']['responses']['201']['content']['application/json']>({
+        method: 'POST',
+        path: '/api/roles',
+        body,
+      }),
+    update: (
+      roleId: string,
+      body: paths['/api/roles/{role_id}']['patch']['requestBody']['content']['application/json'],
+    ) =>
+      request<paths['/api/roles/{role_id}']['patch']['responses']['200']['content']['application/json']>({
+        method: 'PATCH',
+        path: `/api/roles/${encodeURIComponent(roleId)}`,
+        body,
+      }),
+    delete: (roleId: string) =>
+      request<void>({
+        method: 'DELETE',
+        path: `/api/roles/${encodeURIComponent(roleId)}`,
+      }),
+    addPermission: (
+      roleId: string,
+      body: paths['/api/roles/{role_id}/permissions']['post']['requestBody']['content']['application/json'],
+    ) =>
+      request<paths['/api/roles/{role_id}/permissions']['post']['responses']['201']['content']['application/json']>({
+        method: 'POST',
+        path: `/api/roles/${encodeURIComponent(roleId)}/permissions`,
+        body,
+      }),
+    removePermission: (roleId: string, permissionId: string) =>
+      request<void>({
+        method: 'DELETE',
+        path: `/api/roles/${encodeURIComponent(roleId)}/permissions/${encodeURIComponent(permissionId)}`,
+      }),
   },
 }
