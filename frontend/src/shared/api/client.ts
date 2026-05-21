@@ -146,6 +146,24 @@ export const api = {
         path: `/api/users/${encodeURIComponent(userId)}/roles/${encodeURIComponent(roleId)}`,
       }),
   },
+  audit: {
+    list: (
+      query: {
+        user_id?: string
+        action?: string
+        decision?: string
+        since?: string
+        until?: string
+        limit?: number
+        offset?: number
+      } = {},
+    ) =>
+      request<paths['/api/audit']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/audit',
+        query,
+      }),
+  },
   roles: {
     list: (query: { limit?: number; offset?: number } = {}) =>
       request<paths['/api/roles']['get']['responses']['200']['content']['application/json']>({
