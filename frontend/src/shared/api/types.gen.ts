@@ -123,6 +123,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/minions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Minions Route */
+        get: operations["list_minions_route_api_minions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/roles": {
         parameters: {
             query?: never;
@@ -338,6 +355,20 @@ export interface components {
             username: string;
             /** Password */
             password: string;
+        };
+        /** MinionListOut */
+        MinionListOut: {
+            /** Total */
+            total: number;
+            /** Minions */
+            minions: components["schemas"]["MinionSummary"][];
+        };
+        /** MinionSummary */
+        MinionSummary: {
+            /** Id */
+            id: string;
+            /** Ip */
+            ip?: string | null;
         };
         /** PasswordResetPayload */
         PasswordResetPayload: {
@@ -708,6 +739,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_minions_route_api_minions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MinionListOut"];
                 };
             };
         };

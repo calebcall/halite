@@ -213,4 +213,11 @@ export const api = {
         path: `/api/roles/${encodeURIComponent(roleId)}/permissions/${encodeURIComponent(permissionId)}`,
       }),
   },
+  minions: {
+    list: () =>
+      request<paths['/api/minions']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/minions',
+      }),
+  },
 }
