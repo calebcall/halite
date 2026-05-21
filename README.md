@@ -17,19 +17,30 @@ The salt-facing feature pages arrive in later plans.
 git clone <this repo>
 cd halite
 
-# Generate a cookie secret
-export COOKIE_SECRET="$(./scripts/gen-bootstrap-secret.sh)"
-export BOOTSTRAP_ADMIN_USERNAME=admin
-export BOOTSTRAP_ADMIN_PASSWORD=changeme
+# 1. Copy the env template and generate a real cookie secret.
+cp .env.example .env
+./scripts/gen-bootstrap-secret.sh
+# Paste the secret as the value of COOKIE_SECRET in .env.
+# .env.example defaults to COOKIE_SECURE=false for plain-HTTP local testing;
+# set it to true in production (HTTPS-fronted deployments).
 
-# Homelab (SQLite)
-docker compose -f compose.sqlite.yml up --build
+# 2. For the SQLite (homelab) profile, also flip DATABASE_URL in .env to the
+#    sqlite+aiosqlite line that's commented out. The Postgres profile uses
+#    the default DATABASE_URL as-is.
 
-# Shared / production (Postgres)
-docker compose -f compose.yml up --build
+# 3. Bring it up.
+docker compose -f compose.sqlite.yml up --build    # homelab (SQLite)
+# OR
+docker compose -f compose.yml up --build           # production-shaped (Postgres)
 ```
 
-Then:
+`docker compose` automatically picks values up from `.env` in this directory —
+no shell `export`s required.
+
+Browse to **http://localhost:8080/** and sign in as `admin` / `changeme` (the
+defaults in `.env.example`; change them in `.env` if you want).
+
+For a non-interactive sanity check:
 
 ```bash
 curl -s -X POST http://localhost:8080/api/auth/login \

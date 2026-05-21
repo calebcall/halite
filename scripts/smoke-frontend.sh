@@ -2,10 +2,14 @@
 set -eu
 cd "$(dirname "$0")/.."
 
+# Self-contained smoke: deliberately exports the variables this run needs so
+# we don't depend on the developer's .env. Shell env wins over .env in
+# docker compose's interpolation order, so this also overrides a .env that
+# might be configured for production (e.g. COOKIE_SECURE=true).
 export COOKIE_SECRET="$(scripts/gen-bootstrap-secret.sh)"
+export COOKIE_SECURE=false
 export BOOTSTRAP_ADMIN_USERNAME=admin
 export BOOTSTRAP_ADMIN_PASSWORD=changeme
-export COOKIE_SECURE=false
 
 docker compose -f compose.sqlite.yml up --build -d
 trap 'docker compose -f compose.sqlite.yml down' EXIT
