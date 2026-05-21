@@ -9,6 +9,7 @@ import {
 import { LoginPage } from '@/features/auth/login-page'
 import { ChangePasswordPage } from '@/features/auth/change-password-page'
 import { LoginRequired, MustChangePassword, PublicOnly } from '@/features/auth/guards'
+import { AuditViewerPage } from '@/features/audit/audit-viewer-page'
 import { RolesListPage } from '@/features/roles/roles-list-page'
 import { UsersListPage } from '@/features/users/users-list-page'
 import { AppShell } from './layout/AppShell'
@@ -69,9 +70,15 @@ const rolesRoute = createRoute({
   component: () => <RolesListPage />,
 })
 
+const auditRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/audit',
+  component: () => <AuditViewerPage />,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  appRoute.addChildren([changePasswordRoute, homeRoute, usersRoute, rolesRoute]),
+  appRoute.addChildren([changePasswordRoute, homeRoute, usersRoute, rolesRoute, auditRoute]),
 ])
 
 export const router = createRouter({ routeTree })
