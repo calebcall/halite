@@ -6,7 +6,7 @@ const navItems = [
   { to: '/minions', label: 'Minions', icon: Server, enabled: false },
   { to: '/keys', label: 'Keys', icon: Key, enabled: false },
   { to: '/jobs', label: 'Jobs', icon: Activity, enabled: false },
-  { to: '/users', label: 'Users', icon: Users, enabled: false },
+  { to: '/users', label: 'Users', icon: Users, enabled: true },
   { to: '/audit', label: 'Audit', icon: FileClock, enabled: false },
 ]
 
