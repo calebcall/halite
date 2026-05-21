@@ -1,7 +1,12 @@
 import { AppRouter } from './app/router'
+import { ThemeProvider } from './app/theme/theme-provider'
 
 function App() {
-  return <AppRouter />
+  return (
+    <ThemeProvider>
+      <AppRouter />
+    </ThemeProvider>
+  )
 }
 
 export default App

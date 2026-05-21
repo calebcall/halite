@@ -1,4 +1,4 @@
-import { ChevronDown, KeyRound, LogOut } from 'lucide-react'
+import { ChevronDown, KeyRound, LogOut, Monitor, Moon, Sun } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 
 import { Button } from '@/components/ui/button'
@@ -8,13 +8,18 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuthActions, useCurrentUser } from '@/features/auth/use-current-user'
+import { useTheme } from '@/app/theme/use-theme'
 
 export function UserMenu() {
   const { data: user } = useCurrentUser()
   const { logout } = useAuthActions()
+  const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
 
   if (!user) return null
@@ -36,6 +41,33 @@ export function UserMenu() {
           <KeyRound className="mr-2 h-4 w-4" />
           Change password
         </DropdownMenuItem>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            {theme === 'dark' ? (
+              <Moon className="mr-2 h-4 w-4" />
+            ) : theme === 'light' ? (
+              <Sun className="mr-2 h-4 w-4" />
+            ) : (
+              <Monitor className="mr-2 h-4 w-4" />
+            )}
+            Theme
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuItem onClick={() => setTheme('light')}>
+              <Sun className="mr-2 h-4 w-4" />
+              Light {theme === 'light' && '✓'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setTheme('dark')}>
+              <Moon className="mr-2 h-4 w-4" />
+              Dark {theme === 'dark' && '✓'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setTheme('system')}>
+              <Monitor className="mr-2 h-4 w-4" />
+              System {theme === 'system' && '✓'}
+            </DropdownMenuItem>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => void logout()}>
           <LogOut className="mr-2 h-4 w-4" />
           Sign out
