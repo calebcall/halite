@@ -72,3 +72,47 @@ async def test_logout_clears_cookie_and_invalidates_session(app_db, session):
         me = await ac.get("/api/auth/me", cookies={settings.cookie_name: cookie})
     assert out.status_code == 204
     assert me.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_me_returns_permissions(app_db, session):
+    """/api/auth/me must include the user's permissions array for the frontend
+    to drive permission-aware UI gating."""
+    from halite.rbac.models import Permission, Role, UserRole
+
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+
+    user = User(
+        username_lower="alice",
+        username="alice",
+        password_hash=hash_password("pw"),
+        is_active=True,
+        created_at=datetime.now(tz=UTC),
+    )
+    session.add(user)
+    await session.flush()
+    role = Role(name="ops", is_builtin=False, description="")
+    session.add(role)
+    await session.flush()
+    session.add(Permission(role_id=role.id, verb="view", resource_glob="audit:*"))
+    session.add(Permission(role_id=role.id, verb="run", resource_glob="state.*"))
+    session.add(UserRole(user_id=user.id, role_id=role.id))
+    await session.commit()
+    await session.refresh(user)
+
+    from halite.auth.service import create_session
+    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get("/api/auth/me", cookies={settings.cookie_name: codec.sign(sess.id)})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["username"] == "alice"
+    perms = body["permissions"]
+    assert isinstance(perms, list)
+    pairs = {(p["verb"], p["resource_glob"]) for p in perms}
+    assert ("view", "audit:*") in pairs
+    assert ("run", "state.*") in pairs

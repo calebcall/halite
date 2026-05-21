@@ -361,6 +361,13 @@ export interface components {
             /** Resource Glob */
             resource_glob: string;
         };
+        /** PermissionPair */
+        PermissionPair: {
+            /** Verb */
+            verb: string;
+            /** Resource Glob */
+            resource_glob: string;
+        };
         /** PermissionPayload */
         PermissionPayload: {
             /** Verb */
@@ -464,6 +471,11 @@ export interface components {
             display_name: string;
             /** Must Change Pw */
             must_change_pw: boolean;
+            /**
+             * Permissions
+             * @default []
+             */
+            permissions: components["schemas"]["PermissionPair"][];
         };
         /** UserSummary */
         UserSummary: {

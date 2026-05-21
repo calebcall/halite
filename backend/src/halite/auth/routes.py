@@ -9,6 +9,7 @@ from halite.audit.writer import record as audit_record
 from halite.auth.cookies import CookieCodec
 from halite.auth.password import hash_password as _hash_password
 from halite.auth.password import verify_password as _verify_password
+from halite.auth.permissions_cache import load_permissions_for
 from halite.auth.service import end_session, end_sessions_for_user
 from halite.auth.service import login as _login
 from halite.config import Settings
@@ -23,10 +24,20 @@ class LoginPayload(BaseModel):
     password: str
 
 
+class PermissionPair(BaseModel):
+    verb: str
+    resource_glob: str
+
+
 class UserOut(BaseModel):
     username: str
     display_name: str
     must_change_pw: bool
+    permissions: list[PermissionPair] = []
+
+
+def _perms_of(user) -> list[PermissionPair]:
+    return [PermissionPair(verb=v, resource_glob=g) for v, g in getattr(user, "permissions_cache", [])]
 
 
 def _client_meta(request: Request) -> tuple[str, str]:
@@ -72,6 +83,7 @@ async def login_route(
         decision="allow",
         result_code=200,
     )
+    result.user.permissions_cache = await load_permissions_for(db, result.user)
     await db.commit()
     response.set_cookie(
         settings.cookie_name,
@@ -86,6 +98,7 @@ async def login_route(
         username=result.user.username,
         display_name=result.user.display_name,
         must_change_pw=result.user.must_change_pw,
+        permissions=_perms_of(result.user),
     )
 
 
@@ -113,6 +126,7 @@ async def me_route(user: CurrentUser) -> UserOut:
         username=user.username,
         display_name=user.display_name,
         must_change_pw=user.must_change_pw,
+        permissions=_perms_of(user),
     )
 
 
