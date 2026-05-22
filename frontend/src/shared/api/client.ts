@@ -164,6 +164,19 @@ export const api = {
         query,
       }),
   },
+  jobs: {
+    list: (params?: { limit?: number }) =>
+      request<paths['/api/jobs']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/jobs',
+        query: params,
+      }),
+    get: (jid: string) =>
+      request<paths['/api/jobs/{jid}']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: `/api/jobs/${encodeURIComponent(jid)}`,
+      }),
+  },
   keys: {
     list: () =>
       request<paths['/api/keys']['get']['responses']['200']['content']['application/json']>({

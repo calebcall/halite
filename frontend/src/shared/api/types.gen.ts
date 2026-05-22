@@ -123,6 +123,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Jobs Route */
+        get: operations["list_jobs_route_api_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jobs/{jid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Job Route */
+        get: operations["get_job_route_api_jobs__jid__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/keys": {
         parameters: {
             query?: never;
@@ -433,6 +467,69 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** JobDetail */
+        JobDetail: {
+            /** Jid */
+            jid: string;
+            /** Function */
+            function: string;
+            /**
+             * Arguments
+             * @default []
+             */
+            arguments: unknown[];
+            /** Target */
+            target: string;
+            /** Target Type */
+            target_type?: string | null;
+            /** User */
+            user?: string | null;
+            /** Start Time */
+            start_time?: string | null;
+            /**
+             * Minions
+             * @default []
+             */
+            minions: string[];
+            /**
+             * Results
+             * @default []
+             */
+            results: components["schemas"]["JobMinionResult"][];
+        };
+        /** JobMinionResult */
+        JobMinionResult: {
+            /** Minion */
+            minion: string;
+            /** Success */
+            success?: boolean | null;
+            /** Retcode */
+            retcode?: number | null;
+            /** Return Value */
+            return_value?: unknown;
+        };
+        /** JobSummary */
+        JobSummary: {
+            /** Jid */
+            jid: string;
+            /** Function */
+            function: string;
+            /** Target */
+            target: string;
+            /** Target Type */
+            target_type?: string | null;
+            /** User */
+            user?: string | null;
+            /** Start Time */
+            start_time?: string | null;
+        };
+        /** JobsListOut */
+        JobsListOut: {
+            /** Total */
+            total: number;
+            /** Jobs */
+            jobs: components["schemas"]["JobSummary"][];
         };
         /** KeyEntry */
         KeyEntry: {
@@ -851,6 +948,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_jobs_route_api_jobs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobsListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_route_api_jobs__jid__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobDetail"];
                 };
             };
             /** @description Validation Error */
