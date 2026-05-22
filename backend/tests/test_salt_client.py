@@ -212,7 +212,9 @@ async def test_reject_key_calls_wheel_with_include_flags(fake_salt_api):
         await client.reject_key("web-01")
     finally:
         await client.aclose()
+    assert captured["client"] == "wheel"
     assert captured["fun"] == "key.reject"
+    assert captured["match"] == "web-01"
     assert captured["include_accepted"] is True
     assert captured["include_denied"] is True
 
@@ -231,5 +233,6 @@ async def test_delete_key_calls_wheel_match(fake_salt_api):
         await client.delete_key("web-01")
     finally:
         await client.aclose()
+    assert captured["client"] == "wheel"
     assert captured["fun"] == "key.delete"
     assert captured["match"] == "web-01"
