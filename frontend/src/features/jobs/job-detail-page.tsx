@@ -54,7 +54,7 @@ function JobDetailPageInner() {
       <div className="flex flex-col gap-3">
         <BackToList />
         <div className="rounded-md border border-amber-400/40 bg-amber-50 p-6 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          Salt-API is not configured.
+          Salt-API is not configured. Set <code>SALT_API_URL</code>, <code>SALT_API_USERNAME</code>, and <code>SALT_API_PASSWORD</code> in your <code>.env</code> and restart the stack.
         </div>
       </div>
     )
@@ -121,6 +121,7 @@ function Field({ label, value, mono }: { label: string; value: string; mono?: bo
 
 function MinionResultCard({ result }: { result: JobMinionResult }) {
   const [open, setOpen] = useState(false)
+  const panelId = `minion-result-${result.minion}`
   const ok = result.success === true
   const failed = result.success === false
   return (
@@ -130,6 +131,7 @@ function MinionResultCard({ result }: { result: JobMinionResult }) {
         variant="ghost"
         className="flex h-auto w-full items-center justify-between gap-2 rounded-none px-4 py-3 text-left"
         aria-expanded={open}
+        aria-controls={panelId}
         onClick={() => setOpen((o) => !o)}
       >
         <div className="flex items-center gap-3">
@@ -145,7 +147,7 @@ function MinionResultCard({ result }: { result: JobMinionResult }) {
         <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
       </Button>
       {open && (
-        <pre className="overflow-x-auto border-t bg-muted/20 p-4 text-xs">
+        <pre id={panelId} className="overflow-x-auto border-t bg-muted/20 p-4 text-xs">
           {JSON.stringify(result.return_value, null, 2)}
         </pre>
       )}

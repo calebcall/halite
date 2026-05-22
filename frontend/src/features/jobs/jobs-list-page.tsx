@@ -83,9 +83,9 @@ function JobsListPageInner() {
               </TableRow>
             )}
             {data?.jobs.map((j) => (
-              <TableRow key={j.jid} className="cursor-pointer hover:bg-muted/40">
+              <TableRow key={j.jid}>
                 <TableCell className="font-mono text-xs">
-                  <Link to="/jobs/$jid" params={{ jid: j.jid }} className="block">
+                  <Link to="/jobs/$jid" params={{ jid: j.jid }} className="block hover:underline">
                     {j.jid}
                   </Link>
                 </TableCell>
