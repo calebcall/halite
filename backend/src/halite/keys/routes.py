@@ -60,13 +60,14 @@ async def accept_key_route(
     try:
         await client.accept_key(key_id)
     except (SaltAPIUnavailable, SaltAPIError) as exc:
+        http_exc = _wrap_salt_errors(exc)
         await audit_record(
             db, user_id=actor.id, action="key.accept",
             resource=f"key:{key_id}", args_json=None, salt_jid=None,
-            decision="deny", result_code=502,
+            decision="deny", result_code=http_exc.status_code,
         )
         await db.commit()
-        raise _wrap_salt_errors(exc) from None
+        raise http_exc from None
     await audit_record(
         db, user_id=actor.id, action="key.accept",
         resource=f"key:{key_id}", args_json=None, salt_jid=None,
@@ -91,13 +92,14 @@ async def reject_key_route(
     try:
         await client.reject_key(key_id)
     except (SaltAPIUnavailable, SaltAPIError) as exc:
+        http_exc = _wrap_salt_errors(exc)
         await audit_record(
             db, user_id=actor.id, action="key.reject",
             resource=f"key:{key_id}", args_json=None, salt_jid=None,
-            decision="deny", result_code=502,
+            decision="deny", result_code=http_exc.status_code,
         )
         await db.commit()
-        raise _wrap_salt_errors(exc) from None
+        raise http_exc from None
     await audit_record(
         db, user_id=actor.id, action="key.reject",
         resource=f"key:{key_id}", args_json=None, salt_jid=None,
@@ -122,13 +124,14 @@ async def delete_key_route(
     try:
         await client.delete_key(key_id)
     except (SaltAPIUnavailable, SaltAPIError) as exc:
+        http_exc = _wrap_salt_errors(exc)
         await audit_record(
             db, user_id=actor.id, action="key.delete",
             resource=f"key:{key_id}", args_json=None, salt_jid=None,
-            decision="deny", result_code=502,
+            decision="deny", result_code=http_exc.status_code,
         )
         await db.commit()
-        raise _wrap_salt_errors(exc) from None
+        raise http_exc from None
     await audit_record(
         db, user_id=actor.id, action="key.delete",
         resource=f"key:{key_id}", args_json=None, salt_jid=None,

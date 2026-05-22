@@ -204,6 +204,43 @@ async def test_delete_key_204(app_db, session, fake_salt_api):
         await client.aclose()
     assert r.status_code == 204
 
+    rows = (
+        await session.execute(select(AuditEntry).where(AuditEntry.action == "key.delete"))
+    ).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].resource == "key:web-01"
+    assert rows[0].decision == "allow"
+
+
+@pytest.mark.asyncio
+async def test_reject_key_204_and_audit(app_db, session, fake_salt_api):
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(session, [("reject", "key:*")])
+    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+
+    fake_salt_api.run_handler = _key_list_handler({})
+
+    app = create_app(settings=settings, codec=codec)
+    client = _attach_salt_client(app, fake_salt_api)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+            r = await ac.post(
+                "/api/keys/bad-host/reject",
+                cookies={settings.cookie_name: codec.sign(sess.id)},
+            )
+    finally:
+        await client.aclose()
+    assert r.status_code == 204
+
+    rows = (
+        await session.execute(select(AuditEntry).where(AuditEntry.action == "key.reject"))
+    ).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].resource == "key:bad-host"
+    assert rows[0].decision == "allow"
+
 
 @pytest.mark.asyncio
 async def test_keys_list_503_when_salt_not_configured(app_db, session):
