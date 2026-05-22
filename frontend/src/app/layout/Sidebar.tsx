@@ -18,7 +18,7 @@ const navItems: NavItem[] = [
   { to: '/', label: 'Overview', icon: Server },
   { to: '/minions', label: 'Minions', icon: Server, requires: { verb: 'view', resource: 'minion:*' } },
   { to: '/keys', label: 'Keys', icon: Key, requires: { verb: 'view', resource: 'key:*' } },
-  { to: '/jobs', label: 'Jobs', icon: Activity, comingSoon: true },
+  { to: '/jobs', label: 'Jobs', icon: Activity, requires: { verb: 'view', resource: 'job:*' } },
   { to: '/users', label: 'Users', icon: Users, requires: { verb: 'view', resource: 'user:*' } },
   { to: '/roles', label: 'Roles', icon: Shield, requires: { verb: 'view', resource: 'role:*' } },
   { to: '/audit', label: 'Audit', icon: FileClock, requires: { verb: 'view', resource: 'audit:*' } },
