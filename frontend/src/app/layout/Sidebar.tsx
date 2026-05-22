@@ -17,7 +17,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { to: '/', label: 'Overview', icon: Server },
   { to: '/minions', label: 'Minions', icon: Server, requires: { verb: 'view', resource: 'minion:*' } },
-  { to: '/keys', label: 'Keys', icon: Key, comingSoon: true },
+  { to: '/keys', label: 'Keys', icon: Key, requires: { verb: 'view', resource: 'key:*' } },
   { to: '/jobs', label: 'Jobs', icon: Activity, comingSoon: true },
   { to: '/users', label: 'Users', icon: Users, requires: { verb: 'view', resource: 'user:*' } },
   { to: '/roles', label: 'Roles', icon: Shield, requires: { verb: 'view', resource: 'role:*' } },
