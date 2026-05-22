@@ -174,3 +174,62 @@ async def test_get_minion_grains_returns_none_when_offline(fake_salt_api):
     finally:
         await client.aclose()
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_accept_key_calls_wheel_with_include_flags(fake_salt_api):
+    """accept_key forwards match + include_rejected + include_denied."""
+    captured: dict = {}
+
+    def handler(payload):
+        captured.update(payload)
+        return {"return": [{"data": {"return": {"minions": [payload.get("match")]}, "success": True}}]}
+
+    fake_salt_api.run_handler = handler
+    client = _make_client(fake_salt_api)
+    try:
+        await client.accept_key("web-01")
+    finally:
+        await client.aclose()
+    assert captured["client"] == "wheel"
+    assert captured["fun"] == "key.accept"
+    assert captured["match"] == "web-01"
+    assert captured["include_rejected"] is True
+    assert captured["include_denied"] is True
+
+
+@pytest.mark.asyncio
+async def test_reject_key_calls_wheel_with_include_flags(fake_salt_api):
+    captured: dict = {}
+
+    def handler(payload):
+        captured.update(payload)
+        return {"return": [{"data": {"return": {"minions_rejected": [payload.get("match")]}, "success": True}}]}
+
+    fake_salt_api.run_handler = handler
+    client = _make_client(fake_salt_api)
+    try:
+        await client.reject_key("web-01")
+    finally:
+        await client.aclose()
+    assert captured["fun"] == "key.reject"
+    assert captured["include_accepted"] is True
+    assert captured["include_denied"] is True
+
+
+@pytest.mark.asyncio
+async def test_delete_key_calls_wheel_match(fake_salt_api):
+    captured: dict = {}
+
+    def handler(payload):
+        captured.update(payload)
+        return {"return": [{"data": {"return": {"minions": [payload.get("match")]}, "success": True}}]}
+
+    fake_salt_api.run_handler = handler
+    client = _make_client(fake_salt_api)
+    try:
+        await client.delete_key("web-01")
+    finally:
+        await client.aclose()
+    assert captured["fun"] == "key.delete"
+    assert captured["match"] == "web-01"

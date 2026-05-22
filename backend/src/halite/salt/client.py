@@ -234,6 +234,32 @@ class SaltAPIClient:
             return None
         return grains
 
+    async def accept_key(self, minion_id: str) -> None:
+        """Accept a minion key. Works regardless of current state — passes
+        include_rejected and include_denied so an operator clicking 'Accept'
+        on a rejected/denied key gets the expected behavior."""
+        await self.wheel_call(
+            "key.accept",
+            match=minion_id,
+            include_rejected=True,
+            include_denied=True,
+        )
+
+    async def reject_key(self, minion_id: str) -> None:
+        """Reject a minion key. include_accepted + include_denied for the same
+        reason as accept."""
+        await self.wheel_call(
+            "key.reject",
+            match=minion_id,
+            include_accepted=True,
+            include_denied=True,
+        )
+
+    async def delete_key(self, minion_id: str) -> None:
+        """Delete a minion key. Idempotent — salt returns success even for
+        non-existent minions."""
+        await self.wheel_call("key.delete", match=minion_id)
+
 
 # ---------- helpers ----------
 
