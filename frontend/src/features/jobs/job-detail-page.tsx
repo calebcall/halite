@@ -146,11 +146,13 @@ function MinionResultCard({ result }: { result: JobMinionResult }) {
         </div>
         <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
       </Button>
-      {open && (
-        <pre id={panelId} className="overflow-x-auto border-t bg-muted/20 p-4 text-xs">
-          {JSON.stringify(result.return_value, null, 2)}
-        </pre>
-      )}
+      <pre
+        id={panelId}
+        hidden={!open}
+        className="overflow-x-auto border-t bg-muted/20 p-4 text-xs"
+      >
+        {JSON.stringify(result.return_value, null, 2)}
+      </pre>
     </div>
   )
 }
