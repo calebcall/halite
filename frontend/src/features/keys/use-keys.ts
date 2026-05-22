@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { type KeysListOut, keysApi, keysQueryKeys } from './api'
+import { minionsQueryKeys } from '@/features/minions/api'
 
 export function useKeysList() {
   return useQuery<KeysListOut>({
@@ -17,7 +18,8 @@ export function useAcceptKey() {
     mutationFn: (keyId: string) => keysApi.accept(keyId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keysQueryKeys.all })
-      void qc.invalidateQueries({ queryKey: ['minions'] })
+      // Accepting a key moves a minion into the connected list.
+      void qc.invalidateQueries({ queryKey: minionsQueryKeys.all })
     },
   })
 }
@@ -28,7 +30,8 @@ export function useRejectKey() {
     mutationFn: (keyId: string) => keysApi.reject(keyId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keysQueryKeys.all })
-      void qc.invalidateQueries({ queryKey: ['minions'] })
+      // Rejecting may remove a previously-accepted minion from the connected list.
+      void qc.invalidateQueries({ queryKey: minionsQueryKeys.all })
     },
   })
 }
@@ -39,7 +42,8 @@ export function useDeleteKey() {
     mutationFn: (keyId: string) => keysApi.delete(keyId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keysQueryKeys.all })
-      void qc.invalidateQueries({ queryKey: ['minions'] })
+      // Deleting the key removes any associated minion from the connected list.
+      void qc.invalidateQueries({ queryKey: minionsQueryKeys.all })
     },
   })
 }
