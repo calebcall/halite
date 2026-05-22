@@ -25,10 +25,11 @@ const server = setupServer(
   ),
   http.get('/api/minions', () =>
     HttpResponse.json({
-      total: 2,
+      total: 3,
       minions: [
-        { id: 'db-01', ip: '10.0.0.2' },
-        { id: 'web-01', ip: '10.0.0.1' },
+        { id: 'db-01', ip: null, status: 'offline' },
+        { id: 'pending-host', ip: null, status: 'pending' },
+        { id: 'web-01', ip: '10.0.0.1', status: 'online' },
       ],
     }),
   ),
@@ -55,13 +56,15 @@ function renderInRouter() {
 }
 
 describe('MinionsListPage', () => {
-  it('renders the connected minions', async () => {
+  it('renders minions with status badges', async () => {
     renderInRouter()
     expect(await screen.findByText('db-01')).toBeInTheDocument()
+    expect(screen.getByText('pending-host')).toBeInTheDocument()
     expect(screen.getByText('web-01')).toBeInTheDocument()
     expect(screen.getByText('10.0.0.1')).toBeInTheDocument()
-    expect(screen.getByText('10.0.0.2')).toBeInTheDocument()
-    expect(screen.getAllByText('connected').length).toBe(2)
+    expect(screen.getByText('online')).toBeInTheDocument()
+    expect(screen.getByText('offline')).toBeInTheDocument()
+    expect(screen.getByText('pending')).toBeInTheDocument()
   })
 
   it('shows the not-configured message on 503', async () => {
