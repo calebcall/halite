@@ -15,26 +15,26 @@ import { useAcceptKey, useDeleteKey, useRejectKey } from './use-keys'
 
 export type KeyAction = 'accept' | 'reject' | 'delete'
 
-const COPY: Record<KeyAction, { title: string; body: string; cta: string; cta_progress: string; variant: 'default' | 'destructive' }> = {
+const COPY: Record<KeyAction, { title: string; body: string; cta: string; ctaProgress: string; variant: 'default' | 'destructive' }> = {
   accept: {
     title: 'Accept key',
     body: 'This grants the minion permission to communicate with the master.',
     cta: 'Accept key',
-    cta_progress: 'Accepting…',
+    ctaProgress: 'Accepting…',
     variant: 'default',
   },
   reject: {
     title: 'Reject key',
     body: 'This blocks the minion from communicating with the master. The minion key remains on disk.',
     cta: 'Reject key',
-    cta_progress: 'Rejecting…',
+    ctaProgress: 'Rejecting…',
     variant: 'destructive',
   },
   delete: {
     title: 'Delete key',
     body: 'This removes the minion key entirely. The minion will have to re-register from scratch. This cannot be undone.',
     cta: 'Delete key',
-    cta_progress: 'Deleting…',
+    ctaProgress: 'Deleting…',
     variant: 'destructive',
   },
 }
@@ -105,7 +105,7 @@ export function KeyActionDialog({
             disabled={pending}
             onClick={() => void onConfirm()}
           >
-            {pending ? copy.cta_progress : copy.cta}
+            {pending ? copy.ctaProgress : copy.cta}
           </Button>
         </DialogFooter>
       </DialogContent>

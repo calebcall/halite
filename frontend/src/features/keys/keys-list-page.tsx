@@ -47,7 +47,8 @@ function KeysListPageInner() {
   if (error instanceof ApiError && error.status === 503) {
     return (
       <div className="rounded-md border border-amber-400/40 bg-amber-50 p-6 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-        Salt-API is not configured.
+        Salt-API is not configured. Set <code>SALT_API_URL</code>, <code>SALT_API_USERNAME</code>,
+        and <code>SALT_API_PASSWORD</code> in your <code>.env</code> and restart the stack.
       </div>
     )
   }
@@ -93,7 +94,7 @@ function KeysListPageInner() {
               </TableRow>
             )}
             {data?.keys.map((k) => (
-              <TableRow key={`${k.id}-${k.status}`}>
+              <TableRow key={k.id}>
                 <TableCell className="font-mono text-xs">
                   <span className="flex items-center gap-2">
                     <Key className="h-3.5 w-3.5 text-muted-foreground" />
