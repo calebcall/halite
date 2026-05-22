@@ -1,5 +1,6 @@
 // frontend/src/features/minions/minions-list-page.tsx
 import { Loader2, Server } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
 
 import { Badge } from '@/components/ui/badge'
 import {
@@ -12,6 +13,7 @@ import {
 } from '@/components/ui/table'
 import { ApiError } from '@/shared/api/client'
 import { MustChangePassword } from '@/features/auth/guards'
+import type { MinionStatus } from './api'
 import { useMinionsList } from './use-minions'
 
 export function MinionsListPage() {
@@ -55,7 +57,7 @@ function MinionsListPageInner() {
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Minions</h2>
         <p className="text-sm text-muted-foreground">
-          Connected accepted minions. Refreshes every 30 seconds.
+          All known minions across every state. Refreshes every 30 seconds.
         </p>
       </div>
 
@@ -79,21 +81,27 @@ function MinionsListPageInner() {
             {!isPending && data && data.minions.length === 0 && (
               <TableRow>
                 <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
-                  No minions connected.
+                  No minions known to the master.
                 </TableCell>
               </TableRow>
             )}
             {data?.minions.map((m) => (
               <TableRow key={m.id}>
-                <TableCell className="flex items-center gap-2 font-mono text-xs">
-                  <Server className="h-3.5 w-3.5 text-muted-foreground" />
-                  {m.id}
+                <TableCell className="font-mono text-xs">
+                  <Link
+                    to="/minions/$minionId"
+                    params={{ minionId: m.id }}
+                    className="flex items-center gap-2 hover:underline"
+                  >
+                    <Server className="h-3.5 w-3.5 text-muted-foreground" />
+                    {m.id}
+                  </Link>
                 </TableCell>
                 <TableCell className="font-mono text-xs">
                   {m.ip || <span className="text-muted-foreground">—</span>}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Badge variant="secondary">connected</Badge>
+                  <StatusBadge status={m.status} />
                 </TableCell>
               </TableRow>
             ))}
@@ -103,9 +111,32 @@ function MinionsListPageInner() {
 
       {data && data.minions.length > 0 && (
         <p className="text-sm text-muted-foreground">
-          {data.total} minion{data.total === 1 ? '' : 's'} connected.
+          {data.total} minion{data.total === 1 ? '' : 's'} known to the master.
         </p>
       )}
     </div>
   )
+}
+
+export function StatusBadge({ status }: { status: MinionStatus }) {
+  switch (status) {
+    case 'online':
+      return (
+        <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200">
+          online
+        </Badge>
+      )
+    case 'offline':
+      return <Badge variant="secondary">offline</Badge>
+    case 'pending':
+      return (
+        <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200">
+          pending
+        </Badge>
+      )
+    case 'rejected':
+      return <Badge variant="destructive">rejected</Badge>
+    case 'denied':
+      return <Badge variant="destructive">denied</Badge>
+  }
 }

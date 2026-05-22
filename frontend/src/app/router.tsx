@@ -10,6 +10,7 @@ import { LoginPage } from '@/features/auth/login-page'
 import { ChangePasswordPage } from '@/features/auth/change-password-page'
 import { LoginRequired, MustChangePassword, PublicOnly } from '@/features/auth/guards'
 import { AuditViewerPage } from '@/features/audit/audit-viewer-page'
+import { MinionDetailPage } from '@/features/minions/minion-detail-page'
 import { MinionsListPage } from '@/features/minions/minions-list-page'
 import { RolesListPage } from '@/features/roles/roles-list-page'
 import { UsersListPage } from '@/features/users/users-list-page'
@@ -65,6 +66,12 @@ const minionsRoute = createRoute({
   component: () => <MinionsListPage />,
 })
 
+const minionDetailRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/minions/$minionId',
+  component: () => <MinionDetailPage />,
+})
+
 const usersRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/users',
@@ -89,6 +96,7 @@ const routeTree = rootRoute.addChildren([
     changePasswordRoute,
     homeRoute,
     minionsRoute,
+    minionDetailRoute,
     usersRoute,
     rolesRoute,
     auditRoute,
