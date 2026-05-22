@@ -118,3 +118,59 @@ async def test_list_connected_minions_returns_dict(fake_salt_api):
     finally:
         await client.aclose()
     assert result == {"web-01": "10.0.0.1", "db-01": "10.0.0.2"}
+
+
+@pytest.mark.asyncio
+async def test_list_minion_keys_returns_dict(fake_salt_api):
+    fake_salt_api.run_handler = lambda payload: {
+        "return": [
+            {
+                "data": {
+                    "return": {
+                        "minions": ["web-01", "db-01"],
+                        "minions_pre": ["new-host"],
+                        "minions_rejected": [],
+                        "minions_denied": [],
+                        "local": [],
+                    }
+                }
+            }
+        ]
+    }
+    client = _make_client(fake_salt_api)
+    try:
+        result = await client.list_minion_keys()
+    finally:
+        await client.aclose()
+    assert result == {
+        "minions": ["web-01", "db-01"],
+        "minions_pre": ["new-host"],
+        "minions_rejected": [],
+        "minions_denied": [],
+        "local": [],
+    }
+
+
+@pytest.mark.asyncio
+async def test_get_minion_grains_returns_dict(fake_salt_api):
+    fake_salt_api.run_handler = lambda payload: {
+        "return": [{"web-01": {"os": "Ubuntu", "osrelease": "22.04", "kernel": "Linux"}}]
+    }
+    client = _make_client(fake_salt_api)
+    try:
+        result = await client.get_minion_grains("web-01")
+    finally:
+        await client.aclose()
+    assert result == {"os": "Ubuntu", "osrelease": "22.04", "kernel": "Linux"}
+
+
+@pytest.mark.asyncio
+async def test_get_minion_grains_returns_none_when_offline(fake_salt_api):
+    """salt-api returns an empty dict when the targeted minion didn't respond."""
+    fake_salt_api.run_handler = lambda payload: {"return": [{}]}
+    client = _make_client(fake_salt_api)
+    try:
+        result = await client.get_minion_grains("web-01")
+    finally:
+        await client.aclose()
+    assert result is None

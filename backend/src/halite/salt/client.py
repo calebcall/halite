@@ -206,6 +206,34 @@ class SaltAPIClient:
             return {}
         return {str(k): str(v) for k, v in result.items()}
 
+    async def list_minion_keys(self) -> dict[str, list[str]]:
+        """Returns the master's view of minion keys, bucketed by state.
+
+        Shape: {
+          'minions': [...accepted minion ids...],
+          'minions_pre': [...unaccepted...],
+          'minions_rejected': [...rejected...],
+          'minions_denied': [...denied...],
+          'local': [...local salt keys...],
+        }
+        """
+        result = await self.wheel_call("key.list_all")
+        if not isinstance(result, dict):
+            return {}
+        return {str(k): list(v) for k, v in result.items()}
+
+    async def get_minion_grains(self, minion_id: str) -> dict[str, Any] | None:
+        """Returns grains for a single minion. None if the minion didn't respond
+        (e.g. offline)."""
+        result = await self.local_call(minion_id, "grains.items", target_type="glob")
+        # local return shape: {<minion_id>: <result>}. Could be missing if minion offline.
+        if not isinstance(result, dict):
+            return None
+        grains = result.get(minion_id)
+        if not isinstance(grains, dict):
+            return None
+        return grains
+
 
 # ---------- helpers ----------
 
