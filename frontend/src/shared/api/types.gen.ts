@@ -140,6 +140,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/minions/{minion_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Minion Route */
+        get: operations["get_minion_route_api_minions__minion_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/roles": {
         parameters: {
             query?: never;
@@ -356,6 +373,20 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** MinionDetail */
+        MinionDetail: {
+            /** Id */
+            id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "online" | "offline" | "pending" | "rejected" | "denied";
+            /** Ip */
+            ip?: string | null;
+            /** Grains */
+            grains?: Record<string, never> | null;
+        };
         /** MinionListOut */
         MinionListOut: {
             /** Total */
@@ -369,6 +400,11 @@ export interface components {
             id: string;
             /** Ip */
             ip?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "online" | "offline" | "pending" | "rejected" | "denied";
         };
         /** PasswordResetPayload */
         PasswordResetPayload: {
@@ -759,6 +795,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MinionListOut"];
+                };
+            };
+        };
+    };
+    get_minion_route_api_minions__minion_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                minion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MinionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

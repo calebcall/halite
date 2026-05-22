@@ -219,5 +219,10 @@ export const api = {
         method: 'GET',
         path: '/api/minions',
       }),
+    get: (minionId: string) =>
+      request<paths['/api/minions/{minion_id}']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: `/api/minions/${encodeURIComponent(minionId)}`,
+      }),
   },
 }
