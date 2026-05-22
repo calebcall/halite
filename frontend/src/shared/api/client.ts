@@ -164,6 +164,28 @@ export const api = {
         query,
       }),
   },
+  keys: {
+    list: () =>
+      request<paths['/api/keys']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/keys',
+      }),
+    accept: (keyId: string) =>
+      request<void>({
+        method: 'POST',
+        path: `/api/keys/${encodeURIComponent(keyId)}/accept`,
+      }),
+    reject: (keyId: string) =>
+      request<void>({
+        method: 'POST',
+        path: `/api/keys/${encodeURIComponent(keyId)}/reject`,
+      }),
+    delete: (keyId: string) =>
+      request<void>({
+        method: 'DELETE',
+        path: `/api/keys/${encodeURIComponent(keyId)}`,
+      }),
+  },
   roles: {
     list: (query: { limit?: number; offset?: number } = {}) =>
       request<paths['/api/roles']['get']['responses']['200']['content']['application/json']>({
