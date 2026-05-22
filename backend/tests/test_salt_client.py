@@ -236,3 +236,69 @@ async def test_delete_key_calls_wheel_match(fake_salt_api):
     assert captured["client"] == "wheel"
     assert captured["fun"] == "key.delete"
     assert captured["match"] == "web-01"
+
+
+@pytest.mark.asyncio
+async def test_list_jobs_returns_recent_slice(fake_salt_api):
+    def handler(payload):
+        return {
+            "return": [{
+                "20251019120000123456": {"Function": "test.ping", "Target": "*"},
+                "20251019110000000000": {"Function": "cmd.run", "Target": "web-01"},
+                "20251019100000000000": {"Function": "state.apply", "Target": "*"},
+            }],
+        }
+
+    fake_salt_api.run_handler = handler
+    client = _make_client(fake_salt_api)
+    try:
+        result = await client.list_jobs(limit=2)
+    finally:
+        await client.aclose()
+    assert list(result.keys()) == ["20251019120000123456", "20251019110000000000"]
+    assert result["20251019120000123456"]["Function"] == "test.ping"
+
+
+@pytest.mark.asyncio
+async def test_get_job_returns_detail(fake_salt_api):
+    captured: dict = {}
+
+    def handler(payload):
+        captured.update(payload)
+        return {
+            "return": [{
+                "Function": "test.ping",
+                "Arguments": [],
+                "Target": "*",
+                "Target-type": "glob",
+                "User": "halite-service",
+                "StartTime": "2025-10-19T12:00:00.123456",
+                "Minions": ["web-01"],
+                "Result": {"web-01": {"return": True, "success": True}},
+            }],
+        }
+
+    fake_salt_api.run_handler = handler
+    client = _make_client(fake_salt_api)
+    try:
+        result = await client.get_job("20251019120000123456")
+    finally:
+        await client.aclose()
+    assert result is not None
+    assert result["Function"] == "test.ping"
+    assert captured["fun"] == "jobs.list_job"
+    assert captured["jid"] == "20251019120000123456"
+
+
+@pytest.mark.asyncio
+async def test_get_job_returns_none_for_unknown_jid(fake_salt_api):
+    def handler(payload):
+        return {"return": [{}]}
+
+    fake_salt_api.run_handler = handler
+    client = _make_client(fake_salt_api)
+    try:
+        result = await client.get_job("nonexistent")
+    finally:
+        await client.aclose()
+    assert result is None

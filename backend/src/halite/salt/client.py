@@ -260,6 +260,28 @@ class SaltAPIClient:
         non-existent minions."""
         await self.wheel_call("key.delete", match=minion_id)
 
+    async def list_jobs(self, limit: int = 50) -> dict[str, dict[str, Any]]:
+        """Return recent jobs from the master's job cache.
+
+        Calls runner.jobs.list_jobs and slices to the most recent `limit` entries
+        (ordered by jid descending, since salt jids are timestamp-based and
+        sort lexicographically by time).
+        """
+        result = await self.runner_call("jobs.list_jobs")
+        if not isinstance(result, dict):
+            return {}
+        ordered = sorted(result.keys(), reverse=True)[:limit]
+        return {jid: result[jid] for jid in ordered if isinstance(result[jid], dict)}
+
+    async def get_job(self, jid: str) -> dict[str, Any] | None:
+        """Return detail for one job. None if the jid is not in the cache."""
+        result = await self.runner_call("jobs.list_job", jid=jid)
+        if not isinstance(result, dict):
+            return None
+        if not result.get("Function"):
+            return None
+        return result
+
 
 # ---------- helpers ----------
 
