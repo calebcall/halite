@@ -37,7 +37,14 @@ BUILTIN_ROLES: dict[str, tuple[str, list[tuple[str, str]]]] = {
 
 
 async def seed_builtin_roles(session: AsyncSession) -> None:
-    """Insert the built-in roles + their permissions if missing. Idempotent."""
+    """Insert the built-in roles + their permissions if missing. Idempotent.
+
+    Both roles and permissions are filled in a gap-filling manner: a role
+    is created only if absent, and each (verb, resource_glob) pair is
+    inserted only if not already present on the role. This makes the
+    seed safe to call on every boot and ensures deployments upgrading
+    from earlier plans pick up newly-added permissions on built-in roles.
+    """
     for name, (description, perms) in BUILTIN_ROLES.items():
         existing = (
             await session.execute(select(Role).where(Role.name == name))
@@ -46,5 +53,16 @@ async def seed_builtin_roles(session: AsyncSession) -> None:
             role = Role(name=name, is_builtin=True, description=description)
             session.add(role)
             await session.flush()
-            for verb, glob in perms:
+        else:
+            role = existing
+        existing_perms = {
+            (perm.verb, perm.resource_glob)
+            for perm in (
+                await session.execute(
+                    select(Permission).where(Permission.role_id == role.id)
+                )
+            ).scalars().all()
+        }
+        for verb, glob in perms:
+            if (verb, glob) not in existing_perms:
                 session.add(Permission(role_id=role.id, verb=verb, resource_glob=glob))
