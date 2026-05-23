@@ -16,6 +16,7 @@ import { KeysListPage } from '@/features/keys/keys-list-page'
 import { MinionDetailPage } from '@/features/minions/minion-detail-page'
 import { MinionsListPage } from '@/features/minions/minions-list-page'
 import { RolesListPage } from '@/features/roles/roles-list-page'
+import { RunCommandPage } from '@/features/run/run-command-page'
 import { UsersListPage } from '@/features/users/users-list-page'
 import { AppShell } from './layout/AppShell'
 
@@ -105,6 +106,12 @@ const rolesRoute = createRoute({
   component: () => <RolesListPage />,
 })
 
+const runRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/run',
+  component: () => <RunCommandPage />,
+})
+
 const auditRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/audit',
@@ -123,6 +130,7 @@ const routeTree = rootRoute.addChildren([
     jobDetailRoute,
     usersRoute,
     rolesRoute,
+    runRoute,
     auditRoute,
   ]),
 ])

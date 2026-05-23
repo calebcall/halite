@@ -1,5 +1,5 @@
 // frontend/src/app/layout/Sidebar.tsx
-import { Activity, FileClock, Key, Server, Shield, Users } from 'lucide-react'
+import { Activity, FileClock, Key, Server, Shield, Terminal, Users } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 
 import { useHasPerm } from '@/features/auth/use-has-perm'
@@ -19,6 +19,7 @@ const navItems: NavItem[] = [
   { to: '/minions', label: 'Minions', icon: Server, requires: { verb: 'view', resource: 'minion:*' } },
   { to: '/keys', label: 'Keys', icon: Key, requires: { verb: 'view', resource: 'key:*' } },
   { to: '/jobs', label: 'Jobs', icon: Activity, requires: { verb: 'view', resource: 'job:*' } },
+  { to: '/run', label: 'Run', icon: Terminal, requires: { verb: 'execute', resource: 'salt:*' } },
   { to: '/users', label: 'Users', icon: Users, requires: { verb: 'view', resource: 'user:*' } },
   { to: '/roles', label: 'Roles', icon: Shield, requires: { verb: 'view', resource: 'role:*' } },
   { to: '/audit', label: 'Audit', icon: FileClock, requires: { verb: 'view', resource: 'audit:*' } },
