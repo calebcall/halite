@@ -81,7 +81,7 @@ function RunCommandPageInner() {
     e.preventDefault()
     setError(null)
     const args = argsText.split('\n').map((s) => s.trim()).filter((s) => s.length > 0)
-    const kwargs: Record<string, string> = {}
+    const kwargs: Record<string, unknown> = {}
     for (const line of kwargsText.split('\n')) {
       const trimmed = line.trim()
       if (!trimmed) continue
@@ -90,7 +90,17 @@ function RunCommandPageInner() {
         setError(`Invalid kwarg line (expected key=value): ${trimmed}`)
         return
       }
-      kwargs[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim()
+      const key = trimmed.slice(0, eq).trim()
+      const rawValue = trimmed.slice(eq + 1).trim()
+      // Try to parse as JSON so dicts / arrays / bools / numbers round-trip
+      // through the textarea. If it doesn't parse, treat as plain string.
+      let value: unknown = rawValue
+      try {
+        value = JSON.parse(rawValue)
+      } catch {
+        // Not JSON — keep as raw string
+      }
+      kwargs[key] = value
     }
     mutation.mutate(
       { target, target_type: targetType, fun, args, kwargs },

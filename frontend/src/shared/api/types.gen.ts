@@ -723,12 +723,9 @@ export interface components {
              * @default []
              */
             args: string[];
-            /**
-             * Kwargs
-             * @default {}
-             */
-            kwargs: {
-                [key: string]: string;
+            /** Kwargs */
+            kwargs?: {
+                [key: string]: unknown;
             };
         };
         /** RunCommandOut */

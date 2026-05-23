@@ -173,6 +173,42 @@ async def test_run_command_502_when_salt_returns_no_jid(app_db, session, fake_sa
 
 
 @pytest.mark.asyncio
+async def test_run_command_accepts_dict_kwarg_value(app_db, session, fake_salt_api):
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(session, [("execute", "salt:*")])
+    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+
+    captured_kwarg: dict = {}
+
+    def handler(payload):
+        captured_kwarg.update(payload.get("kwarg") or {})
+        return {"return": [{"jid": "20260123120000000001", "minions": ["web-01"]}]}
+
+    fake_salt_api.run_handler = handler
+
+    app = create_app(settings=settings, codec=codec)
+    client = _attach_salt_client(app, fake_salt_api)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+            r = await ac.post(
+                "/api/run",
+                cookies={settings.cookie_name: codec.sign(sess.id)},
+                json={
+                    "target": "*",
+                    "fun": "state.apply",
+                    "args": ["mystate"],
+                    "kwargs": {"pillar": {"env": "prod"}},
+                },
+            )
+    finally:
+        await client.aclose()
+    assert r.status_code == 202
+    assert captured_kwarg == {"pillar": {"env": "prod"}}
+
+
+@pytest.mark.asyncio
 async def test_run_command_503_when_salt_not_configured(app_db, session):
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
