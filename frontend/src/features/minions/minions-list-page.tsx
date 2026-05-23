@@ -1,8 +1,15 @@
 // frontend/src/features/minions/minions-list-page.tsx
-import { Loader2, Server } from 'lucide-react'
-import { Link } from '@tanstack/react-router'
+import { Loader2, MoreHorizontal, Server, Terminal } from 'lucide-react'
+import { Link, useNavigate } from '@tanstack/react-router'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -13,6 +20,7 @@ import {
 } from '@/components/ui/table'
 import { ApiError } from '@/shared/api/client'
 import { MustChangePassword } from '@/features/auth/guards'
+import { useHasPerm } from '@/features/auth/use-has-perm'
 import type { MinionStatus } from './api'
 import { useMinionsList } from './use-minions'
 
@@ -26,6 +34,8 @@ export function MinionsListPage() {
 
 function MinionsListPageInner() {
   const { data, isPending, error } = useMinionsList()
+  const canRun = useHasPerm('execute', 'salt:*')
+  const navigate = useNavigate()
 
   if (error instanceof ApiError && error.isForbidden) {
     return (
@@ -68,19 +78,20 @@ function MinionsListPageInner() {
               <TableHead>Minion ID</TableHead>
               <TableHead>IP</TableHead>
               <TableHead className="w-32 text-right">Status</TableHead>
+              <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {isPending && (
               <TableRow>
-                <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                   <Loader2 className="mx-auto h-4 w-4 animate-spin" />
                 </TableCell>
               </TableRow>
             )}
             {!isPending && data && data.minions.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                   No minions known to the master.
                 </TableCell>
               </TableRow>
@@ -102,6 +113,25 @@ function MinionsListPageInner() {
                 </TableCell>
                 <TableCell className="text-right">
                   <StatusBadge status={m.status} />
+                </TableCell>
+                <TableCell className="w-12">
+                  {canRun && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label={`Actions for ${m.id}`}>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => void navigate({ to: '/run', search: { target: m.id, target_type: 'glob' } })}
+                        >
+                          <Terminal className="mr-2 h-4 w-4" />
+                          Run command
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

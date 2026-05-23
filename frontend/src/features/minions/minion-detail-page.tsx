@@ -1,8 +1,9 @@
 // frontend/src/features/minions/minion-detail-page.tsx
-import { ArrowLeft, Loader2, Server } from 'lucide-react'
+import { ArrowLeft, Loader2, Server, Terminal } from 'lucide-react'
 import { Link, useParams } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui/table'
 import { ApiError } from '@/shared/api/client'
 import { MustChangePassword } from '@/features/auth/guards'
+import { useHasPerm } from '@/features/auth/use-has-perm'
 import { StatusBadge } from './minions-list-page'
 import { useMinion } from './use-minions'
 
@@ -30,6 +32,7 @@ function MinionDetailPageInner() {
   const { minionId } = useParams({ from: '/app/minions/$minionId' })
   const { data, isPending, error } = useMinion(minionId)
   const [grainSearch, setGrainSearch] = useState('')
+  const canRun = useHasPerm('execute', 'salt:*')
 
   if (error instanceof ApiError && error.status === 404) {
     return <NotFoundPanel minionId={minionId} />
@@ -56,13 +59,21 @@ function MinionDetailPageInner() {
         Back to minions
       </Link>
 
-      <div className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Server className="h-6 w-6 text-muted-foreground" />
           <h2 className="font-mono text-2xl font-semibold tracking-tight">{minionId}</h2>
           {data && <StatusBadge status={data.status} />}
         </div>
-      </div>
+        {canRun && (
+          <Button asChild variant="outline" size="sm">
+            <Link to="/run" search={{ target: minionId, target_type: 'glob' }}>
+              <Terminal className="mr-2 h-4 w-4" />
+              Run command
+            </Link>
+          </Button>
+        )}
+      </header>
 
       {isPending && (
         <div className="flex items-center justify-center py-12 text-muted-foreground">
