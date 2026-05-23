@@ -66,8 +66,9 @@ describe('JobDetailPage', () => {
       http.get('/api/jobs/:jid', () =>
         HttpResponse.json({
           jid: '20251019120000123456',
-          function: 'test.ping',
-          arguments: [],
+          function: 'state.apply',
+          arguments: ['mystate'],
+          kwargs: { pillar: { foo: 'bar' } },
           target: '*',
           target_type: 'glob',
           user: 'halite-service',
@@ -82,11 +83,13 @@ describe('JobDetailPage', () => {
     )
     renderAt('20251019120000123456')
     expect(await screen.findByText('20251019120000123456')).toBeInTheDocument()
-    expect(screen.getByText(/test\.ping on \*/i)).toBeInTheDocument()
+    expect(screen.getByText(/state\.apply on \*/i)).toBeInTheDocument()
     expect(screen.getByText('web-01')).toBeInTheDocument()
     expect(screen.getByText('web-02')).toBeInTheDocument()
     expect(screen.getByText('success')).toBeInTheDocument()
     expect(screen.getByText('failed')).toBeInTheDocument()
+    expect(screen.getByText(/Keyword arguments/i)).toBeInTheDocument()
+    expect(screen.getByText(/"pillar"/)).toBeInTheDocument()
   })
 
   it('expands a minion result on click', async () => {
@@ -96,6 +99,7 @@ describe('JobDetailPage', () => {
           jid: 'j1',
           function: 'test.ping',
           arguments: [],
+          kwargs: {},
           target: '*',
           target_type: 'glob',
           user: 'halite-service',

@@ -89,6 +89,15 @@ function JobDetailPageInner() {
         </div>
       )}
 
+      {Object.keys(data.kwargs).length > 0 && (
+        <div className="rounded-md border p-4">
+          <p className="mb-2 text-sm font-medium">Keyword arguments</p>
+          <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">
+            {JSON.stringify(data.kwargs, null, 2)}
+          </pre>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
         <h3 className="text-lg font-semibold tracking-tight">Results</h3>
         {data.results.length === 0 ? (
