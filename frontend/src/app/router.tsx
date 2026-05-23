@@ -106,9 +106,24 @@ const rolesRoute = createRoute({
   component: () => <RolesListPage />,
 })
 
+type RunSearch = {
+  target?: string
+  target_type?: string
+  fun?: string
+  args?: string  // JSON-stringified array
+  kwargs?: string  // JSON-stringified object
+}
+
 const runRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/run',
+  validateSearch: (search: Record<string, unknown>): RunSearch => ({
+    target: typeof search.target === 'string' ? search.target : undefined,
+    target_type: typeof search.target_type === 'string' ? search.target_type : undefined,
+    fun: typeof search.fun === 'string' ? search.fun : undefined,
+    args: typeof search.args === 'string' ? search.args : undefined,
+    kwargs: typeof search.kwargs === 'string' ? search.kwargs : undefined,
+  }),
   component: () => <RunCommandPage />,
 })
 

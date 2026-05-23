@@ -1,5 +1,5 @@
 // frontend/src/features/run/run-command-page.tsx
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { Loader2, Terminal } from 'lucide-react'
 import { useState } from 'react'
 
@@ -21,6 +21,34 @@ import { useRunCommand } from './use-run'
 
 const TARGET_TYPES = ['glob', 'list', 'pcre', 'grain', 'nodegroup', 'compound'] as const
 
+function parseSearchArgs(raw: string | undefined): string {
+  if (!raw) return ''
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (Array.isArray(parsed)) {
+      return parsed.map((v) => (typeof v === 'string' ? v : JSON.stringify(v))).join('\n')
+    }
+  } catch {
+    // fall through
+  }
+  return ''
+}
+
+function parseSearchKwargs(raw: string | undefined): string {
+  if (!raw) return ''
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return Object.entries(parsed as Record<string, unknown>)
+        .map(([k, v]) => `${k}=${typeof v === 'string' ? v : JSON.stringify(v)}`)
+        .join('\n')
+    }
+  } catch {
+    // fall through
+  }
+  return ''
+}
+
 export function RunCommandPage() {
   return (
     <MustChangePassword>
@@ -32,11 +60,21 @@ export function RunCommandPage() {
 function RunCommandPageInner() {
   const navigate = useNavigate()
   const mutation = useRunCommand()
-  const [target, setTarget] = useState('*')
-  const [targetType, setTargetType] = useState<(typeof TARGET_TYPES)[number]>('glob')
-  const [fun, setFun] = useState('')
-  const [argsText, setArgsText] = useState('')
-  const [kwargsText, setKwargsText] = useState('')
+  const search = useSearch({ from: '/app/run' })
+
+  const initialTarget = search.target || '*'
+  const initialTargetType = (
+    TARGET_TYPES.includes(search.target_type as never) ? search.target_type : 'glob'
+  ) as (typeof TARGET_TYPES)[number]
+  const initialFun = search.fun || ''
+  const initialArgs = parseSearchArgs(search.args)
+  const initialKwargs = parseSearchKwargs(search.kwargs)
+
+  const [target, setTarget] = useState(initialTarget)
+  const [targetType, setTargetType] = useState<(typeof TARGET_TYPES)[number]>(initialTargetType)
+  const [fun, setFun] = useState(initialFun)
+  const [argsText, setArgsText] = useState(initialArgs)
+  const [kwargsText, setKwargsText] = useState(initialKwargs)
   const [error, setError] = useState<string | null>(null)
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
