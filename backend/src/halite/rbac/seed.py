@@ -16,8 +16,9 @@ BUILTIN_ROLES: dict[str, tuple[str, list[tuple[str, str]]]] = {
             ("view", "*"),
             ("run", "*"),
             ("accept", "key:*"),
-            ("reject", "key:*"),
             ("delete", "key:*"),
+            ("execute", "salt:*"),
+            ("reject", "key:*"),
         ],
     ),
     "viewer": (
