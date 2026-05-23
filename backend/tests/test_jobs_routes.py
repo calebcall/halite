@@ -121,8 +121,8 @@ async def test_job_detail_returns_per_minion_results(app_db, session, fake_salt_
     await session.commit()
 
     fake_salt_api.run_handler = _jobs_handler(detail_payload={
-        "Function": "test.ping",
-        "Arguments": [],
+        "Function": "state.apply",
+        "Arguments": ["mystate", {"__kwarg__": True, "pillar": {"foo": "bar"}}],
         "Target": "*",
         "Target-type": "glob",
         "User": "halite-service",
@@ -148,13 +148,15 @@ async def test_job_detail_returns_per_minion_results(app_db, session, fake_salt_
     assert r.status_code == 200
     body = r.json()
     assert body["jid"] == "20251019120000123456"
-    assert body["function"] == "test.ping"
+    assert body["function"] == "state.apply"
     assert body["minions"] == ["web-01", "web-02"]
     results_by_minion = {r["minion"]: r for r in body["results"]}
     assert results_by_minion["web-01"]["success"] is True
     assert results_by_minion["web-01"]["return_value"] is True
     assert results_by_minion["web-02"]["success"] is False
     assert results_by_minion["web-02"]["retcode"] == 1
+    assert body["arguments"] == ["mystate"]
+    assert body["kwargs"] == {"pillar": {"foo": "bar"}}
 
 
 @pytest.mark.asyncio
@@ -195,3 +197,36 @@ async def test_jobs_list_503_when_salt_not_configured(app_db, session):
     ):
         r = await ac.get("/api/jobs", cookies={settings.cookie_name: codec.sign(sess.id)})
     assert r.status_code == 503
+
+
+def test_split_args_and_kwargs_with_trailing_kwarg():
+    from halite.jobs.service import _split_args_and_kwargs
+    positional, kwargs = _split_args_and_kwargs([
+        "a1",
+        "a2",
+        {"__kwarg__": True, "k1": "v1", "k2": ["nested"]},
+    ])
+    assert positional == ["a1", "a2"]
+    assert kwargs == {"k1": "v1", "k2": ["nested"]}
+
+
+def test_split_args_and_kwargs_with_no_kwarg():
+    from halite.jobs.service import _split_args_and_kwargs
+    positional, kwargs = _split_args_and_kwargs(["a1", "a2"])
+    assert positional == ["a1", "a2"]
+    assert kwargs == {}
+
+
+def test_split_args_and_kwargs_with_empty_args():
+    from halite.jobs.service import _split_args_and_kwargs
+    positional, kwargs = _split_args_and_kwargs([])
+    assert positional == []
+    assert kwargs == {}
+
+
+def test_split_args_and_kwargs_trailing_dict_without_marker():
+    """A trailing dict that doesn't have __kwarg__: True is NOT kwargs."""
+    from halite.jobs.service import _split_args_and_kwargs
+    positional, kwargs = _split_args_and_kwargs(["a1", {"plain": "dict"}])
+    assert positional == ["a1", {"plain": "dict"}]
+    assert kwargs == {}

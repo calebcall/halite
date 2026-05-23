@@ -31,6 +31,7 @@ class JobDetail(BaseModel):
     jid: str
     function: str
     arguments: list[Any] = []
+    kwargs: dict[str, Any] = {}
     target: str
     target_type: str | None = None
     user: str | None = None

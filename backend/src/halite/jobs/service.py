@@ -24,6 +24,16 @@ def _opt_str(value: Any) -> str | None:
     return str(value)
 
 
+def _split_args_and_kwargs(raw_args: list[Any]) -> tuple[list[Any], dict[str, Any]]:
+    """Salt embeds kwargs as the trailing dict entry with __kwarg__: True.
+    Returns (positional_args, kwargs). If no kwarg entry, kwargs is empty."""
+    if raw_args and isinstance(raw_args[-1], dict) and raw_args[-1].get("__kwarg__") is True:
+        kwarg_entry = dict(raw_args[-1])
+        kwarg_entry.pop("__kwarg__", None)
+        return list(raw_args[:-1]), kwarg_entry
+    return list(raw_args), {}
+
+
 async def list_recent_jobs(client: SaltAPIClient, *, limit: int) -> list[JobSummary]:
     raw = await client.list_jobs(limit=limit)
     return [_summary_from_raw(jid, j) for jid, j in raw.items()]
@@ -52,10 +62,12 @@ async def get_job_detail(client: SaltAPIClient, jid: str) -> JobDetail | None:
                     minion=str(minion_id),
                     return_value=value,
                 ))
+    positional, kwargs = _split_args_and_kwargs(list(raw.get("Arguments") or []))
     return JobDetail(
         jid=jid,
         function=str(raw.get("Function") or ""),
-        arguments=list(raw.get("Arguments") or []),
+        arguments=positional,
+        kwargs=kwargs,
         target=str(raw.get("Target") or ""),
         target_type=_opt_str(raw.get("Target-type")),
         user=_opt_str(raw.get("User")),
