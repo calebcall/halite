@@ -1,12 +1,13 @@
 // frontend/src/features/jobs/job-detail-page.tsx
 import { Link, useParams } from '@tanstack/react-router'
-import { ArrowLeft, CheckCircle2, ChevronDown, Loader2, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronDown, Loader2, Terminal, XCircle } from 'lucide-react'
 import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/shared/api/client'
 import { MustChangePassword } from '@/features/auth/guards'
+import { useHasPerm } from '@/features/auth/use-has-perm'
 import type { JobMinionResult } from './api'
 import { useJob } from './use-jobs'
 
@@ -21,6 +22,7 @@ export function JobDetailPage() {
 function JobDetailPageInner() {
   const { jid } = useParams({ from: '/app/jobs/$jid' })
   const { data, isPending, error } = useJob(jid)
+  const canRun = useHasPerm('execute', 'salt:*')
 
   if (isPending) {
     return (
@@ -66,9 +68,28 @@ function JobDetailPageInner() {
   return (
     <div className="flex flex-col gap-4">
       <BackToList />
-      <header>
-        <h2 className="text-2xl font-semibold tracking-tight font-mono">{data.jid}</h2>
-        <p className="text-sm text-muted-foreground">{data.function} on {data.target || 'no target'}</p>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight font-mono">{data.jid}</h2>
+          <p className="text-sm text-muted-foreground">{data.function} on {data.target || 'no target'}</p>
+        </div>
+        {canRun && (
+          <Button asChild variant="outline" size="sm">
+            <Link
+              to="/run"
+              search={{
+                target: data.target,
+                target_type: data.target_type || 'glob',
+                fun: data.function,
+                args: data.arguments.length > 0 ? JSON.stringify(data.arguments) : undefined,
+                kwargs: Object.keys(data.kwargs as Record<string, unknown>).length > 0 ? JSON.stringify(data.kwargs) : undefined,
+              }}
+            >
+              <Terminal className="mr-2 h-4 w-4" />
+              Run again
+            </Link>
+          </Button>
+        )}
       </header>
 
       <dl className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-md border bg-muted/20 p-4 text-sm sm:grid-cols-4">
