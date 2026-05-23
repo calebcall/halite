@@ -15,5 +15,18 @@ export function useJob(jid: string) {
   return useQuery<JobDetail>({
     queryFn: () => jobsApi.get(jid),
     queryKey: jobsQueryKeys.detail(jid),
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) {
+        return false
+      }
+      // Salt populates `minions` upfront when the job is dispatched, and
+      // appends to `results` as each minion replies. Poll while incomplete.
+      if (data.results.length < data.minions.length) {
+        return 3_000
+      }
+      return false
+    },
+    staleTime: 5 * 60 * 1000,
   })
 }
