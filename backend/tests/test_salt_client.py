@@ -302,3 +302,32 @@ async def test_get_job_returns_none_for_unknown_jid(fake_salt_api):
     finally:
         await client.aclose()
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_run_local_async_returns_jid_and_minions(fake_salt_api):
+    captured: dict = {}
+
+    def handler(payload):
+        captured.update(payload)
+        return {"return": [{"jid": "20260123120000000000", "minions": ["web-01", "web-02"]}]}
+
+    fake_salt_api.run_handler = handler
+    client = _make_client(fake_salt_api)
+    try:
+        result = await client.run_local_async(
+            "web-*",
+            "test.ping",
+            target_type="glob",
+            args=["arg1"],
+            kwargs={"k1": "v1"},
+        )
+    finally:
+        await client.aclose()
+    assert result == {"jid": "20260123120000000000", "minions": ["web-01", "web-02"]}
+    assert captured["client"] == "local_async"
+    assert captured["tgt"] == "web-*"
+    assert captured["tgt_type"] == "glob"
+    assert captured["fun"] == "test.ping"
+    assert captured["arg"] == ["arg1"]
+    assert captured["kwarg"] == {"k1": "v1"}

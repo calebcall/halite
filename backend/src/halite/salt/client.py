@@ -282,6 +282,43 @@ class SaltAPIClient:
             return None
         return result
 
+    async def run_local_async(
+        self,
+        target: str,
+        fun: str,
+        *,
+        target_type: str = "glob",
+        args: list[Any] | None = None,
+        kwargs: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Fire a salt execution module function asynchronously.
+
+        Returns {jid, minions} on success. Salt-api's local_async client
+        responds with the assigned jid and the list of targeted minions
+        immediately — results land via the jobs cache as minions reply.
+
+        kwargs are passed via the dedicated `kwarg` key (not inlined at
+        the top level) so user-supplied keys can't collide with salt-api
+        reserved keys like `client`, `tgt`, `fun`.
+        """
+        payload: dict[str, Any] = {
+            "arg": list(args or []),
+            "client": "local_async",
+            "fun": fun,
+            "kwarg": dict(kwargs or {}),
+            "tgt": target,
+            "tgt_type": target_type,
+        }
+        body = await self._request(payload)
+        # local_async return shape: {"return": [{jid, minions}]}
+        if isinstance(body, dict):
+            inner = body.get("return")
+            if isinstance(inner, list) and inner:
+                first = inner[0]
+                if isinstance(first, dict):
+                    return first
+        return {}
+
 
 # ---------- helpers ----------
 
