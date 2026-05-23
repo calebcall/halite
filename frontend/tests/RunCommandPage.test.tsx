@@ -39,28 +39,44 @@ afterEach(() => {
 })
 afterAll(() => server.close())
 
-function renderInRouter() {
+function renderWithSearch(searchString: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const rootRoute = createRootRoute({ component: Outlet })
-  const homeRoute = createRoute({
+  const appRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/',
+    id: 'app',
+    component: Outlet,
+  })
+  const runRoute = createRoute({
+    getParentRoute: () => appRoute,
+    path: '/run',
+    validateSearch: (s: Record<string, unknown>) => ({
+      target: typeof s.target === 'string' ? s.target : undefined,
+      target_type: typeof s.target_type === 'string' ? s.target_type : undefined,
+      fun: typeof s.fun === 'string' ? s.fun : undefined,
+      args: typeof s.args === 'string' ? s.args : undefined,
+      kwargs: typeof s.kwargs === 'string' ? s.kwargs : undefined,
+    }),
     component: () => <RunCommandPage />,
   })
   const jobDetailRoute = createRoute({
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => appRoute,
     path: '/jobs/$jid',
     component: () => <div>jobs-detail-stub</div>,
   })
   const router = createRouter({
-    routeTree: rootRoute.addChildren([homeRoute, jobDetailRoute]),
-    history: createMemoryHistory({ initialEntries: ['/'] }),
+    routeTree: rootRoute.addChildren([appRoute.addChildren([runRoute, jobDetailRoute])]),
+    history: createMemoryHistory({ initialEntries: [`/run${searchString}`] }),
   })
   return { router, ...render(
     <QueryClientProvider client={qc}>
       <RouterProvider router={router} />
     </QueryClientProvider>,
   ) }
+}
+
+function renderInRouter() {
+  return renderWithSearch('')
 }
 
 describe('RunCommandPage', () => {
@@ -120,5 +136,13 @@ describe('RunCommandPage', () => {
     await user.type(await screen.findByLabelText(/^function$/i), 'nodot')
     await user.click(screen.getByRole('button', { name: /^run$/i }))
     expect(await screen.findByText(/module\.function/i)).toBeInTheDocument()
+  })
+
+  it('prefills the form from search params', async () => {
+    renderWithSearch('?target=web-01&target_type=list&fun=cmd.run&args=%22%5B%5C%22ls+%2Ftmp%5C%22%5D%22&kwargs=%22%7B%5C%22shell%5C%22%3A%5C%22%2Fbin%2Fbash%5C%22%7D%22')
+    expect(((await screen.findByLabelText(/^target$/i)) as HTMLInputElement).value).toBe('web-01')
+    expect((screen.getByLabelText(/^function$/i) as HTMLInputElement).value).toBe('cmd.run')
+    expect((screen.getByLabelText(/^arguments/i) as HTMLTextAreaElement).value).toBe('ls /tmp')
+    expect((screen.getByLabelText(/^keyword arguments/i) as HTMLTextAreaElement).value).toBe('shell=/bin/bash')
   })
 })

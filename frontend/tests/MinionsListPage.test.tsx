@@ -8,6 +8,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
@@ -20,7 +21,10 @@ const server = setupServer(
       username: 'admin',
       display_name: 'admin',
       must_change_pw: false,
-      permissions: [{ verb: 'view', resource_glob: 'minion:*' }],
+      permissions: [
+        { verb: 'view', resource_glob: 'minion:*' },
+        { verb: 'execute', resource_glob: 'salt:*' },
+      ],
     }),
   ),
   http.get('/api/minions', () =>
@@ -83,5 +87,20 @@ describe('MinionsListPage', () => {
     )
     renderInRouter()
     expect(await screen.findByText(/don'?t have permission/i)).toBeInTheDocument()
+  })
+
+  it('shows a Run command item when user has execute:salt:*', async () => {
+    server.use(
+      http.get('/api/minions', () =>
+        HttpResponse.json({
+          total: 1,
+          minions: [{ id: 'web-01', status: 'online', ip: '1.2.3.4' }],
+        }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderInRouter()
+    await user.click(await screen.findByRole('button', { name: /actions for web-01/i }))
+    expect(await screen.findByText(/run command/i)).toBeInTheDocument()
   })
 })
