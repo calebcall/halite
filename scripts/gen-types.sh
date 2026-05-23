@@ -17,6 +17,7 @@ cd backend
 DATABASE_URL="sqlite+aiosqlite:///$SPEC_DB" \
 COOKIE_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')" \
 COOKIE_SECURE=false \
+PYTHONPATH=src \
 python -c "
 import json
 from halite.config import Settings

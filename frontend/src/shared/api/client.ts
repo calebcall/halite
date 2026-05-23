@@ -260,4 +260,12 @@ export const api = {
         path: `/api/minions/${encodeURIComponent(minionId)}`,
       }),
   },
+  run: {
+    post: (body: paths['/api/run']['post']['requestBody']['content']['application/json']) =>
+      request<paths['/api/run']['post']['responses']['202']['content']['application/json']>({
+        method: 'POST',
+        path: '/api/run',
+        body,
+      }),
+  },
 }

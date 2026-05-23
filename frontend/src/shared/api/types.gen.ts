@@ -330,6 +330,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Command Route */
+        post: operations["run_command_route_api_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users": {
         parameters: {
             query?: never;
@@ -683,6 +700,38 @@ export interface components {
         RoleUpdatePayload: {
             /** Description */
             description?: string | null;
+        };
+        /** RunCommandIn */
+        RunCommandIn: {
+            /** Target */
+            target: string;
+            /**
+             * Target Type
+             * @default glob
+             * @enum {string}
+             */
+            target_type: "glob" | "list" | "pcre" | "grain" | "nodegroup" | "compound";
+            /** Fun */
+            fun: string;
+            /**
+             * Args
+             * @default []
+             */
+            args: string[];
+            /**
+             * Kwargs
+             * @default {}
+             */
+            kwargs: {
+                [key: string]: string;
+            };
+        };
+        /** RunCommandOut */
+        RunCommandOut: {
+            /** Jid */
+            jid: string;
+            /** Minions */
+            minions: string[];
         };
         /** UserCreatePayload */
         UserCreatePayload: {
@@ -1382,6 +1431,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_command_route_api_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunCommandIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunCommandOut"];
+                };
             };
             /** @description Validation Error */
             422: {
