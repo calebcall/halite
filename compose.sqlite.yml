@@ -9,6 +9,11 @@ services:
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-changeme}
       LOG_FORMAT: ${LOG_FORMAT:-json}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      SALT_API_URL: ${SALT_API_URL:-}
+      SALT_API_USERNAME: ${SALT_API_USERNAME:-}
+      SALT_API_PASSWORD: ${SALT_API_PASSWORD:-}
+      SALT_API_VERIFY: ${SALT_API_VERIFY:-true}
+      SALT_API_EAUTH: ${SALT_API_EAUTH:-pam}
       HALITE_STATIC_DIR: /app/frontend/dist
     volumes:
       - halite-sqlite:/data
