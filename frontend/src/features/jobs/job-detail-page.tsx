@@ -82,7 +82,7 @@ function JobDetailPageInner() {
                 target_type: data.target_type || 'glob',
                 fun: data.function,
                 args: data.arguments.length > 0 ? JSON.stringify(data.arguments) : undefined,
-                kwargs: Object.keys(data.kwargs as Record<string, unknown>).length > 0 ? JSON.stringify(data.kwargs) : undefined,
+                kwargs: Object.keys(data.kwargs ?? {}).length > 0 ? JSON.stringify(data.kwargs) : undefined,
               }}
             >
               <Terminal className="mr-2 h-4 w-4" />
@@ -110,7 +110,7 @@ function JobDetailPageInner() {
         </div>
       )}
 
-      {Object.keys(data.kwargs).length > 0 && (
+      {Object.keys(data.kwargs ?? {}).length > 0 && (
         <div className="rounded-md border p-4">
           <p className="mb-2 text-sm font-medium">Keyword arguments</p>
           <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">

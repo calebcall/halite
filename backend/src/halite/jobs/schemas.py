@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class JobSummary(BaseModel):
@@ -31,7 +31,9 @@ class JobDetail(BaseModel):
     jid: str
     function: str
     arguments: list[Any] = []
-    kwargs: dict[str, Any] = {}
+    # additionalProperties=True so openapi-typescript emits the kwargs
+    # type as { [key: string]: unknown } instead of Record<string, never>.
+    kwargs: dict[str, Any] = Field(default_factory=dict, json_schema_extra={"additionalProperties": True})
     target: str
     target_type: str | None = None
     user: str | None = None

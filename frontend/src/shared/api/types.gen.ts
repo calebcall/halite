@@ -496,11 +496,10 @@ export interface components {
              * @default []
              */
             arguments: unknown[];
-            /**
-             * Kwargs
-             * @default {}
-             */
-            kwargs: Record<string, never>;
+            /** Kwargs */
+            kwargs?: {
+                [key: string]: unknown;
+            };
             /** Target */
             target: string;
             /** Target Type */
