@@ -1,7 +1,10 @@
 // frontend/src/features/jobs/jobs-list-page.tsx
+import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -25,6 +28,20 @@ export function JobsListPage() {
 function JobsListPageInner() {
   const { data, isPending, error } = useJobsList()
   const detail = errorDetail(error)
+
+  const [filter, setFilter] = useState('')
+
+  const filteredJobs = useMemo(() => {
+    if (!data) return []
+    const q = filter.trim().toLowerCase()
+    if (!q) return data.jobs
+    return data.jobs.filter((j) =>
+      j.jid.toLowerCase().includes(q) ||
+      j.function.toLowerCase().includes(q) ||
+      (j.target || '').toLowerCase().includes(q) ||
+      (j.user || '').toLowerCase().includes(q),
+    )
+  }, [data, filter])
 
   if (error instanceof ApiError && error.isForbidden) {
     return (
@@ -59,6 +76,14 @@ function JobsListPageInner() {
         </p>
       </div>
 
+      <Input
+        type="search"
+        placeholder="Filter by jid, function, target, or user…"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        className="max-w-md"
+      />
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -66,6 +91,7 @@ function JobsListPageInner() {
               <TableHead className="w-56">JID</TableHead>
               <TableHead>Function</TableHead>
               <TableHead>Target</TableHead>
+              <TableHead className="w-24">Status</TableHead>
               <TableHead>User</TableHead>
               <TableHead className="w-48">Started</TableHead>
             </TableRow>
@@ -73,19 +99,19 @@ function JobsListPageInner() {
           <TableBody>
             {isPending && (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                   <Loader2 className="mx-auto h-4 w-4 animate-spin" />
                 </TableCell>
               </TableRow>
             )}
             {!isPending && data && data.jobs.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                   No jobs in the master cache.
                 </TableCell>
               </TableRow>
             )}
-            {data?.jobs.map((j) => (
+            {filteredJobs.map((j) => (
               <TableRow key={j.jid}>
                 <TableCell className="font-mono text-xs">
                   <Link to="/jobs/$jid" params={{ jid: j.jid }} className="block hover:underline">
@@ -94,6 +120,9 @@ function JobsListPageInner() {
                 </TableCell>
                 <TableCell className="font-mono text-xs">{j.function}</TableCell>
                 <TableCell className="font-mono text-xs">{j.target || '—'}</TableCell>
+                <TableCell>
+                  <JobStatusBadge status={j.status} />
+                </TableCell>
                 <TableCell className="text-xs">{j.user || '—'}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">
                   {j.start_time || '—'}
@@ -106,9 +135,22 @@ function JobsListPageInner() {
 
       {data && data.jobs.length > 0 && (
         <p className="text-sm text-muted-foreground">
-          {data.total} recent job{data.total === 1 ? '' : 's'}.
+          {filter
+            ? `Showing ${filteredJobs.length} of ${data.total} recent job${data.total === 1 ? '' : 's'}.`
+            : `${data.total} recent job${data.total === 1 ? '' : 's'}.`}
         </p>
       )}
     </div>
   )
+}
+
+function JobStatusBadge({ status }: { status: 'running' | 'complete' }) {
+  if (status === 'running') {
+    return (
+      <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200">
+        running
+      </Badge>
+    )
+  }
+  return <Badge variant="outline" className="text-muted-foreground">complete</Badge>
 }
