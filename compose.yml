@@ -1,12 +1,12 @@
 services:
   db:
-    image: postgres:16
+    image: postgres:18
     environment:
       POSTGRES_USER: halite
       POSTGRES_PASSWORD: halite
       POSTGRES_DB: halite
     volumes:
-      - halite-pg:/var/lib/postgresql/data
+      - halite-pg:/var/lib/postgresql
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "halite"]
       interval: 5s
@@ -35,7 +35,13 @@ services:
     ports:
       - "8080:8080"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')",
+        ]
       interval: 10s
       timeout: 3s
       retries: 6
