@@ -54,13 +54,16 @@ export function KeyActionDialog({
   const rejectMutation = useRejectKey()
   const deleteMutation = useDeleteKey()
   const [serverError, setServerError] = useState<string | null>(null)
-  const [pending, setPending] = useState(false)
+
+  const activeMutation =
+    action === 'accept' ? acceptMutation :
+    action === 'reject' ? rejectMutation : deleteMutation
+  const pending = activeMutation.isPending
 
   const copy = COPY[action]
 
   async function onConfirm() {
     setServerError(null)
-    setPending(true)
     try {
       if (action === 'accept') {
         await acceptMutation.mutateAsync(keyId)
@@ -82,8 +85,6 @@ export function KeyActionDialog({
       } else {
         setServerError(e instanceof Error ? e.message : `${copy.cta} failed.`)
       }
-    } finally {
-      setPending(false)
     }
   }
 

@@ -4,7 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { KeyActionDialog } from '@/features/keys/key-action-dialog'
 
@@ -36,38 +36,49 @@ afterAll(() => server.close())
 
 function renderDialog(action: 'accept' | 'reject' | 'delete') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
+  const onOpenChange = vi.fn()
+  const utils = render(
     <QueryClientProvider client={qc}>
-      <KeyActionDialog keyId="web-01" action={action} open onOpenChange={() => {}} />
+      <KeyActionDialog keyId="web-01" action={action} open onOpenChange={onOpenChange} />
     </QueryClientProvider>,
   )
+  return { ...utils, onOpenChange }
 }
 
 describe('KeyActionDialog', () => {
   it('confirms an accept', async () => {
     const user = userEvent.setup()
-    renderDialog('accept')
+    const { onOpenChange } = renderDialog('accept')
     await user.click(screen.getByRole('button', { name: /accept key/i }))
     await waitFor(() => {
       expect(lastPostedPath).toBe('/api/keys/web-01/accept')
+    })
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false)
     })
   })
 
   it('confirms a reject', async () => {
     const user = userEvent.setup()
-    renderDialog('reject')
+    const { onOpenChange } = renderDialog('reject')
     await user.click(screen.getByRole('button', { name: /reject key/i }))
     await waitFor(() => {
       expect(lastPostedPath).toBe('/api/keys/web-01/reject')
+    })
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false)
     })
   })
 
   it('confirms a delete', async () => {
     const user = userEvent.setup()
-    renderDialog('delete')
+    const { onOpenChange } = renderDialog('delete')
     await user.click(screen.getByRole('button', { name: /delete key/i }))
     await waitFor(() => {
       expect(lastDeletedPath).toBe('/api/keys/web-01')
+    })
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false)
     })
   })
 
