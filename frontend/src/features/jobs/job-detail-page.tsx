@@ -10,6 +10,8 @@ import { MustChangePassword } from '@/features/auth/guards'
 import { useHasPerm } from '@/features/auth/use-has-perm'
 import type { JobMinionResult } from './api'
 import { useJob } from './use-jobs'
+import { HighstateResult } from './highstate/highstate-result'
+import { parseHighstate } from './highstate/parse'
 
 export function JobDetailPage() {
   return (
@@ -167,6 +169,7 @@ function MinionResultCard({ result }: { result: JobMinionResult }) {
   const panelId = `minion-result-${result.minion}`
   const ok = result.success === true
   const failed = result.success === false
+  const highstate = parseHighstate(result.return_value)
   return (
     <div className="rounded-md border">
       <Button
@@ -189,13 +192,19 @@ function MinionResultCard({ result }: { result: JobMinionResult }) {
         </div>
         <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
       </Button>
-      <pre
+      <div
         id={panelId}
         hidden={!open}
-        className="overflow-x-auto border-t bg-muted/20 p-4 text-xs"
+        className="border-t bg-muted/20"
       >
-        {JSON.stringify(result.return_value, null, 2)}
-      </pre>
+        {highstate ? (
+          <HighstateResult states={highstate} />
+        ) : (
+          <pre className="overflow-x-auto p-4 text-xs">
+            {JSON.stringify(result.return_value, null, 2)}
+          </pre>
+        )}
+      </div>
     </div>
   )
 }
