@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ApiError } from '@/shared/api/client'
+import { ApiError, errorDetail } from '@/shared/api/client'
 import { MustChangePassword } from '@/features/auth/guards'
 import { useHasPerm } from '@/features/auth/use-has-perm'
 import { StatusBadge } from './minions-list-page'
@@ -33,6 +33,7 @@ function MinionDetailPageInner() {
   const { data, isPending, error } = useMinion(minionId)
   const [grainSearch, setGrainSearch] = useState('')
   const canRun = useHasPerm('execute', 'salt:*')
+  const detail = errorDetail(error)
 
   if (error instanceof ApiError && error.status === 404) {
     return <NotFoundPanel minionId={minionId} />
@@ -47,7 +48,8 @@ function MinionDetailPageInner() {
   if (error instanceof ApiError && error.status === 503) {
     return (
       <div className="rounded-md border border-amber-400/40 bg-amber-50 p-6 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-        Salt-API is not configured.
+        <p>Salt-API is not configured.</p>
+        {detail && <p className="mt-2 font-mono text-xs">{detail}</p>}
       </div>
     )
   }

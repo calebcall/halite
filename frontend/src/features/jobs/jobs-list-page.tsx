@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ApiError } from '@/shared/api/client'
+import { ApiError, errorDetail } from '@/shared/api/client'
 import { MustChangePassword } from '@/features/auth/guards'
 import { useJobsList } from './use-jobs'
 
@@ -24,6 +24,7 @@ export function JobsListPage() {
 
 function JobsListPageInner() {
   const { data, isPending, error } = useJobsList()
+  const detail = errorDetail(error)
 
   if (error instanceof ApiError && error.isForbidden) {
     return (
@@ -35,14 +36,16 @@ function JobsListPageInner() {
   if (error instanceof ApiError && error.status === 503) {
     return (
       <div className="rounded-md border border-amber-400/40 bg-amber-50 p-6 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-        Salt-API is not configured. Set <code>SALT_API_URL</code>, <code>SALT_API_USERNAME</code>, and <code>SALT_API_PASSWORD</code> in your <code>.env</code> and restart the stack.
+        <p>Salt-API is not configured. Set <code>SALT_API_URL</code>, <code>SALT_API_USERNAME</code>, and <code>SALT_API_PASSWORD</code> in your <code>.env</code> and restart the stack.</p>
+        {detail && <p className="mt-2 font-mono text-xs">{detail}</p>}
       </div>
     )
   }
   if (error instanceof ApiError && error.status === 502) {
     return (
       <div className="rounded-md border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">
-        Salt-API responded with an error.
+        <p>Salt-API responded with an error.</p>
+        {detail && <p className="mt-2 font-mono text-xs">{detail}</p>}
       </div>
     )
   }

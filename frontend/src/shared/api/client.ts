@@ -62,6 +62,18 @@ function extractDetail(body: unknown): string | undefined {
   return undefined
 }
 
+export function errorDetail(e: unknown): string | null {
+  if (e instanceof ApiError) {
+    // ApiError.message was populated from body.detail by extractDetail; if
+    // the body had no detail we get the default `HTTP ${status}` which
+    // isn't useful as a detail line.
+    if (e.message && !e.message.startsWith('HTTP ')) {
+      return e.message
+    }
+  }
+  return null
+}
+
 export const api = {
   auth: {
     login: (body: { username: string; password: string }) =>

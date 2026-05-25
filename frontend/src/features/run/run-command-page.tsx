@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { MustChangePassword } from '@/features/auth/guards'
-import { ApiError } from '@/shared/api/client'
+import { ApiError, errorDetail } from '@/shared/api/client'
 
 import { useRunCommand } from './use-run'
 
@@ -119,9 +119,11 @@ function RunCommandPageInner() {
             const detail = (e.body as { detail?: unknown })?.detail
             setError(typeof detail === 'string' ? detail : 'Invalid input.')
           } else if (e instanceof ApiError && e.status === 502) {
-            setError('Salt-API returned an error. Check the backend logs.')
+            const detail = errorDetail(e)
+            setError(detail ? `Salt-API returned an error: ${detail}` : 'Salt-API returned an error.')
           } else if (e instanceof ApiError && e.status === 503) {
-            setError('Salt-API is not reachable.')
+            const detail = errorDetail(e)
+            setError(detail ? `Salt-API is not reachable: ${detail}` : 'Salt-API is not reachable.')
           } else {
             setError(e instanceof Error ? e.message : 'Run failed.')
           }

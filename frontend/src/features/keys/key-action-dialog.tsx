@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { ApiError } from '@/shared/api/client'
+import { ApiError, errorDetail } from '@/shared/api/client'
 import { useAcceptKey, useDeleteKey, useRejectKey } from './use-keys'
 
 export type KeyAction = 'accept' | 'reject' | 'delete'
@@ -72,9 +72,11 @@ export function KeyActionDialog({
       onOpenChange(false)
     } catch (e) {
       if (e instanceof ApiError && e.status === 502) {
-        setServerError('Salt-API returned an error. Check the backend logs.')
+        const detail = errorDetail(e)
+        setServerError(detail ? `Salt-API returned an error: ${detail}` : 'Salt-API returned an error.')
       } else if (e instanceof ApiError && e.status === 503) {
-        setServerError('Salt-API is not reachable.')
+        const detail = errorDetail(e)
+        setServerError(detail ? `Salt-API is not reachable: ${detail}` : 'Salt-API is not reachable.')
       } else if (e instanceof ApiError && e.isForbidden) {
         setServerError(`You don't have permission to ${action} this key.`)
       } else {
