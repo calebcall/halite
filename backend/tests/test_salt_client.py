@@ -377,3 +377,45 @@ async def test_run_local_async_returns_jid_and_minions(fake_salt_api):
     assert captured["fun"] == "test.ping"
     assert captured["arg"] == ["arg1"]
     assert captured["kwarg"] == {"k1": "v1"}
+
+
+@pytest.mark.asyncio
+async def test_kill_job_calls_runner_with_jid(fake_salt_api):
+    captured: dict = {}
+
+    def handler(payload):
+        captured.update(payload)
+        return {"return": [{"web-01": True}]}
+
+    fake_salt_api.run_handler = handler
+    client = _make_client(fake_salt_api)
+    try:
+        await client.kill_job("20260123120000000000")
+    finally:
+        await client.aclose()
+    assert captured["client"] == "runner"
+    assert captured["fun"] == "saltutil.kill_job"
+    assert captured["jid"] == "20260123120000000000"
+
+
+@pytest.mark.asyncio
+async def test_list_active_jobs_returns_jids(fake_salt_api):
+    def handler(payload):
+        return {
+            "return": [{
+                "20260123120000000000": {"Function": "state.apply", "Target": "*"},
+                "20260123110000000000": {"Function": "cmd.run", "Target": "web-01"},
+            }],
+        }
+
+    fake_salt_api.run_handler = handler
+    client = _make_client(fake_salt_api)
+    try:
+        result = await client.list_active_jobs()
+    finally:
+        await client.aclose()
+    assert set(result.keys()) == {
+        "20260123120000000000",
+        "20260123110000000000",
+    }
+    assert result["20260123120000000000"]["Function"] == "state.apply"

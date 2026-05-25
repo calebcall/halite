@@ -404,6 +404,26 @@ class SaltAPIClient:
                     return first
         return {}
 
+    async def kill_job(self, jid: str) -> None:
+        """Signal all minions executing `jid` to abort.
+
+        Uses runner.saltutil.kill_job. Idempotent — salt no-ops if the
+        jid is unknown or already complete. Failure surfaces via the
+        existing SaltAPIError flow.
+        """
+        await self.runner_call("saltutil.kill_job", jid=jid)
+
+    async def list_active_jobs(self) -> dict[str, dict[str, Any]]:
+        """Return the dict of currently-running jobs (jid → details).
+
+        Calls runner.jobs.active. We typically only care about the keys
+        (set of active jids); callers cast as needed.
+        """
+        result = await self.runner_call("jobs.active")
+        if not isinstance(result, dict):
+            return {}
+        return result
+
 
 # ---------- helpers ----------
 
