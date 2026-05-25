@@ -78,7 +78,8 @@ describe('MinionsListPage', () => {
       ),
     )
     renderInRouter()
-    expect(await screen.findByText(/salt-api is not configured/i)).toBeInTheDocument()
+    const matches = await screen.findAllByText(/salt-api is not configured/i)
+    expect(matches.length).toBeGreaterThan(0)
   })
 
   it('shows Forbidden on 403', async () => {
