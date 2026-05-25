@@ -64,19 +64,45 @@ def _salt_router(
     connected: dict[str, str] | None = None,
     keys: dict[str, list[str]] | None = None,
     grains: dict[str, dict | None] | None = None,
+    network_grains: dict[str, dict] | None = None,
 ):
     """Returns a run_handler that responds to wheel/local calls based on the
-    payload's `fun` field. Pass dicts for the data this test cares about."""
+    payload's `fun` field. Pass dicts for the data this test cares about.
+
+    ``network_grains`` is the subset returned by the batched ``grains.item``
+    call the list endpoint makes (fqdn_ip4, ip4_gw, ip4_interfaces).
+    """
     connected = connected or {}
-    keys = keys or {"minions": [], "minions_pre": [], "minions_rejected": [], "minions_denied": [], "local": []}
+    keys = keys or {
+        "minions": [],
+        "minions_pre": [],
+        "minions_rejected": [],
+        "minions_denied": [],
+        "local": [],
+    }
     grains = grains or {}
+    network_grains = network_grains or {}
 
     def handler(payload):
         fun = payload.get("fun", "")
-        if fun == "minions.connected":
-            return {"return": [{"data": {"return": connected}}]}
+        if fun == "manage.present":
+            # runner.manage.present(show_ip=True) returns a list of [id, ip] pairs.
+            pairs = [[mid, ip] for mid, ip in connected.items()]
+            return {"return": [pairs]}
         if fun == "key.list_all":
             return {"return": [{"data": {"return": keys}}]}
+        if fun == "grains.item":
+            # local '...' grains.item fqdn_ip4 ip4_gw ip4_interfaces
+            # -> {minion: {grain: value, ...}}
+            tgt = payload.get("tgt", "")
+            tgt_type = payload.get("tgt_type", "glob")
+            if tgt_type == "list":
+                targets = [t for t in tgt.split(",") if t]
+            elif tgt == "*":
+                targets = list(connected.keys())
+            else:
+                targets = [tgt]
+            return {"return": [{mid: network_grains.get(mid, {}) for mid in targets}]}
         if fun == "grains.items":
             target = payload.get("tgt", "")
             return {"return": [{target: grains.get(target)} if target in grains else {}]}
@@ -175,7 +201,13 @@ async def test_minion_detail_online_returns_grains(app_db, session, fake_salt_ap
 
     fake_salt_api.run_handler = _salt_router(
         connected={"web-01": "10.0.0.1"},
-        keys={"minions": ["web-01"], "minions_pre": [], "minions_rejected": [], "minions_denied": [], "local": []},
+        keys={
+            "minions": ["web-01"],
+            "minions_pre": [],
+            "minions_rejected": [],
+            "minions_denied": [],
+            "local": [],
+        },
         grains={"web-01": {"os": "Ubuntu", "kernel": "Linux"}},
     )
 
@@ -183,7 +215,9 @@ async def test_minion_detail_online_returns_grains(app_db, session, fake_salt_ap
     client = _attach_salt_client(app, fake_salt_api)
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get("/api/minions/web-01", cookies={settings.cookie_name: codec.sign(sess.id)})
+            r = await ac.get(
+                "/api/minions/web-01", cookies={settings.cookie_name: codec.sign(sess.id)}
+            )
     finally:
         await client.aclose()
 
@@ -198,6 +232,112 @@ async def test_minion_detail_online_returns_grains(app_db, session, fake_salt_ap
 
 
 @pytest.mark.asyncio
+async def test_minions_list_prefers_fqdn_ip4_over_manage_present_ip(app_db, session, fake_salt_api):
+    """manage.present(show_ip=True) often returns the docker0 bridge IP from
+    the minion's ``ipv4`` grain. ``fqdn_ip4`` is the real primary address —
+    when present, it must win."""
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _viewer(session)
+    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+
+    fake_salt_api.run_handler = _salt_router(
+        connected={"web-01": "172.17.0.1", "db-01": "10.0.0.5"},
+        keys={
+            "minions": ["web-01", "db-01"],
+            "minions_pre": [],
+            "minions_rejected": [],
+            "minions_denied": [],
+            "local": [],
+        },
+        # web-01: classic docker-host shape. fqdn_ip4 is polluted with bridge
+        # IPs, but the real interface IP shares /24 with the gateway.
+        # db-01: no gateway info or interfaces — we fall back to fqdn_ip4,
+        # then ultimately to the manage.present value.
+        network_grains={
+            "web-01": {
+                "fqdn_ip4": ["172.18.0.1", "172.17.0.1", "203.0.113.10"],
+                "ip4_gw": "203.0.113.1",
+                "ip4_interfaces": {
+                    "lo": ["127.0.0.1"],
+                    "eth0": ["203.0.113.10"],
+                    "docker0": ["172.17.0.1"],
+                    "br-abc": ["172.18.0.1"],
+                },
+            },
+            "db-01": {},
+        },
+    )
+
+    app = create_app(settings=settings, codec=codec)
+    client = _attach_salt_client(app, fake_salt_api)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+            r = await ac.get("/api/minions", cookies={settings.cookie_name: codec.sign(sess.id)})
+    finally:
+        await client.aclose()
+
+    assert r.status_code == 200
+    by_id = {m["id"]: m for m in r.json()["minions"]}
+    # gateway-shared /24 wins over the polluted fqdn_ip4 entries.
+    assert by_id["web-01"]["ip"] == "203.0.113.10"
+    # db-01: nothing useful in grains — fall back to manage.present's value.
+    assert by_id["db-01"]["ip"] == "10.0.0.5"
+
+
+@pytest.mark.asyncio
+async def test_minion_detail_prefers_fqdn_ip4_from_grains(app_db, session, fake_salt_api):
+    """Detail view should pull the IP from grains.fqdn_ip4 rather than the IP
+    returned by manage.present."""
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _viewer(session)
+    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+
+    fake_salt_api.run_handler = _salt_router(
+        connected={"web-01": "172.17.0.1"},
+        keys={
+            "minions": ["web-01"],
+            "minions_pre": [],
+            "minions_rejected": [],
+            "minions_denied": [],
+            "local": [],
+        },
+        grains={
+            "web-01": {
+                "os": "Ubuntu",
+                "fqdn_ip4": ["172.18.0.1", "172.17.0.1", "203.0.113.10"],
+                "ip4_gw": "203.0.113.1",
+                "ip4_interfaces": {
+                    "lo": ["127.0.0.1"],
+                    "eth0": ["203.0.113.10"],
+                    "docker0": ["172.17.0.1"],
+                    "br-abc": ["172.18.0.1"],
+                },
+                "ipv4": ["127.0.0.1", "172.17.0.1", "203.0.113.10"],
+            }
+        },
+    )
+
+    app = create_app(settings=settings, codec=codec)
+    client = _attach_salt_client(app, fake_salt_api)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+            r = await ac.get(
+                "/api/minions/web-01", cookies={settings.cookie_name: codec.sign(sess.id)}
+            )
+    finally:
+        await client.aclose()
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ip"] == "203.0.113.10"
+    assert body["status"] == "online"
+
+
+@pytest.mark.asyncio
 async def test_minion_detail_offline_omits_grains(app_db, session, fake_salt_api):
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
@@ -207,14 +347,22 @@ async def test_minion_detail_offline_omits_grains(app_db, session, fake_salt_api
 
     fake_salt_api.run_handler = _salt_router(
         connected={},
-        keys={"minions": ["db-01"], "minions_pre": [], "minions_rejected": [], "minions_denied": [], "local": []},
+        keys={
+            "minions": ["db-01"],
+            "minions_pre": [],
+            "minions_rejected": [],
+            "minions_denied": [],
+            "local": [],
+        },
     )
 
     app = create_app(settings=settings, codec=codec)
     client = _attach_salt_client(app, fake_salt_api)
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get("/api/minions/db-01", cookies={settings.cookie_name: codec.sign(sess.id)})
+            r = await ac.get(
+                "/api/minions/db-01", cookies={settings.cookie_name: codec.sign(sess.id)}
+            )
     finally:
         await client.aclose()
 
@@ -235,14 +383,22 @@ async def test_minion_detail_pending(app_db, session, fake_salt_api):
 
     fake_salt_api.run_handler = _salt_router(
         connected={},
-        keys={"minions": [], "minions_pre": ["new-host"], "minions_rejected": [], "minions_denied": [], "local": []},
+        keys={
+            "minions": [],
+            "minions_pre": ["new-host"],
+            "minions_rejected": [],
+            "minions_denied": [],
+            "local": [],
+        },
     )
 
     app = create_app(settings=settings, codec=codec)
     client = _attach_salt_client(app, fake_salt_api)
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get("/api/minions/new-host", cookies={settings.cookie_name: codec.sign(sess.id)})
+            r = await ac.get(
+                "/api/minions/new-host", cookies={settings.cookie_name: codec.sign(sess.id)}
+            )
     finally:
         await client.aclose()
 
@@ -259,14 +415,23 @@ async def test_minion_detail_404(app_db, session, fake_salt_api):
     await session.commit()
 
     fake_salt_api.run_handler = _salt_router(
-        connected={}, keys={"minions": [], "minions_pre": [], "minions_rejected": [], "minions_denied": [], "local": []},
+        connected={},
+        keys={
+            "minions": [],
+            "minions_pre": [],
+            "minions_rejected": [],
+            "minions_denied": [],
+            "local": [],
+        },
     )
 
     app = create_app(settings=settings, codec=codec)
     client = _attach_salt_client(app, fake_salt_api)
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get("/api/minions/ghost", cookies={settings.cookie_name: codec.sign(sess.id)})
+            r = await ac.get(
+                "/api/minions/ghost", cookies={settings.cookie_name: codec.sign(sess.id)}
+            )
     finally:
         await client.aclose()
     assert r.status_code == 404

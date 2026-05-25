@@ -12,6 +12,7 @@ must run from a SYNC context — fixtures that drive migrations are therefore
 sync (pytest.fixture, not pytest_asyncio.fixture). Async session fixtures
 are layered on top after migrations have completed.
 """
+
 from __future__ import annotations
 
 import os
@@ -137,13 +138,18 @@ class FakeSaltAPI:
                     return httpx.Response(self.login_status, json={"detail": "login rejected"})
                 return httpx.Response(self.login_status, json=self.login_response)
 
-            if path == "/run":
+            # The real client POSTs lowstates to the session-aware root endpoint
+            # (`/`) with X-Auth-Token. We keep `/run` accepted here too for
+            # backwards compatibility with any direct callers.
+            if path in ("/", "/run"):
                 if self.run_status >= 400:
                     return httpx.Response(self.run_status, json={"detail": "run failed"})
                 if self.run_handler is None:
                     return httpx.Response(200, json={"return": [None]})
-                # salt-api accepts a list of payloads in /run; we look at the first.
-                payload_one = payload[0] if isinstance(payload, list) and payload else (payload or {})
+                # salt-api accepts a list of payloads; we look at the first.
+                payload_one = (
+                    payload[0] if isinstance(payload, list) and payload else (payload or {})
+                )
                 return httpx.Response(200, json=self.run_handler(payload_one))
 
             return httpx.Response(404, json={"detail": f"unknown path {path}"})

@@ -18,15 +18,17 @@ def _make_client(fake_salt_api) -> SaltAPIClient:
 
 @pytest.mark.asyncio
 async def test_logs_in_on_first_call(fake_salt_api):
-    fake_salt_api.run_handler = lambda payload: {"return": [{"data": {"return": {"m1": "1.2.3.4"}}}]}
+    fake_salt_api.run_handler = lambda payload: {
+        "return": [{"data": {"return": {"m1": "1.2.3.4"}}}]
+    }
     client = _make_client(fake_salt_api)
     try:
         result = await client.wheel_call("minions.connected")
     finally:
         await client.aclose()
     assert result == {"m1": "1.2.3.4"}
-    # First call should be /login, second /run
-    assert [p for p, _ in fake_salt_api.calls] == ["/login", "/run"]
+    # First call should be /login, second the root LowDataAdapter endpoint.
+    assert [p for p, _ in fake_salt_api.calls] == ["/login", "/"]
 
 
 @pytest.mark.asyncio
@@ -42,14 +44,23 @@ async def test_reuses_token_across_calls(fake_salt_api):
     # One login, three runs — token reused.
     paths = [p for p, _ in fake_salt_api.calls]
     assert paths.count("/login") == 1
-    assert paths.count("/run") == 3
+    assert paths.count("/") == 3
 
 
 @pytest.mark.asyncio
 async def test_refreshes_expired_token(fake_salt_api):
     # Token expires immediately — every call should re-login.
     fake_salt_api.login_response = {
-        "return": [{"token": "expired-token", "expire": time.time() - 1, "start": time.time() - 100, "user": "x", "eauth": "pam", "perms": []}]
+        "return": [
+            {
+                "token": "expired-token",
+                "expire": time.time() - 1,
+                "start": time.time() - 100,
+                "user": "x",
+                "eauth": "pam",
+                "perms": [],
+            }
+        ]
     }
     fake_salt_api.run_handler = lambda payload: {"return": [{"data": {"return": {}}}]}
     client = _make_client(fake_salt_api)
@@ -60,11 +71,13 @@ async def test_refreshes_expired_token(fake_salt_api):
         await client.aclose()
     paths = [p for p, _ in fake_salt_api.calls]
     assert paths.count("/login") == 2
+    assert paths.count("/") == 2
 
 
 @pytest.mark.asyncio
 async def test_concurrent_calls_share_one_login(fake_salt_api):
     import asyncio
+
     fake_salt_api.run_handler = lambda payload: {"return": [{"data": {"return": {}}}]}
     client = _make_client(fake_salt_api)
     try:
@@ -77,7 +90,7 @@ async def test_concurrent_calls_share_one_login(fake_salt_api):
         await client.aclose()
     paths = [p for p, _ in fake_salt_api.calls]
     assert paths.count("/login") == 1
-    assert paths.count("/run") == 3
+    assert paths.count("/") == 3
 
 
 @pytest.mark.asyncio
@@ -92,7 +105,7 @@ async def test_retries_on_5xx(fake_salt_api):
         await client.aclose()
     # Should have tried _MAX_RETRIES (3) times after the initial login.
     paths = [p for p, _ in fake_salt_api.calls]
-    assert paths.count("/run") == 3
+    assert paths.count("/") == 3
 
 
 @pytest.mark.asyncio
@@ -109,15 +122,36 @@ async def test_raises_on_login_rejection(fake_salt_api):
 
 @pytest.mark.asyncio
 async def test_list_connected_minions_returns_dict(fake_salt_api):
-    fake_salt_api.run_handler = lambda payload: {
-        "return": [{"data": {"return": {"web-01": "10.0.0.1", "db-01": "10.0.0.2"}}}]
-    }
+    # runner.manage.present(show_ip=True) returns a sorted list of [id, ip]
+    # pairs (Python tuples in the salt runner, JSON arrays over the wire).
+    captured: dict = {}
+
+    def handler(payload):
+        captured.update(payload)
+        return {"return": [[["web-01", "10.0.0.1"], ["db-01", "10.0.0.2"]]]}
+
+    fake_salt_api.run_handler = handler
     client = _make_client(fake_salt_api)
     try:
         result = await client.list_connected_minions()
     finally:
         await client.aclose()
     assert result == {"web-01": "10.0.0.1", "db-01": "10.0.0.2"}
+    assert captured["client"] == "runner"
+    assert captured["fun"] == "manage.present"
+    assert captured["show_ip"] is True
+
+
+@pytest.mark.asyncio
+async def test_list_connected_minions_tolerates_flat_list(fake_salt_api):
+    """If show_ip is ignored (older salt), fall back to id-only entries."""
+    fake_salt_api.run_handler = lambda payload: {"return": [["web-01", "db-01"]]}
+    client = _make_client(fake_salt_api)
+    try:
+        result = await client.list_connected_minions()
+    finally:
+        await client.aclose()
+    assert set(result.keys()) == {"web-01", "db-01"}
 
 
 @pytest.mark.asyncio
@@ -183,7 +217,9 @@ async def test_accept_key_calls_wheel_with_include_flags(fake_salt_api):
 
     def handler(payload):
         captured.update(payload)
-        return {"return": [{"data": {"return": {"minions": [payload.get("match")]}, "success": True}}]}
+        return {
+            "return": [{"data": {"return": {"minions": [payload.get("match")]}, "success": True}}]
+        }
 
     fake_salt_api.run_handler = handler
     client = _make_client(fake_salt_api)
@@ -204,7 +240,11 @@ async def test_reject_key_calls_wheel_with_include_flags(fake_salt_api):
 
     def handler(payload):
         captured.update(payload)
-        return {"return": [{"data": {"return": {"minions_rejected": [payload.get("match")]}, "success": True}}]}
+        return {
+            "return": [
+                {"data": {"return": {"minions_rejected": [payload.get("match")]}, "success": True}}
+            ]
+        }
 
     fake_salt_api.run_handler = handler
     client = _make_client(fake_salt_api)
@@ -225,7 +265,9 @@ async def test_delete_key_calls_wheel_match(fake_salt_api):
 
     def handler(payload):
         captured.update(payload)
-        return {"return": [{"data": {"return": {"minions": [payload.get("match")]}, "success": True}}]}
+        return {
+            "return": [{"data": {"return": {"minions": [payload.get("match")]}, "success": True}}]
+        }
 
     fake_salt_api.run_handler = handler
     client = _make_client(fake_salt_api)
@@ -242,11 +284,13 @@ async def test_delete_key_calls_wheel_match(fake_salt_api):
 async def test_list_jobs_returns_recent_slice(fake_salt_api):
     def handler(payload):
         return {
-            "return": [{
-                "20251019120000123456": {"Function": "test.ping", "Target": "*"},
-                "20251019110000000000": {"Function": "cmd.run", "Target": "web-01"},
-                "20251019100000000000": {"Function": "state.apply", "Target": "*"},
-            }],
+            "return": [
+                {
+                    "20251019120000123456": {"Function": "test.ping", "Target": "*"},
+                    "20251019110000000000": {"Function": "cmd.run", "Target": "web-01"},
+                    "20251019100000000000": {"Function": "state.apply", "Target": "*"},
+                }
+            ],
         }
 
     fake_salt_api.run_handler = handler
@@ -266,16 +310,18 @@ async def test_get_job_returns_detail(fake_salt_api):
     def handler(payload):
         captured.update(payload)
         return {
-            "return": [{
-                "Function": "test.ping",
-                "Arguments": [],
-                "Target": "*",
-                "Target-type": "glob",
-                "User": "halite-service",
-                "StartTime": "2025-10-19T12:00:00.123456",
-                "Minions": ["web-01"],
-                "Result": {"web-01": {"return": True, "success": True}},
-            }],
+            "return": [
+                {
+                    "Function": "test.ping",
+                    "Arguments": [],
+                    "Target": "*",
+                    "Target-type": "glob",
+                    "User": "halite-service",
+                    "StartTime": "2025-10-19T12:00:00.123456",
+                    "Minions": ["web-01"],
+                    "Result": {"web-01": {"return": True, "success": True}},
+                }
+            ],
         }
 
     fake_salt_api.run_handler = handler
