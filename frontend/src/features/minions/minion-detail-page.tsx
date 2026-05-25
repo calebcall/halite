@@ -53,6 +53,14 @@ function MinionDetailPageInner() {
       </div>
     )
   }
+  if (error instanceof ApiError && error.status === 502) {
+    return (
+      <div className="rounded-md border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">
+        <p>Salt-API responded with an error.</p>
+        {detail && <p className="mt-2 font-mono text-xs">{detail}</p>}
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">
