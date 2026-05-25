@@ -25,6 +25,7 @@ const server = setupServer(
       permissions: [
         { verb: 'view', resource_glob: 'job:*' },
         { verb: 'execute', resource_glob: 'salt:*' },
+        { verb: 'kill', resource_glob: 'job:*' },
       ],
     }),
   ),
@@ -235,5 +236,48 @@ describe('JobDetailPage', () => {
     )
     renderAt('nonexistent')
     expect(await screen.findByText(/is not in the master cache/i)).toBeInTheDocument()
+  })
+
+  it('shows the Kill job button when the job is incomplete', async () => {
+    server.use(
+      http.get('/api/jobs/:jid', () =>
+        HttpResponse.json({
+          jid: 'j-running',
+          function: 'state.apply',
+          arguments: [],
+          kwargs: {},
+          target: '*',
+          target_type: 'glob',
+          user: 'halite-service',
+          start_time: '2025-10-19T12:00:00',
+          minions: ['web-01', 'web-02'],
+          results: [],
+        }),
+      ),
+    )
+    renderAt('j-running')
+    expect(await screen.findByRole('button', { name: /kill job/i })).toBeInTheDocument()
+  })
+
+  it('hides the Kill job button when the job is complete', async () => {
+    server.use(
+      http.get('/api/jobs/:jid', () =>
+        HttpResponse.json({
+          jid: 'j-done',
+          function: 'state.apply',
+          arguments: [],
+          kwargs: {},
+          target: '*',
+          target_type: 'glob',
+          user: 'halite-service',
+          start_time: '2025-10-19T12:00:00',
+          minions: ['web-01'],
+          results: [{ minion: 'web-01', success: true, retcode: 0, return_value: true }],
+        }),
+      ),
+    )
+    renderAt('j-done')
+    await screen.findByText(/state\.apply on \*/i)
+    expect(screen.queryByRole('button', { name: /kill job/i })).not.toBeInTheDocument()
   })
 })

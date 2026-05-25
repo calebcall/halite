@@ -8,6 +8,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
@@ -60,10 +61,12 @@ describe('JobsListPage', () => {
             {
               jid: '20251019120000123456', function: 'test.ping', target: '*',
               target_type: 'glob', user: 'halite-service', start_time: '2025-10-19T12:00:00',
+              status: 'running',
             },
             {
               jid: '20251019110000000000', function: 'cmd.run', target: 'web-01',
               target_type: 'glob', user: 'halite-service', start_time: '2025-10-19T11:00:00',
+              status: 'complete',
             },
           ],
         }),
@@ -73,6 +76,31 @@ describe('JobsListPage', () => {
     expect(await screen.findByText('20251019120000123456')).toBeInTheDocument()
     expect(screen.getByText('test.ping')).toBeInTheDocument()
     expect(screen.getByText('cmd.run')).toBeInTheDocument()
+    expect(screen.getByText('running')).toBeInTheDocument()
+    expect(screen.getByText('complete')).toBeInTheDocument()
+  })
+
+  it('filters jobs by function name', async () => {
+    server.use(
+      http.get('/api/jobs', () =>
+        HttpResponse.json({
+          total: 3,
+          jobs: [
+            { jid: 'j1', function: 'test.ping', target: '*', target_type: 'glob', user: 'a', start_time: '2025-10-19T12:00:00', status: 'complete' },
+            { jid: 'j2', function: 'cmd.run', target: 'web-*', target_type: 'glob', user: 'a', start_time: '2025-10-19T11:00:00', status: 'complete' },
+            { jid: 'j3', function: 'state.apply', target: 'db-*', target_type: 'glob', user: 'a', start_time: '2025-10-19T10:00:00', status: 'running' },
+          ],
+        }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderInRouter()
+    await screen.findByText('cmd.run')
+    await user.type(screen.getByPlaceholderText(/filter by jid/i), 'state')
+    expect(screen.queryByText('test.ping')).not.toBeInTheDocument()
+    expect(screen.queryByText('cmd.run')).not.toBeInTheDocument()
+    expect(screen.getByText('state.apply')).toBeInTheDocument()
+    expect(screen.getByText(/Showing 1 of 3/i)).toBeInTheDocument()
   })
 
   it('shows the empty state when no jobs', async () => {
