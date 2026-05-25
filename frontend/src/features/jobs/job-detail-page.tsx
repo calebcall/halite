@@ -1,6 +1,6 @@
 // frontend/src/features/jobs/job-detail-page.tsx
 import { Link, useParams } from '@tanstack/react-router'
-import { ArrowLeft, CheckCircle2, ChevronDown, Loader2, Terminal, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronDown, Loader2, Square, Terminal, XCircle } from 'lucide-react'
 import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -9,6 +9,7 @@ import { ApiError, errorDetail } from '@/shared/api/client'
 import { MustChangePassword } from '@/features/auth/guards'
 import { useHasPerm } from '@/features/auth/use-has-perm'
 import type { JobMinionResult } from './api'
+import { KillJobDialog } from './kill-job-dialog'
 import { useJob } from './use-jobs'
 import { HighstateResult } from './highstate/highstate-result'
 import { parseHighstate } from './highstate/parse'
@@ -25,6 +26,8 @@ function JobDetailPageInner() {
   const { jid } = useParams({ from: '/app/jobs/$jid' })
   const { data, isPending, error } = useJob(jid)
   const canRun = useHasPerm('execute', 'salt:*')
+  const canKill = useHasPerm('kill', 'job:*')
+  const [killOpen, setKillOpen] = useState(false)
   const detail = errorDetail(error)
 
   if (isPending) {
@@ -80,6 +83,8 @@ function JobDetailPageInner() {
     return null
   }
 
+  const isRunning = data.results.length < data.minions.length
+
   return (
     <div className="flex flex-col gap-4">
       <BackToList />
@@ -88,23 +93,36 @@ function JobDetailPageInner() {
           <h2 className="text-2xl font-semibold tracking-tight font-mono">{data.jid}</h2>
           <p className="text-sm text-muted-foreground">{data.function} on {data.target || 'no target'}</p>
         </div>
-        {canRun && (
-          <Button asChild variant="outline" size="sm">
-            <Link
-              to="/run"
-              search={{
-                target: data.target,
-                target_type: data.target_type || 'glob',
-                fun: data.function,
-                args: data.arguments.length > 0 ? JSON.stringify(data.arguments) : undefined,
-                kwargs: Object.keys(data.kwargs ?? {}).length > 0 ? JSON.stringify(data.kwargs) : undefined,
-              }}
+        <div className="flex flex-wrap items-center gap-2">
+          {canKill && isRunning && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setKillOpen(true)}
             >
-              <Terminal className="mr-2 h-4 w-4" />
-              Run again
-            </Link>
-          </Button>
-        )}
+              <Square className="mr-2 h-4 w-4 fill-current" />
+              Kill job
+            </Button>
+          )}
+          {canRun && (
+            <Button asChild variant="outline" size="sm">
+              <Link
+                to="/run"
+                search={{
+                  target: data.target,
+                  target_type: data.target_type || 'glob',
+                  fun: data.function,
+                  args: data.arguments.length > 0 ? JSON.stringify(data.arguments) : undefined,
+                  kwargs: Object.keys(data.kwargs ?? {}).length > 0 ? JSON.stringify(data.kwargs) : undefined,
+                }}
+              >
+                <Terminal className="mr-2 h-4 w-4" />
+                Run again
+              </Link>
+            </Button>
+          )}
+        </div>
       </header>
 
       <dl className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-md border bg-muted/20 p-4 text-sm sm:grid-cols-4">
@@ -142,6 +160,14 @@ function JobDetailPageInner() {
           data.results.map((r) => <MinionResultCard key={r.minion} result={r} />)
         )}
       </div>
+
+      <KillJobDialog
+        jid={data.jid}
+        jobFunction={data.function}
+        jobTarget={data.target}
+        open={killOpen}
+        onOpenChange={setKillOpen}
+      />
     </div>
   )
 }
