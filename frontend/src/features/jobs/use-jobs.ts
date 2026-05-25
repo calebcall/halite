@@ -1,5 +1,5 @@
 // frontend/src/features/jobs/use-jobs.ts
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { type JobDetail, type JobsListOut, jobsApi, jobsQueryKeys } from './api'
 
@@ -28,5 +28,18 @@ export function useJob(jid: string) {
       return false
     },
     staleTime: 5 * 60 * 1000,
+  })
+}
+
+export function useKillJob() {
+  const qc = useQueryClient()
+  return useMutation<void, Error, string>({
+    mutationFn: (jid) => jobsApi.kill(jid),
+    onSuccess: (_data, jid) => {
+      // Invalidate both the list (status may have flipped) and the
+      // specific job detail (polling will pick up the rest).
+      void qc.invalidateQueries({ queryKey: jobsQueryKeys.all })
+      void qc.invalidateQueries({ queryKey: jobsQueryKeys.detail(jid) })
+    },
   })
 }

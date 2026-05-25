@@ -188,6 +188,11 @@ export const api = {
         method: 'GET',
         path: `/api/jobs/${encodeURIComponent(jid)}`,
       }),
+    kill: (jid: string) =>
+      request<void>({
+        method: 'POST',
+        path: `/api/jobs/${encodeURIComponent(jid)}/kill`,
+      }),
   },
   keys: {
     list: () =>

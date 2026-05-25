@@ -14,5 +14,6 @@ export const jobsQueryKeys = {
 
 export const jobsApi = {
   get: api.jobs.get,
+  kill: api.jobs.kill,
   list: api.jobs.list,
 }
