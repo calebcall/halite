@@ -1,13 +1,14 @@
 # backend/src/halite/jobs/service.py
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 from halite.jobs.schemas import JobDetail, JobMinionResult, JobSummary
-from halite.salt.client import SaltAPIClient
+from halite.salt.client import SaltAPIClient, SaltAPIError, SaltAPIUnavailable
 
 
-def _summary_from_raw(jid: str, raw: dict[str, Any]) -> JobSummary:
+def _summary_from_raw(jid: str, raw: dict[str, Any], *, is_active: bool) -> JobSummary:
     return JobSummary(
         jid=jid,
         function=str(raw.get("Function") or ""),
@@ -15,6 +16,7 @@ def _summary_from_raw(jid: str, raw: dict[str, Any]) -> JobSummary:
         target_type=_opt_str(raw.get("Target-type")),
         user=_opt_str(raw.get("User")),
         start_time=_opt_str(raw.get("StartTime")),
+        status="running" if is_active else "complete",
     )
 
 
@@ -36,7 +38,16 @@ def _split_args_and_kwargs(raw_args: list[Any]) -> tuple[list[Any], dict[str, An
 
 async def list_recent_jobs(client: SaltAPIClient, *, limit: int) -> list[JobSummary]:
     raw = await client.list_jobs(limit=limit)
-    return [_summary_from_raw(jid, j) for jid, j in raw.items()]
+    active: set[str] = set()
+    # If the active call fails for any reason, default every job to
+    # complete. We don't want a salt-api hiccup to take down the
+    # entire Jobs list view.
+    with contextlib.suppress(SaltAPIError, SaltAPIUnavailable):
+        active = set((await client.list_active_jobs()).keys())
+    return [
+        _summary_from_raw(jid, j, is_active=jid in active)
+        for jid, j in raw.items()
+    ]
 
 
 async def get_job_detail(client: SaltAPIClient, jid: str) -> JobDetail | None:

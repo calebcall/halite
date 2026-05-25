@@ -1,9 +1,11 @@
 # backend/src/halite/jobs/schemas.py
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+
+JobStatus = Literal["running", "complete"]
 
 
 class JobSummary(BaseModel):
@@ -13,6 +15,7 @@ class JobSummary(BaseModel):
     target_type: str | None = None
     user: str | None = None
     start_time: str | None = None
+    status: JobStatus = "complete"
 
 
 class JobsListOut(BaseModel):

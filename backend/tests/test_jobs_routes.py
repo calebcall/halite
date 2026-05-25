@@ -46,13 +46,19 @@ def _attach_salt_client(app, fake_salt_api) -> SaltAPIClient:
     return client
 
 
-def _jobs_handler(list_payload: dict | None = None, detail_payload: dict | None = None):
+def _jobs_handler(
+    list_payload: dict | None = None,
+    detail_payload: dict | None = None,
+    active_payload: dict | None = None,
+):
     def handler(payload):
         fun = payload.get("fun", "")
         if fun == "jobs.list_jobs":
             return {"return": [list_payload or {}]}
         if fun == "jobs.list_job":
             return {"return": [detail_payload or {}]}
+        if fun == "jobs.active":
+            return {"return": [active_payload or {}]}
         return {"return": [{"data": {"return": {}}}]}
     return handler
 
@@ -65,16 +71,21 @@ async def test_jobs_list_returns_summaries(app_db, session, fake_salt_api):
     sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
     await session.commit()
 
-    fake_salt_api.run_handler = _jobs_handler(list_payload={
-        "20251019120000123456": {
-            "Function": "test.ping", "Target": "*", "Target-type": "glob",
-            "User": "halite-service", "StartTime": "2025-10-19T12:00:00.123456",
+    fake_salt_api.run_handler = _jobs_handler(
+        list_payload={
+            "20251019120000123456": {
+                "Function": "test.ping", "Target": "*", "Target-type": "glob",
+                "User": "halite-service", "StartTime": "2025-10-19T12:00:00.123456",
+            },
+            "20251019110000000000": {
+                "Function": "cmd.run", "Target": "web-01", "Target-type": "glob",
+                "User": "halite-service", "StartTime": "2025-10-19T11:00:00.000000",
+            },
         },
-        "20251019110000000000": {
-            "Function": "cmd.run", "Target": "web-01", "Target-type": "glob",
-            "User": "halite-service", "StartTime": "2025-10-19T11:00:00.000000",
+        active_payload={
+            "20251019120000123456": {"Function": "test.ping"},
         },
-    })
+    )
 
     app = create_app(settings=settings, codec=codec)
     client = _attach_salt_client(app, fake_salt_api)
@@ -90,6 +101,37 @@ async def test_jobs_list_returns_summaries(app_db, session, fake_salt_api):
     assert body["jobs"][0]["jid"] == "20251019120000123456"
     assert body["jobs"][0]["function"] == "test.ping"
     assert body["jobs"][1]["function"] == "cmd.run"
+    by_jid = {j["jid"]: j for j in body["jobs"]}
+    assert by_jid["20251019120000123456"]["status"] == "running"
+    assert by_jid["20251019110000000000"]["status"] == "complete"
+
+
+@pytest.mark.asyncio
+async def test_jobs_list_defaults_to_complete_when_active_is_empty(app_db, session, fake_salt_api):
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(session, [("view", "job:*")])
+    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+
+    fake_salt_api.run_handler = _jobs_handler(
+        list_payload={
+            "20251019120000123456": {"Function": "test.ping", "Target": "*"},
+        },
+        active_payload={},  # no active jobs
+    )
+
+    app = create_app(settings=settings, codec=codec)
+    client = _attach_salt_client(app, fake_salt_api)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+            r = await ac.get("/api/jobs", cookies={settings.cookie_name: codec.sign(sess.id)})
+    finally:
+        await client.aclose()
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["jobs"][0]["status"] == "complete"
 
 
 @pytest.mark.asyncio

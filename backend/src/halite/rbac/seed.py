@@ -18,6 +18,7 @@ BUILTIN_ROLES: dict[str, tuple[str, list[tuple[str, str]]]] = {
             ("accept", "key:*"),
             ("delete", "key:*"),
             ("execute", "salt:*"),
+            ("kill", "job:*"),
             ("reject", "key:*"),
         ],
     ),
