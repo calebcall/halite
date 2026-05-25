@@ -3,7 +3,9 @@ from datetime import UTC, datetime
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
+from halite.audit.models import AuditEntry
 from halite.auth.cookies import CookieCodec
 from halite.auth.models import User
 from halite.auth.password import hash_password
@@ -239,6 +241,95 @@ async def test_jobs_list_503_when_salt_not_configured(app_db, session):
     ):
         r = await ac.get("/api/jobs", cookies={settings.cookie_name: codec.sign(sess.id)})
     assert r.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_kill_job_202_and_audit(app_db, session, fake_salt_api):
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(session, [("kill", "job:*")])
+    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+
+    def handler(payload):
+        return {"return": [{"web-01": True}]}
+    fake_salt_api.run_handler = handler
+
+    app = create_app(settings=settings, codec=codec)
+    client = _attach_salt_client(app, fake_salt_api)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+            r = await ac.post(
+                "/api/jobs/20260123120000000000/kill",
+                cookies={settings.cookie_name: codec.sign(sess.id)},
+            )
+    finally:
+        await client.aclose()
+    assert r.status_code == 202
+
+    rows = (
+        await session.execute(select(AuditEntry).where(AuditEntry.action == "job.kill"))
+    ).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].resource == "job:20260123120000000000"
+    assert rows[0].decision == "allow"
+    assert rows[0].salt_jid == "20260123120000000000"
+
+
+@pytest.mark.asyncio
+async def test_kill_job_403_without_kill_verb(app_db, session, fake_salt_api):
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(session, [("view", "job:*")])  # not kill
+    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+
+    fake_salt_api.run_handler = lambda p: {"return": [{}]}
+
+    app = create_app(settings=settings, codec=codec)
+    client = _attach_salt_client(app, fake_salt_api)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+            r = await ac.post(
+                "/api/jobs/20260123120000000000/kill",
+                cookies={settings.cookie_name: codec.sign(sess.id)},
+            )
+    finally:
+        await client.aclose()
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_kill_job_502_and_deny_audit(app_db, session, fake_salt_api):
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(session, [("kill", "job:*")])
+    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+
+    # 400 from salt-api is a non-retryable SaltAPIError → wrap_salt_errors → 502.
+    # (run_status=500 would retry 3x then raise SaltAPIUnavailable → 503, slow.)
+    fake_salt_api.run_status = 400
+
+    app = create_app(settings=settings, codec=codec)
+    client = _attach_salt_client(app, fake_salt_api)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+            r = await ac.post(
+                "/api/jobs/20260123120000000000/kill",
+                cookies={settings.cookie_name: codec.sign(sess.id)},
+            )
+    finally:
+        await client.aclose()
+    # 4xx (non-401) from salt-api → SaltAPIError → wrap_salt_errors → 502
+    assert r.status_code == 502
+    rows = (
+        await session.execute(select(AuditEntry).where(AuditEntry.action == "job.kill"))
+    ).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].decision == "deny"
+    assert rows[0].salt_jid == "20260123120000000000"
+    assert rows[0].result_code == 502
 
 
 def test_split_args_and_kwargs_with_trailing_kwarg():

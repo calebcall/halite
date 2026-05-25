@@ -1,9 +1,11 @@
 # backend/src/halite/jobs/routes.py
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 
-from halite.deps import require_perm
+from halite.audit.writer import record as audit_record
+from halite.db import SessionDep
+from halite.deps import CurrentUser, require_perm
 from halite.jobs.schemas import JobDetail, JobsListOut
 from halite.jobs.service import get_job_detail, list_recent_jobs
 from halite.salt.client import SaltAPIError, SaltAPIUnavailable
@@ -43,3 +45,35 @@ async def get_job_route(jid: str, request: Request) -> JobDetail:
     if detail is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Job {jid} not found in cache")
     return detail
+
+
+@router.post(
+    "/{jid}/kill",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[require_perm("kill", "job:*")],
+)
+async def kill_job_route(
+    jid: str,
+    request: Request,
+    db: SessionDep,
+    actor: CurrentUser,
+) -> Response:
+    client = salt_client_or_503(request)
+    try:
+        await client.kill_job(jid)
+    except (SaltAPIUnavailable, SaltAPIError) as exc:
+        http_exc = wrap_salt_errors(exc)
+        await audit_record(
+            db, user_id=actor.id, action="job.kill",
+            resource=f"job:{jid}", args_json=None, salt_jid=jid,
+            decision="deny", result_code=http_exc.status_code,
+        )
+        await db.commit()
+        raise http_exc from None
+    await audit_record(
+        db, user_id=actor.id, action="job.kill",
+        resource=f"job:{jid}", args_json=None, salt_jid=jid,
+        decision="allow", result_code=202,
+    )
+    await db.commit()
+    return Response(status_code=status.HTTP_202_ACCEPTED)
