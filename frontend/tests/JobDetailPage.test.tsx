@@ -22,7 +22,10 @@ const server = setupServer(
       username: 'admin',
       display_name: 'admin',
       must_change_pw: false,
-      permissions: [{ verb: 'view', resource_glob: 'job:*' }],
+      permissions: [
+        { verb: 'view', resource_glob: 'job:*' },
+        { verb: 'execute', resource_glob: 'salt:*' },
+      ],
     }),
   ),
 )
@@ -114,6 +117,47 @@ describe('JobDetailPage', () => {
     const trigger = await screen.findByRole('button', { name: /web-01/i })
     await user.click(trigger)
     expect(screen.getByText(/"ok": 1/)).toBeInTheDocument()
+  })
+
+  it('renders Run again button with encoded search params', async () => {
+    server.use(
+      http.get('/api/jobs/:jid', () =>
+        HttpResponse.json({
+          jid: '20251019120000123456',
+          function: 'state.apply',
+          arguments: ['mystate'],
+          kwargs: { pillar: { env: 'prod' } },
+          target: 'web-*',
+          target_type: 'glob',
+          user: 'halite-service',
+          start_time: '2025-10-19T12:00:00',
+          minions: ['web-01'],
+          results: [{ minion: 'web-01', success: true, retcode: 0, return_value: true }],
+        }),
+      ),
+    )
+    renderAt('20251019120000123456')
+    const link = await screen.findByRole('link', { name: /run again/i })
+    expect(link).toBeInTheDocument()
+    const href = link.getAttribute('href') || ''
+    expect(href).toContain('target=')
+    expect(href).toContain('fun=')
+    expect(href).toContain('args=')
+    expect(href).toContain('kwargs=')
+    const url = new URL('http://t' + href)
+    expect(url.searchParams.get('target')).toBe('web-*')
+    expect(url.searchParams.get('fun')).toBe('state.apply')
+  })
+
+  it('shows a 502 panel with salt detail surfaced', async () => {
+    server.use(
+      http.get('/api/jobs/:jid', () =>
+        HttpResponse.json({ detail: "Salt-API error 400: Client disabled: 'wheel'." }, { status: 502 }),
+      ),
+    )
+    renderAt('j-bad')
+    expect(await screen.findByText(/Salt-API responded with an error/i)).toBeInTheDocument()
+    expect(screen.getByText(/Client disabled: 'wheel'/)).toBeInTheDocument()
   })
 
   it('shows a 404 panel for unknown jids', async () => {

@@ -22,7 +22,10 @@ const server = setupServer(
       username: 'admin',
       display_name: 'admin',
       must_change_pw: false,
-      permissions: [{ verb: 'view', resource_glob: 'minion:*' }],
+      permissions: [
+        { verb: 'view', resource_glob: 'minion:*' },
+        { verb: 'execute', resource_glob: 'salt:*' },
+      ],
     }),
   ),
 )
@@ -41,12 +44,24 @@ function renderDetail(minionId: string) {
     id: 'app',
     component: Outlet,
   })
+  const minionsRoute = createRoute({
+    getParentRoute: () => appRoute,
+    path: '/minions',
+    component: () => <div>minions-list-stub</div>,
+  })
   const detailRoute = createRoute({
     getParentRoute: () => appRoute,
     path: '/minions/$minionId',
     component: () => <MinionDetailPage />,
   })
-  const tree = rootRoute.addChildren([appRoute.addChildren([detailRoute])])
+  const runRoute = createRoute({
+    getParentRoute: () => appRoute,
+    path: '/run',
+    component: () => <div>run-stub</div>,
+  })
+  const tree = rootRoute.addChildren([
+    appRoute.addChildren([minionsRoute, detailRoute, runRoute]),
+  ])
   const router = createRouter({
     routeTree: tree,
     history: createMemoryHistory({ initialEntries: [`/minions/${minionId}`] }),
@@ -106,5 +121,40 @@ describe('MinionDetailPage', () => {
     renderDetail('ghost')
     expect(await screen.findByText(/minion not found/i)).toBeInTheDocument()
     expect(screen.getByText(/ghost/)).toBeInTheDocument()
+  })
+
+  it('renders Run command button with target prefilled', async () => {
+    server.use(
+      http.get('/api/minions/web-01', () =>
+        HttpResponse.json({
+          id: 'web-01',
+          status: 'online',
+          ip: '1.2.3.4',
+          grains: { os: 'Ubuntu', osrelease: '22.04' },
+        }),
+      ),
+    )
+    renderDetail('web-01')
+    const link = await screen.findByRole('link', { name: /run command/i })
+    expect(link).toBeInTheDocument()
+    const href = link.getAttribute('href') || ''
+    const url = new URL('http://t' + href)
+    expect(url.pathname).toBe('/run')
+    expect(url.searchParams.get('target')).toBe('web-01')
+    expect(url.searchParams.get('target_type')).toBe('glob')
+  })
+
+  it('shows a 502 panel with salt detail surfaced', async () => {
+    server.use(
+      http.get('/api/minions/web-01', () =>
+        HttpResponse.json(
+          { detail: "Salt-API error 400: Client disabled: 'wheel'." },
+          { status: 502 },
+        ),
+      ),
+    )
+    renderDetail('web-01')
+    expect(await screen.findByText(/Salt-API responded with an error/i)).toBeInTheDocument()
+    expect(screen.getByText(/Client disabled: 'wheel'/)).toBeInTheDocument()
   })
 })
