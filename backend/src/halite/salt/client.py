@@ -17,6 +17,7 @@ Convenience helpers:
 A SaltAPIError is raised for non-2xx responses; SaltAPIUnavailable for
 network / config errors.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -112,27 +113,46 @@ class SaltAPIClient:
 
     async def _ensure_token(self, force: bool = False) -> str:
         """Return a valid token, logging in if needed. Concurrency-safe."""
-        if not force and self._token and time.time() < self._token_expires_at - _TOKEN_REFRESH_MARGIN_S:
+        if (
+            not force
+            and self._token
+            and time.time() < self._token_expires_at - _TOKEN_REFRESH_MARGIN_S
+        ):
             return self._token
         async with self._login_lock:
             # Re-check inside the lock — another waiter may have refreshed.
-            if not force and self._token and time.time() < self._token_expires_at - _TOKEN_REFRESH_MARGIN_S:
+            if (
+                not force
+                and self._token
+                and time.time() < self._token_expires_at - _TOKEN_REFRESH_MARGIN_S
+            ):
                 return self._token
             await self._login()
         assert self._token is not None
         return self._token
 
     async def _request(self, payload: dict[str, Any]) -> dict[str, Any]:
-        """POST /run with the given payload, with retries on 5xx and one
-        retry on 401 after re-login."""
+        """POST a lowstate to salt-api, with retries on 5xx and one retry on
+        401 after re-login.
+
+        Authentication is performed via the X-Auth-Token header against the
+        session-aware root endpoint (`/`). The `token` value returned by
+        salt-api's `/login` is the CherryPy session id — the real Salt eauth
+        token lives inside that session and is looked up server-side when the
+        header is present. Passing it inline as a `token` field to `/run`
+        (which has sessions disabled) results in
+        "Authentication failure of type 'token' occurred" because salt-api's
+        token cache has no record of the session id.
+        """
         token = await self._ensure_token()
 
         last_exc: Exception | None = None
         for attempt in range(_MAX_RETRIES):
             try:
                 resp = await self._client.post(
-                    "/run",
-                    json=[{**payload, "token": token}],
+                    "/",
+                    json=[payload],
+                    headers={"X-Auth-Token": token},
                 )
             except httpx.HTTPError as exc:
                 last_exc = exc
@@ -144,11 +164,14 @@ class SaltAPIClient:
                 # Token may be stale — refresh and retry once.
                 token = await self._ensure_token(force=True)
                 resp = await self._client.post(
-                    "/run",
-                    json=[{**payload, "token": token}],
+                    "/",
+                    json=[payload],
+                    headers={"X-Auth-Token": token},
                 )
                 if resp.status_code == 401:
-                    raise SaltAPIError(401, _safe_json(resp), "salt-api auth rejected after refresh")
+                    raise SaltAPIError(
+                        401, _safe_json(resp), "salt-api auth rejected after refresh"
+                    )
 
             if 500 <= resp.status_code < 600:
                 logger.warning(
@@ -158,11 +181,20 @@ class SaltAPIClient:
                 continue
 
             if resp.status_code >= 400:
-                raise SaltAPIError(resp.status_code, _safe_json(resp))
+                body = _safe_json(resp)
+                logger.warning(
+                    "salt-api error %d for payload fun=%s: %s",
+                    resp.status_code,
+                    payload.get("fun", "<unknown>"),
+                    _short_body(body),
+                )
+                raise SaltAPIError(resp.status_code, body)
 
             return resp.json()
 
-        raise SaltAPIUnavailable(f"salt-api unreachable after {_MAX_RETRIES} attempts: {last_exc!r}")
+        raise SaltAPIUnavailable(
+            f"salt-api unreachable after {_MAX_RETRIES} attempts: {last_exc!r}"
+        )
 
     # ---------- helpers ----------
 
@@ -200,11 +232,64 @@ class SaltAPIClient:
         return body["return"][0]
 
     async def list_connected_minions(self) -> dict[str, str]:
-        """Returns a dict {minion_id: ip} of currently-connected accepted minions."""
-        result = await self.wheel_call("minions.connected")
+        """Returns a dict {minion_id: ip} of currently-connected accepted minions.
+
+        Uses the master's presence detection via ``runner.manage.present`` with
+        ``show_ip=True``. There is no ``wheel.minions.connected`` in upstream
+        Salt — the wheel package only ships ``config``, ``error``,
+        ``file_roots``, ``key``, and ``pillar_roots`` — so callers must go
+        through the runner client for this information.
+
+        ``manage.present`` with ``show_ip=True`` returns a sorted list of
+        ``(minion_id, ip)`` tuples. JSON serialization through salt-api turns
+        those into two-element arrays. We also tolerate the older flat-list
+        shape (``["minion-a", "minion-b"]``) and a dict shape for robustness.
+        """
+        result = await self.runner_call("manage.present", show_ip=True)
+        out: dict[str, str] = {}
+        if isinstance(result, dict):
+            # Some salt versions / wrappers expose {id: ip}.
+            return {str(k): str(v) for k, v in result.items()}
+        if isinstance(result, list):
+            for item in result:
+                if isinstance(item, (list, tuple)) and len(item) >= 2:
+                    out[str(item[0])] = str(item[1])
+                elif isinstance(item, str):
+                    # show_ip=True was ignored or unsupported — fall back to id
+                    # only. Status is still computed correctly; IP is unknown.
+                    out[item] = ""
+        return out
+
+    async def get_network_grains_map(
+        self,
+        target: str = "*",
+        *,
+        target_type: str = "glob",
+    ) -> dict[str, dict[str, Any]]:
+        """Return a per-minion subset of network grains used for IP selection.
+
+        Specifically: ``fqdn_ip4``, ``ip4_gw``, and ``ip4_interfaces``. The
+        caller (see ``halite.minions.service._pick_primary_ip``) combines these
+        to identify the interface IP that sits on the same subnet as the
+        default IPv4 gateway — a more reliable signal than ``fqdn_ip4`` alone,
+        which gets polluted on hosts where multiple docker bridges happen to
+        reverse-resolve to the FQDN.
+
+        Minions that don't respond are omitted.
+        """
+        result = await self.local_call(
+            target,
+            "grains.item",
+            target_type=target_type,
+            arg=["fqdn_ip4", "ip4_gw", "ip4_interfaces"],
+        )
         if not isinstance(result, dict):
             return {}
-        return {str(k): str(v) for k, v in result.items()}
+        out: dict[str, dict[str, Any]] = {}
+        for mid, sub in result.items():
+            if isinstance(sub, dict):
+                out[str(mid)] = sub
+        return out
 
     async def list_minion_keys(self) -> dict[str, list[str]]:
         """Returns the master's view of minion keys, bucketed by state.
@@ -322,11 +407,25 @@ class SaltAPIClient:
 
 # ---------- helpers ----------
 
+
 def _safe_json(resp: httpx.Response) -> Any:
     try:
         return resp.json()
     except Exception:
         return resp.text
+
+
+def _short_body(body: Any, limit: int = 500) -> str:
+    """Render body to a short string for log lines."""
+    if isinstance(body, dict):
+        for key in ("detail", "message", "error"):
+            v = body.get(key)
+            if isinstance(v, str) and v.strip():
+                return v.strip()[:limit]
+        return repr(body)[:limit]
+    if isinstance(body, str):
+        return body[:limit]
+    return repr(body)[:limit]
 
 
 async def _sleep_backoff(attempt: int) -> None:

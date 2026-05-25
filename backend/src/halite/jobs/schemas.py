@@ -16,6 +16,10 @@ class JobSummary(BaseModel):
 
 
 class JobsListOut(BaseModel):
+    # total is the size of the returned `jobs` list — i.e. post-slice, not
+    # the size of the master's full job cache. If we ever introduce
+    # server-side pagination this should be revisited so callers can tell
+    # how many records exist past `limit`.
     total: int
     jobs: list[JobSummary]
 
