@@ -444,6 +444,26 @@ async def test_repeated_5xx_raises_salt_api_error_with_body(fake_salt_api):
 
 
 @pytest.mark.asyncio
+async def test_list_execution_functions_returns_sorted_keys(fake_salt_api):
+    def handler(payload):
+        return {
+            "return": [{
+                "test.ping": "Ping the master",
+                "cmd.run": "Run a shell command",
+                "pkg.install": "Install a package",
+            }],
+        }
+
+    fake_salt_api.run_handler = handler
+    client = _make_client(fake_salt_api)
+    try:
+        result = await client.list_execution_functions()
+    finally:
+        await client.aclose()
+    assert result == ["cmd.run", "pkg.install", "test.ping"]
+
+
+@pytest.mark.asyncio
 async def test_repeated_network_error_raises_salt_api_unavailable():
     """If every attempt is a network exception (no HTTP response at all),
     exhaustion raises SaltAPIUnavailable. This is the true-unreachable case

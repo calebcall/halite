@@ -439,6 +439,15 @@ class SaltAPIClient:
             return {}
         return result
 
+    async def list_execution_functions(self) -> list[str]:
+        """Return the sorted list of execution function names the master knows
+        about. Calls runner.doc.execution which returns a dict of
+        function_name → docstring; we extract the keys."""
+        result = await self.runner_call("doc.execution")
+        if not isinstance(result, dict):
+            return []
+        return sorted(str(k) for k in result.keys() if isinstance(k, str))
+
 
 # ---------- helpers ----------
 
