@@ -65,4 +65,15 @@ describe('SaveTemplateDialog', () => {
     expect(await screen.findByText(/name is required/i)).toBeInTheDocument()
     expect(lastBody).toBeNull()
   })
+
+  it('sends is_shared=true when the share switch is toggled on before saving', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+    await user.type(screen.getByLabelText(/^name$/i), 'Shared template')
+    await user.click(screen.getByRole('switch', { name: /share with team/i }))
+    await user.click(screen.getByRole('button', { name: /save template/i }))
+    await waitFor(() => {
+      expect(lastBody).toMatchObject({ name: 'Shared template', is_shared: true })
+    })
+  })
 })
