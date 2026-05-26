@@ -515,7 +515,8 @@ export interface paths {
         delete: operations["delete_template_route_api_templates__template_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update Template Route */
+        patch: operations["update_template_route_api_templates__template_id__patch"];
         trace?: never;
     };
     "/api/users": {
@@ -679,6 +680,11 @@ export interface components {
             kwargs?: {
                 [key: string]: unknown;
             };
+            /**
+             * Is Shared
+             * @default false
+             */
+            is_shared: boolean;
         };
         /** CommandTemplateListOut */
         CommandTemplateListOut: {
@@ -716,10 +722,22 @@ export interface components {
                 [key: string]: unknown;
             };
             /**
+             * Is Shared
+             * @default false
+             */
+            is_shared: boolean;
+            /**
              * Id
              * Format: uuid
              */
             id: string;
+            /**
+             * Owner User Id
+             * Format: uuid
+             */
+            owner_user_id: string;
+            /** Owner Username */
+            owner_username: string;
             /**
              * Created At
              * Format: date-time
@@ -1151,6 +1169,11 @@ export interface components {
              * Format: date-time
              */
             cached_at: string;
+        };
+        /** TemplateShareUpdate */
+        TemplateShareUpdate: {
+            /** Is Shared */
+            is_shared: boolean;
         };
         /** UserCreatePayload */
         UserCreatePayload: {
@@ -2216,6 +2239,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_template_route_api_templates__template_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateShareUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandTemplateOut"];
+                };
             };
             /** @description Validation Error */
             422: {

@@ -310,6 +310,12 @@ export const api = {
         path: '/api/templates',
         body,
       }),
+    update: (id: string, body: paths['/api/templates/{template_id}']['patch']['requestBody']['content']['application/json']) =>
+      request<paths['/api/templates/{template_id}']['patch']['responses']['200']['content']['application/json']>({
+        method: 'PATCH',
+        path: `/api/templates/${encodeURIComponent(id)}`,
+        body,
+      }),
     delete: (id: string) =>
       request<void>({
         method: 'DELETE',

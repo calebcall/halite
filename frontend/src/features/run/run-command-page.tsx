@@ -120,7 +120,7 @@ function RunCommandPageInner() {
       }
       kwargs[key] = value
     }
-    return { target, target_type: targetType, fun, args, kwargs }
+    return { fun, args, is_shared: false, kwargs, target, target_type: targetType }
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {

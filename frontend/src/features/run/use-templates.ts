@@ -38,3 +38,14 @@ export function useDeleteTemplate() {
     },
   })
 }
+
+export function useUpdateTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: { is_shared: boolean } }) =>
+      api.templates.update(id, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: templatesQueryKeys.all })
+    },
+  })
+}
