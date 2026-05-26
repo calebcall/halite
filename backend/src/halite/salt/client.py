@@ -146,7 +146,9 @@ class SaltAPIClient:
         """
         token = await self._ensure_token()
 
-        last_exc: Exception | None = None
+        last_network_exc: Exception | None = None
+        last_5xx_status: int | None = None
+        last_5xx_body: Any = None
         for attempt in range(_MAX_RETRIES):
             try:
                 resp = await self._client.post(
@@ -155,7 +157,7 @@ class SaltAPIClient:
                     headers={"X-Auth-Token": token},
                 )
             except httpx.HTTPError as exc:
-                last_exc = exc
+                last_network_exc = exc
                 logger.warning("salt-api network error (attempt %d): %r", attempt + 1, exc)
                 await _sleep_backoff(attempt)
                 continue
@@ -174,8 +176,14 @@ class SaltAPIClient:
                     )
 
             if 500 <= resp.status_code < 600:
+                last_5xx_status = resp.status_code
+                last_5xx_body = _safe_json(resp)
                 logger.warning(
-                    "salt-api 5xx (attempt %d, status=%d)", attempt + 1, resp.status_code
+                    "salt-api 5xx (attempt %d, status=%d) for fun=%s: %s",
+                    attempt + 1,
+                    resp.status_code,
+                    payload.get("fun", "<unknown>"),
+                    _short_body(last_5xx_body),
                 )
                 await _sleep_backoff(attempt)
                 continue
@@ -192,8 +200,15 @@ class SaltAPIClient:
 
             return resp.json()
 
+        # All retries exhausted. If we saw ANY 5xx response, salt-api IS
+        # reachable but the master is choking — raise SaltAPIError so the
+        # route layer surfaces the salt body via wrap_salt_errors → 502.
+        # SaltAPIUnavailable is now reserved for the case where every
+        # attempt was a network exception.
+        if last_5xx_status is not None:
+            raise SaltAPIError(last_5xx_status, last_5xx_body)
         raise SaltAPIUnavailable(
-            f"salt-api unreachable after {_MAX_RETRIES} attempts: {last_exc!r}"
+            f"salt-api unreachable after {_MAX_RETRIES} attempts: {last_network_exc!r}"
         )
 
     # ---------- helpers ----------

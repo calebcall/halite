@@ -95,17 +95,20 @@ async def test_concurrent_calls_share_one_login(fake_salt_api):
 
 @pytest.mark.asyncio
 async def test_retries_on_5xx(fake_salt_api):
-    """5xx triggers retries; if all attempts fail, SaltAPIUnavailable."""
+    """5xx triggers retries; if all attempts fail, SaltAPIError surfaces the
+    last 5xx status+body so wrap_salt_errors can render a 502 with the salt
+    body inline (salt-api IS reachable; the master is choking)."""
     fake_salt_api.run_status = 500
     client = _make_client(fake_salt_api)
     try:
-        with pytest.raises(SaltAPIUnavailable):
+        with pytest.raises(SaltAPIError) as excinfo:
             await client.wheel_call("minions.connected")
     finally:
         await client.aclose()
     # Should have tried _MAX_RETRIES (3) times after the initial login.
     paths = [p for p, _ in fake_salt_api.calls]
     assert paths.count("/") == 3
+    assert excinfo.value.status == 500
 
 
 @pytest.mark.asyncio
@@ -419,3 +422,45 @@ async def test_list_active_jobs_returns_jids(fake_salt_api):
         "20260123110000000000",
     }
     assert result["20260123120000000000"]["Function"] == "state.apply"
+
+
+@pytest.mark.asyncio
+async def test_repeated_5xx_raises_salt_api_error_with_body(fake_salt_api):
+    """After all attempts return 500, _request should raise SaltAPIError
+    preserving the last status + body — NOT SaltAPIUnavailable. This is
+    what lets wrap_salt_errors produce a 502 with the salt-side message
+    inline (Plan 14 UX) instead of a misleading 503 'not configured' panel."""
+    fake_salt_api.run_status = 500
+    client = _make_client(fake_salt_api)
+    try:
+        with pytest.raises(SaltAPIError) as exc_info:
+            await client.runner_call("saltutil.kill_job", jid="20260101000000000000")
+    finally:
+        await client.aclose()
+    assert exc_info.value.status == 500
+    # The body should be captured (not None), even if its exact shape varies
+    # based on what FakeSaltAPI returns for non-2xx responses.
+    assert exc_info.value.body is not None
+
+
+@pytest.mark.asyncio
+async def test_repeated_network_error_raises_salt_api_unavailable():
+    """If every attempt is a network exception (no HTTP response at all),
+    exhaustion raises SaltAPIUnavailable. This is the true-unreachable case
+    — distinct from the 5xx-with-body case above."""
+    import httpx
+
+    def boom(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("simulated DNS failure")
+
+    client = SaltAPIClient(
+        base_url="http://salt.test",
+        username="halite-service",
+        password="pw",
+        transport=httpx.MockTransport(boom),
+    )
+    try:
+        with pytest.raises(SaltAPIUnavailable):
+            await client.wheel_call("minions.connected")
+    finally:
+        await client.aclose()
