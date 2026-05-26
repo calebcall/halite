@@ -3,7 +3,9 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, Uuid
+import sqlalchemy as sa
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
@@ -47,6 +49,12 @@ class CommandTemplate(Base):
         JSON().with_variant(JSONB(), "postgresql"),
         nullable=False,
         default=dict,
+    )
+    is_shared: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=sa.false(),
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

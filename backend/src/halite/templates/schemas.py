@@ -24,6 +24,7 @@ class CommandTemplateBody(BaseModel):
         default_factory=dict,
         json_schema_extra={"additionalProperties": True},
     )
+    is_shared: bool = False
 
     @field_validator("fun")
     @classmethod
@@ -41,6 +42,8 @@ class CommandTemplateOut(CommandTemplateBody):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    owner_user_id: uuid.UUID
+    owner_username: str
     created_at: datetime
     updated_at: datetime
 
@@ -48,3 +51,7 @@ class CommandTemplateOut(CommandTemplateBody):
 class CommandTemplateListOut(BaseModel):
     total: int
     templates: list[CommandTemplateOut]
+
+
+class TemplateShareUpdate(BaseModel):
+    is_shared: bool
