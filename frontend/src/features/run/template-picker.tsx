@@ -1,5 +1,5 @@
 // frontend/src/features/run/template-picker.tsx
-import { Trash2 } from 'lucide-react'
+import { Trash2, Users } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,7 @@ export function TemplatePicker({
   onSelect: (template: CommandTemplate) => void
 }) {
   const { data } = useTemplates()
+  const { data: currentUser } = useCurrentUser()
   const [manageOpen, setManageOpen] = useState(false)
   const templates = data?.templates ?? []
 
@@ -46,18 +47,27 @@ export function TemplatePicker({
             />
           </SelectTrigger>
           <SelectContent>
-            {templates.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                <div className="flex items-center justify-between gap-3 w-full">
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{t.name}</div>
-                    {t.description && (
-                      <div className="text-xs text-muted-foreground truncate">{t.description}</div>
-                    )}
+            {templates.map((t) => {
+              const isOwner = currentUser != null && t.owner_username === currentUser.username
+              return (
+                <SelectItem key={t.id} value={t.id}>
+                  <div className="flex items-center justify-between gap-3 w-full">
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{t.name}</div>
+                      {t.description && (
+                        <div className="text-xs text-muted-foreground truncate">{t.description}</div>
+                      )}
+                      {!isOwner && (
+                        <div className="flex items-center text-xs text-muted-foreground truncate">
+                          <Users className="size-3 mr-1 shrink-0" />
+                          Shared by {t.owner_username}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </SelectItem>
-            ))}
+                </SelectItem>
+              )
+            })}
           </SelectContent>
         </Select>
         {templates.length > 0 && (
