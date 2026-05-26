@@ -376,4 +376,88 @@ describe('JobDetailPage', () => {
     await screen.findByText(/state\.apply on \*/i)
     expect(screen.queryByRole('button', { name: /kill job/i })).not.toBeInTheDocument()
   })
+
+  it('switches to the by-state view when the toggle is clicked', async () => {
+    const okMinion = {
+      minion: 'web-01',
+      success: true,
+      retcode: 0,
+      return_value: {
+        'pkg_|-install_nginx_|-nginx_|-installed': {
+          name: 'nginx', result: true, comment: 'OK', changes: {}, __run_num__: 0,
+        },
+        'service_|-nginx_running_|-nginx_|-running': {
+          name: 'nginx', result: true, comment: 'Running', changes: {}, __run_num__: 1,
+        },
+      },
+    }
+    const failedMinion = {
+      minion: 'web-02',
+      success: false,
+      retcode: 1,
+      return_value: {
+        'pkg_|-install_nginx_|-nginx_|-installed': {
+          name: 'nginx', result: true, comment: 'OK', changes: {}, __run_num__: 0,
+        },
+        'service_|-nginx_running_|-nginx_|-running': {
+          name: 'nginx', result: false, comment: 'Service failed to start', changes: {}, __run_num__: 1,
+        },
+      },
+    }
+    server.use(
+      http.get('/api/jobs/:jid', () =>
+        HttpResponse.json({
+          jid: 'j-mixed-state',
+          function: 'state.apply',
+          arguments: [],
+          kwargs: {},
+          target: '*',
+          target_type: 'glob',
+          user: 'halite-service',
+          start_time: '2025-10-19T12:00:00',
+          minions: ['web-01', 'web-02'],
+          results: [okMinion, failedMinion],
+        }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderAt('j-mixed-state')
+
+    // Initial view is by-minion — minion buttons visible
+    expect(await screen.findByRole('button', { name: /web-01/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /web-02/i })).toBeInTheDocument()
+
+    // Click "By state"
+    await user.click(screen.getByRole('button', { name: /^by state$/i }))
+
+    // By-state view shows state IDs as primary content
+    expect(await screen.findByText('install_nginx')).toBeInTheDocument()
+    expect(screen.getByText('nginx_running')).toBeInTheDocument()
+    // The state with a failure should be expanded by default → the failed
+    // minion's comment is visible inside it
+    expect(screen.getByText(/Service failed to start/)).toBeInTheDocument()
+  })
+
+  it('does not show the view toggle for non-highstate jobs', async () => {
+    server.use(
+      http.get('/api/jobs/:jid', () =>
+        HttpResponse.json({
+          jid: 'j-plain',
+          function: 'test.ping',
+          arguments: [],
+          kwargs: {},
+          target: '*',
+          target_type: 'glob',
+          user: 'halite-service',
+          start_time: '2025-10-19T12:00:00',
+          minions: ['web-01'],
+          results: [{ minion: 'web-01', success: true, retcode: 0, return_value: true }],
+        }),
+      ),
+    )
+    renderAt('j-plain')
+    await screen.findByRole('button', { name: /web-01/i })
+    expect(screen.queryByRole('button', { name: /^by state$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^by minion$/i })).not.toBeInTheDocument()
+  })
 })
