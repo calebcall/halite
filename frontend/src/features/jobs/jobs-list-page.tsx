@@ -1,9 +1,10 @@
 // frontend/src/features/jobs/jobs-list-page.tsx
 import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Square } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -15,6 +16,8 @@ import {
 } from '@/components/ui/table'
 import { ApiError, errorDetail } from '@/shared/api/client'
 import { MustChangePassword } from '@/features/auth/guards'
+import { useHasPerm } from '@/features/auth/use-has-perm'
+import { KillByJidDialog } from './kill-by-jid-dialog'
 import { useJobsList } from './use-jobs'
 
 export function JobsListPage() {
@@ -29,7 +32,9 @@ function JobsListPageInner() {
   const { data, isPending, error } = useJobsList()
   const detail = errorDetail(error)
 
+  const canKill = useHasPerm('kill', 'job:*')
   const [filter, setFilter] = useState('')
+  const [killByJidOpen, setKillByJidOpen] = useState(false)
 
   const filteredJobs = useMemo(() => {
     if (!data) return []
@@ -69,11 +74,24 @@ function JobsListPageInner() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Jobs</h2>
-        <p className="text-sm text-muted-foreground">
-          Recent salt jobs from the master cache. Refreshes every 30 seconds.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Jobs</h2>
+          <p className="text-sm text-muted-foreground">
+            Recent salt jobs from the master cache. Refreshes every 30 seconds.
+          </p>
+        </div>
+        {canKill && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setKillByJidOpen(true)}
+          >
+            <Square className="mr-2 h-4 w-4 fill-current" />
+            Kill by JID
+          </Button>
+        )}
       </div>
 
       <Input
@@ -140,6 +158,8 @@ function JobsListPageInner() {
             : `${data.total} recent job${data.total === 1 ? '' : 's'}.`}
         </p>
       )}
+
+      <KillByJidDialog open={killByJidOpen} onOpenChange={setKillByJidOpen} />
     </div>
   )
 }
