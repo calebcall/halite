@@ -20,6 +20,9 @@ with contextlib.suppress(ImportError):
 with contextlib.suppress(ImportError):
     from halite.audit import models as _audit_models  # noqa: F401
 
+with contextlib.suppress(ImportError):
+    from halite.templates import models as _templates_models  # noqa: F401
+
 config = context.config
 
 if config.config_file_name is not None:
