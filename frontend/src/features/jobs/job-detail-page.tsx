@@ -5,6 +5,8 @@ import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { ApiError, errorDetail } from '@/shared/api/client'
 import { MustChangePassword } from '@/features/auth/guards'
 import { useHasPerm } from '@/features/auth/use-has-perm'
@@ -12,6 +14,8 @@ import type { JobMinionResult } from './api'
 import { KillJobDialog } from './kill-job-dialog'
 import { useJob } from './use-jobs'
 import { HighstateResult } from './highstate/highstate-result'
+import { JobHighstateSummary } from './highstate/job-highstate-summary'
+import { minionHasFailures, summarizeJobHighstate } from './highstate/job-summary'
 import { parseHighstate } from './highstate/parse'
 
 export function JobDetailPage() {
@@ -28,6 +32,7 @@ function JobDetailPageInner() {
   const canRun = useHasPerm('execute', 'salt:*')
   const canKill = useHasPerm('kill', 'job:*')
   const [killOpen, setKillOpen] = useState(false)
+  const [failuresOnly, setFailuresOnly] = useState(false)
   const detail = errorDetail(error)
 
   if (isPending) {
@@ -84,6 +89,7 @@ function JobDetailPageInner() {
   }
 
   const isRunning = data.results.length < data.minions.length
+  const jobHighstate = summarizeJobHighstate(data.results)
 
   return (
     <div className="flex flex-col gap-4">
@@ -152,12 +158,37 @@ function JobDetailPageInner() {
         </div>
       )}
 
+      {jobHighstate && (
+        <JobHighstateSummary stats={jobHighstate} />
+      )}
+
       <div className="flex flex-col gap-2">
-        <h3 className="text-lg font-semibold tracking-tight">Results</h3>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold tracking-tight">Results</h3>
+          {jobHighstate && jobHighstate.minionsWithFailures > 0 && (
+            <div className="flex items-center gap-2">
+              <Switch
+                id="failures-only"
+                checked={failuresOnly}
+                onCheckedChange={setFailuresOnly}
+              />
+              <Label htmlFor="failures-only" className="text-sm">Show failures only</Label>
+            </div>
+          )}
+        </div>
         {data.results.length === 0 ? (
           <p className="text-sm text-muted-foreground">No results yet — the job may still be running.</p>
         ) : (
-          data.results.map((r) => <MinionResultCard key={r.minion} result={r} />)
+          <>
+            {data.results
+              .filter((r) => !failuresOnly || minionHasFailures(r))
+              .map((r) => (
+                <MinionResultCard key={r.minion} result={r} failuresOnly={failuresOnly} />
+              ))}
+            {failuresOnly && data.results.every((r) => !minionHasFailures(r)) && (
+              <p className="text-sm text-muted-foreground italic">All minions succeeded — toggle the filter to see them.</p>
+            )}
+          </>
         )}
       </div>
 
@@ -190,7 +221,13 @@ function Field({ label, value, mono }: { label: string; value: string; mono?: bo
   )
 }
 
-function MinionResultCard({ result }: { result: JobMinionResult }) {
+function MinionResultCard({
+  result,
+  failuresOnly = false,
+}: {
+  result: JobMinionResult
+  failuresOnly?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const panelId = `minion-result-${result.minion}`
   const ok = result.success === true
@@ -224,7 +261,7 @@ function MinionResultCard({ result }: { result: JobMinionResult }) {
         className="border-t bg-muted/20"
       >
         {highstate ? (
-          <HighstateResult states={highstate} />
+          <HighstateResult states={highstate} filterFailures={failuresOnly} />
         ) : (
           <pre className="overflow-x-auto p-4 text-xs">
             {JSON.stringify(result.return_value, null, 2)}

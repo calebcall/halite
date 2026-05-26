@@ -5,8 +5,8 @@ import { parseHighstate } from './parse'
 // generated JobMinionResult type lets the unit test feed plain objects.
 export interface MinionResultLite {
   minion: string
-  success: boolean | null | undefined
-  return_value: unknown
+  success?: boolean | null | undefined
+  return_value?: unknown
 }
 
 export interface JobHighstateAggregate {
