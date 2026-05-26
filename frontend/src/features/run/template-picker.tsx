@@ -18,7 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { type CommandTemplate, useDeleteTemplate, useTemplates } from './use-templates'
+import { Switch } from '@/components/ui/switch'
+import { useCurrentUser } from '@/features/auth/use-current-user'
+import { type CommandTemplate, useDeleteTemplate, useTemplates, useUpdateTemplate } from './use-templates'
 
 export function TemplatePicker({
   onSelect,
@@ -26,7 +28,6 @@ export function TemplatePicker({
   onSelect: (template: CommandTemplate) => void
 }) {
   const { data } = useTemplates()
-  const deleteMutation = useDeleteTemplate()
   const [manageOpen, setManageOpen] = useState(false)
   const templates = data?.templates ?? []
 
@@ -76,15 +77,9 @@ export function TemplatePicker({
       {manageOpen && (
         <ManageTemplatesDialog
           templates={templates}
-          deleting={deleteMutation.isPending}
           onClose={() => setManageOpen(false)}
-          onDelete={(id) => {
-            deleteMutation.mutate(id, {
-              onSuccess: () => {
-                // Close when there are no more templates
-                if (templates.length === 1) setManageOpen(false)
-              },
-            })
+          onDeleteSuccess={() => {
+            if (templates.length === 1) setManageOpen(false)
           }}
         />
       )}
@@ -94,51 +89,97 @@ export function TemplatePicker({
 
 function ManageTemplatesDialog({
   templates,
-  deleting,
   onClose,
-  onDelete,
+  onDeleteSuccess,
 }: {
   templates: CommandTemplate[]
-  deleting: boolean
   onClose: () => void
-  onDelete: (id: string) => void
+  onDeleteSuccess: () => void
 }) {
+  const { data: currentUser } = useCurrentUser()
+  const deleteMut = useDeleteTemplate()
+  const updateMut = useUpdateTemplate()
+  const [updateError, setUpdateError] = useState<string | null>(null)
+
+  function handleDelete(id: string) {
+    deleteMut.mutate(id, { onSuccess: onDeleteSuccess })
+  }
+
+  function handleShareToggle(template: CommandTemplate, newValue: boolean) {
+    setUpdateError(null)
+    updateMut.mutate(
+      { body: { is_shared: newValue }, id: template.id },
+      {
+        onError: (err) => {
+          setUpdateError(err instanceof Error ? err.message : 'Failed to update sharing.')
+        },
+      },
+    )
+  }
+
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Manage templates</DialogTitle>
-          <DialogDescription>Delete templates you no longer need.</DialogDescription>
+          <DialogDescription>Delete or share templates you own.</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2 max-h-80 overflow-auto">
-          {templates.map((t) => (
-            <div
-              key={t.id}
-              className="flex items-start justify-between gap-3 rounded-md border p-3"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="font-medium truncate">{t.name}</div>
-                {t.description && (
-                  <div className="text-xs text-muted-foreground">{t.description}</div>
-                )}
-                <div className="mt-1 text-xs text-muted-foreground font-mono truncate">
-                  {t.target} · {t.fun}
+          {templates.map((t) => {
+            const isOwner = currentUser != null && t.owner_username === currentUser.username
+            const isUpdatingThisRow = updateMut.isPending && updateMut.variables?.id === t.id
+
+            return (
+              <div
+                key={t.id}
+                className="flex items-start justify-between gap-3 rounded-md border p-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium truncate">{t.name}</div>
+                  {t.description && (
+                    <div className="text-xs text-muted-foreground">{t.description}</div>
+                  )}
+                  <div className="mt-1 text-xs text-muted-foreground font-mono truncate">
+                    {t.target} · {t.fun}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {isOwner ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-muted-foreground">Shared</span>
+                      <Switch
+                        checked={t.is_shared}
+                        disabled={isUpdatingThisRow}
+                        onCheckedChange={(checked) => handleShareToggle(t, checked)}
+                        aria-label={`Share ${t.name}`}
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Shared by {t.owner_username}
+                    </span>
+                  )}
+
+                  {isOwner && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={deleteMut.isPending}
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => handleDelete(t.id)}
+                      aria-label={`Delete ${t.name}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={deleting}
-                className="text-destructive hover:text-destructive shrink-0"
-                onClick={() => onDelete(t.id)}
-                aria-label={`Delete ${t.name}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
+            )
+          })}
         </div>
+        {updateError && <p className="text-sm text-destructive">{updateError}</p>}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Done</Button>
         </DialogFooter>
