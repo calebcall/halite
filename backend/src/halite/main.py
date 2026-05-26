@@ -128,9 +128,22 @@ def create_app(
                     name="assets",
                 )
 
+            static_root = static_path.resolve()
+
             @app.get("/{full_path:path}", include_in_schema=False)
-            async def serve_spa(full_path: str):  # noqa: ARG001
-                # SPA fallback — any non-API path returns index.html for client routing.
+            async def serve_spa(full_path: str):
+                # Serve real files from the static root first (favicon.svg,
+                # apple-touch-icon.png, robots.txt, etc.) — otherwise iOS Safari
+                # gets index.html when asking for the touch icon and falls back
+                # to a generated letter icon. Unknown paths still return
+                # index.html so the SPA can route client-side.
+                if full_path:
+                    candidate = (static_path / full_path).resolve()
+                    if (
+                        candidate.is_file()
+                        and candidate.is_relative_to(static_root)
+                    ):
+                        return FileResponse(candidate)
                 return FileResponse(static_path / "index.html")
 
     return app
