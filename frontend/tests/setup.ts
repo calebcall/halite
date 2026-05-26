@@ -7,6 +7,23 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 }
 
+// jsdom does not implement pointer capture APIs; Radix UI Select requires them.
+if (typeof window !== 'undefined' && typeof window.Element !== 'undefined') {
+  if (!window.Element.prototype.hasPointerCapture) {
+    window.Element.prototype.hasPointerCapture = () => false
+  }
+  if (!window.Element.prototype.setPointerCapture) {
+    window.Element.prototype.setPointerCapture = () => {}
+  }
+  if (!window.Element.prototype.releasePointerCapture) {
+    window.Element.prototype.releasePointerCapture = () => {}
+  }
+  // jsdom does not implement scrollIntoView; Radix UI Select requires it.
+  if (!window.Element.prototype.scrollIntoView) {
+    window.Element.prototype.scrollIntoView = () => {}
+  }
+}
+
 // Node 22+ exposes a file-backed localStorage global that requires --localstorage-file.
 // Replace it with a simple in-memory implementation so tests can use it freely.
 if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localStorage.clear !== 'function') {
