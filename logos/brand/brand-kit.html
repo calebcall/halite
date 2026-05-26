@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Halite Brand Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="tokens/colors.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root { color-scheme: dark; }
+  body {
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background: var(--halite-graphite);
+    color: var(--halite-bone);
+    min-height: 100vh;
+    padding: 3rem 2rem;
+    line-height: 1.5;
+  }
+  body.light {
+    background: #f5f5f5;
+    color: #1a1a1a;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+
+  /* Header */
+  .doc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-bottom: 1.5rem;
+    margin-bottom: 3rem;
+    border-bottom: 1px solid var(--halite-slate);
+  }
+  body.light .doc-header { border-bottom-color: #e0e0e0; }
+  .doc-title {
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .doc-title .accent { color: var(--halite-amber); }
+  .doc-sub {
+    font-size: 0.875rem;
+    color: var(--halite-fog);
+    margin-top: 0.25rem;
+  }
+  .toggle {
+    padding: 0.5rem 1rem;
+    border: 1px solid currentColor;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-family: inherit;
+  }
+
+  /* Sections */
+  section { margin-bottom: 4rem; }
+  h2 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--halite-fog);
+    margin-bottom: 1.25rem;
+  }
+  h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  .lede {
+    font-size: 1rem;
+    max-width: 64ch;
+    color: var(--halite-bone);
+    opacity: 0.85;
+    margin-bottom: 1rem;
+  }
+  body.light .lede { color: #444; opacity: 1; }
+
+  /* Mark grid */
+  .mark-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+  .mark-card {
+    border: 1px solid var(--halite-slate);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--halite-onyx);
+  }
+  body.light .mark-card {
+    background: #fff;
+    border-color: #e0e0e0;
+  }
+  .mark-stage {
+    padding: 2.5rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 240px;
+  }
+  .mark-stage img { max-width: 200px; max-height: 200px; }
+  .mark-meta {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--halite-slate);
+    background: rgba(0,0,0,0.2);
+  }
+  body.light .mark-meta {
+    background: #fafafa;
+    border-top-color: #e0e0e0;
+  }
+  .mark-meta h3 { margin-bottom: 0.25rem; font-size: 1rem; }
+  .mark-meta p { font-size: 0.8125rem; color: var(--halite-fog); }
+  body.light .mark-meta p { color: #666; }
+
+  /* Lockup row */
+  .lockup-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .lockup-row > div {
+    border: 1px solid var(--halite-slate);
+    border-radius: 12px;
+    background: var(--halite-onyx);
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  body.light .lockup-row > div {
+    background: #fff;
+    border-color: #e0e0e0;
+  }
+  .lockup-row img { max-width: 100%; height: auto; max-height: 160px; }
+  .lockup-row .stacked-row { max-height: 280px; }
+
+  /* Size strip */
+  .size-strip {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    padding: 1.5rem;
+    border: 1px solid var(--halite-slate);
+    border-radius: 12px;
+    background: var(--halite-onyx);
+  }
+  body.light .size-strip {
+    background: #fff;
+    border-color: #e0e0e0;
+  }
+  .size-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .size-group .label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+  .size-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 1.25rem;
+  }
+  .size-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .size-cell .px {
+    font-size: 0.6875rem;
+    color: var(--halite-fog);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Color tokens grid */
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+  }
+  .swatch {
+    border: 1px solid var(--halite-slate);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  body.light .swatch { border-color: #e0e0e0; }
+  .swatch-fill {
+    height: 90px;
+  }
+  .swatch-meta {
+    padding: 0.75rem;
+    background: var(--halite-onyx);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+  }
+  body.light .swatch-meta { background: #fff; }
+  .swatch-meta .name {
+    color: var(--halite-bone);
+    font-weight: 500;
+    margin-bottom: 0.125rem;
+  }
+  body.light .swatch-meta .name { color: #1a1a1a; }
+  .swatch-meta .hex { color: var(--halite-fog); }
+
+  /* Files list */
+  .files {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8125rem;
+    background: var(--halite-onyx);
+    border: 1px solid var(--halite-slate);
+    border-radius: 8px;
+    padding: 1.25rem;
+    white-space: pre;
+    overflow-x: auto;
+    line-height: 1.7;
+  }
+  body.light .files {
+    background: #fff;
+    border-color: #e0e0e0;
+    color: #333;
+  }
+  .files a { color: var(--halite-amber); text-decoration: none; }
+  .files a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="doc-header">
+    <div>
+      <div class="doc-title"><span class="accent">●</span> Halite Brand Kit</div>
+      <div class="doc-sub">Three mark families, two lockups each, full PNG size set</div>
+    </div>
+    <button class="toggle"
+      onclick="document.body.classList.toggle('light'); this.textContent = document.body.classList.contains('light') ? '☾ Dark' : '☀ Light';">
+      ☀ Light
+    </button>
+  </div>
+
+  <!-- Marks overview -->
+  <section>
+    <h2>Marks</h2>
+    <p class="lede">
+      Three distinct icon families, each tuned for a different role. All use the Halite amber palette;
+      pick the mark that best fits the context.
+    </p>
+    <div class="mark-grid">
+      <div class="mark-card">
+        <div class="mark-stage"><img src="lattice/icon.svg" alt="The Lattice"></div>
+        <div class="mark-meta">
+          <h3>The Lattice</h3>
+          <p>3×3 grid mark. The most semantically dense — diagrams both halite's atomic lattice and the SaltStack master+minion topology. Default choice for the app icon.</p>
+        </div>
+      </div>
+      <div class="mark-card">
+        <div class="mark-stage"><img src="cube/icon.svg" alt="The Salt Cube"></div>
+        <div class="mark-meta">
+          <h3>The Salt Cube</h3>
+          <p>Single isometric cube, tri-tone amber. The most iconic and merchandise-friendly. Use for marketing, decals, swag, splash screens.</p>
+        </div>
+      </div>
+      <div class="mark-card">
+        <div class="mark-stage"><img src="stack/icon.svg" alt="The Triple Stack"></div>
+        <div class="mark-meta">
+          <h3>The Triple Stack</h3>
+          <p>Three cubes piled in a triangular cluster. Compact and sculptural. Works well as a section divider or small accent.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Horizontal lockups -->
+  <section>
+    <h2>Horizontal Lockups</h2>
+    <p class="lede">Icon + wordmark side-by-side. Use these in topbars, email signatures, README headers.</p>
+    <div class="lockup-row">
+      <div><img src="lattice/lockup-horizontal.svg" alt="Lattice horizontal lockup"></div>
+      <div><img src="cube/lockup-horizontal.svg" alt="Cube horizontal lockup"></div>
+      <div><img src="stack/lockup-horizontal.svg" alt="Stack horizontal lockup"></div>
+    </div>
+  </section>
+
+  <!-- Stacked lockups -->
+  <section>
+    <h2>Stacked Lockups</h2>
+    <p class="lede">Icon centered above the wordmark. Use these for hero blocks, login screens, splash pages.</p>
+    <div class="lockup-row">
+      <div class="stacked-row"><img src="lattice/lockup-stacked.svg" alt="Lattice stacked lockup"></div>
+      <div class="stacked-row"><img src="cube/lockup-stacked.svg" alt="Cube stacked lockup"></div>
+      <div class="stacked-row"><img src="stack/lockup-stacked.svg" alt="Stack stacked lockup"></div>
+    </div>
+  </section>
+
+  <!-- Mono variants -->
+  <section>
+    <h2>Monochrome &amp; Wordmark-only</h2>
+    <p class="lede">
+      For single-color contexts (foil stamping, embroidery, amber-on-amber). The Cube's tri-tone story
+      requires its own mono wireframe variant; Lattice and Stack already render in a single color.
+    </p>
+    <div class="mark-grid">
+      <div class="mark-card">
+        <div class="mark-stage"><img src="cube/icon-mono.svg" alt="Cube monochrome wireframe"></div>
+        <div class="mark-meta">
+          <h3>Cube · Mono Wireframe</h3>
+          <p>Same hex silhouette + internal Y, single-stroke amber. Reads as a cube down to ~64px.</p>
+        </div>
+      </div>
+      <div class="mark-card">
+        <div class="mark-stage" style="padding: 3rem 1rem;">
+          <img src="wordmark/halite.svg" alt="Halite wordmark" style="max-width: 240px; max-height: 80px;">
+        </div>
+        <div class="mark-meta">
+          <h3>Wordmark</h3>
+          <p>"halite" set in Inter Semibold, slightly tracked tight. Use standalone when the mark is established by adjacent context.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Favicon strip -->
+  <section>
+    <h2>Favicon Size Check (16 / 32 / 48 / 192 px)</h2>
+    <p class="lede">
+      How each mark holds up at small sizes. All three survive 32px; The Salt Cube reads most clearly at the smallest favicon size.
+    </p>
+    <div class="size-strip">
+      <div class="size-group">
+        <div class="label">Lattice</div>
+        <div class="size-row">
+          <div class="size-cell"><img src="lattice/png/icon-192.png" width="96" height="96"><span class="px">96</span></div>
+          <div class="size-cell"><img src="lattice/png/icon-48.png" width="48" height="48"><span class="px">48</span></div>
+          <div class="size-cell"><img src="lattice/png/icon-32.png" width="32" height="32"><span class="px">32</span></div>
+          <div class="size-cell"><img src="lattice/png/icon-16.png" width="16" height="16"><span class="px">16</span></div>
+        </div>
+      </div>
+      <div class="size-group">
+        <div class="label">Cube</div>
+        <div class="size-row">
+          <div class="size-cell"><img src="cube/png/icon-192.png" width="96" height="96"><span class="px">96</span></div>
+          <div class="size-cell"><img src="cube/png/icon-48.png" width="48" height="48"><span class="px">48</span></div>
+          <div class="size-cell"><img src="cube/png/icon-32.png" width="32" height="32"><span class="px">32</span></div>
+          <div class="size-cell"><img src="cube/png/icon-16.png" width="16" height="16"><span class="px">16</span></div>
+        </div>
+      </div>
+      <div class="size-group">
+        <div class="label">Stack</div>
+        <div class="size-row">
+          <div class="size-cell"><img src="stack/png/icon-192.png" width="96" height="96"><span class="px">96</span></div>
+          <div class="size-cell"><img src="stack/png/icon-48.png" width="48" height="48"><span class="px">48</span></div>
+          <div class="size-cell"><img src="stack/png/icon-32.png" width="32" height="32"><span class="px">32</span></div>
+          <div class="size-cell"><img src="stack/png/icon-16.png" width="16" height="16"><span class="px">16</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Color tokens -->
+  <section>
+    <h2>Color Tokens</h2>
+    <p class="lede">
+      Source of truth lives in <code>tokens/colors.css</code> and <code>tokens/colors.json</code>. The app's
+      <code>frontend/src/index.css</code> derives the same values in HSL.
+    </p>
+    <div class="color-grid">
+      <div class="swatch">
+        <div class="swatch-fill" style="background: #e5a00d;"></div>
+        <div class="swatch-meta"><div class="name">amber</div><div class="hex">#e5a00d</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background: #f5b938;"></div>
+        <div class="swatch-meta"><div class="name">amber-light</div><div class="hex">#f5b938</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background: #a77100;"></div>
+        <div class="swatch-meta"><div class="name">amber-dark</div><div class="hex">#a77100</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background: #0e0e0e;"></div>
+        <div class="swatch-meta"><div class="name">black</div><div class="hex">#0e0e0e</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background: #141414;"></div>
+        <div class="swatch-meta"><div class="name">graphite</div><div class="hex">#141414</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background: #1f1f1f;"></div>
+        <div class="swatch-meta"><div class="name">onyx</div><div class="hex">#1f1f1f</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background: #2a2a2a;"></div>
+        <div class="swatch-meta"><div class="name">slate</div><div class="hex">#2a2a2a</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background: #999999;"></div>
+        <div class="swatch-meta"><div class="name">fog</div><div class="hex">#999999</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background: #ebebeb;"></div>
+        <div class="swatch-meta"><div class="name">bone</div><div class="hex">#ebebeb</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- File index -->
+  <section>
+    <h2>File Index</h2>
+    <p class="lede">Each mark folder contains the canonical SVG, the two lockups, and a <code>png/</code> subfolder with raster exports.</p>
+    <div class="files">brand/
+├── <a href="README.md">README.md</a>
+├── brand-kit.html              ← you are here
+├── lattice/
+│   ├── <a href="lattice/icon.svg">icon.svg</a>
+│   ├── <a href="lattice/lockup-horizontal.svg">lockup-horizontal.svg</a>
+│   ├── <a href="lattice/lockup-stacked.svg">lockup-stacked.svg</a>
+│   └── png/  ← 7 icon sizes + 3 sizes per lockup
+├── cube/
+│   ├── <a href="cube/icon.svg">icon.svg</a>
+│   ├── <a href="cube/icon-mono.svg">icon-mono.svg</a>
+│   ├── <a href="cube/lockup-horizontal.svg">lockup-horizontal.svg</a>
+│   ├── <a href="cube/lockup-stacked.svg">lockup-stacked.svg</a>
+│   └── png/  ← 7 + 3 + 3 + 3 sizes
+├── stack/
+│   ├── <a href="stack/icon.svg">icon.svg</a>
+│   ├── <a href="stack/lockup-horizontal.svg">lockup-horizontal.svg</a>
+│   ├── <a href="stack/lockup-stacked.svg">lockup-stacked.svg</a>
+│   └── png/  ← 7 + 3 + 3 sizes
+├── wordmark/
+│   ├── <a href="wordmark/halite.svg">halite.svg</a>
+│   └── halite-{256,512,1024}.png
+└── tokens/
+    ├── <a href="tokens/colors.css">colors.css</a>
+    └── <a href="tokens/colors.json">colors.json</a></div>
+  </section>
+</div>
+</body>
+</html>

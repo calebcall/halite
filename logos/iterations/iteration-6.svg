@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!--
+    Halite — "The Cleavage Diamond".
+
+    Halite has perfect cubic cleavage: the crystal breaks along three
+    mutually-perpendicular planes. This mark renders that physical fact
+    as four amber facets separated by wedge-shaped gaps that taper from
+    the bright center outward to zero at the four diamond corners.
+
+    Outer silhouette is a 280×280 square rotated 45° around (256, 256),
+    so the diamond corners sit at (256, 58), (454, 256), (256, 454),
+    (58, 256). The four facets meet at points pulled 16u inward from the
+    geometric center, opening a 32×32 negative-space "+" at the heart.
+  -->
+  <g id="icon" fill="#e5a00d">
+    <!-- Top-left facet -->
+    <polygon points="256,58 58,256 240,240"/>
+    <!-- Top-right facet -->
+    <polygon points="256,58 454,256 272,240"/>
+    <!-- Bottom-right facet -->
+    <polygon points="454,256 256,454 272,272"/>
+    <!-- Bottom-left facet -->
+    <polygon points="58,256 240,272 256,454"/>
+  </g>
+</svg>

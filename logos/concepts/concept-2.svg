@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <g id="icon" fill="#e5a00d">
+    <!-- Left vertical bar: cols 0-1, rows 0-10 -->
+    <rect x="112" y="80" width="32" height="32"/>
+    <rect x="144" y="80" width="32" height="32"/>
+    <rect x="112" y="112" width="32" height="32"/>
+    <rect x="144" y="112" width="32" height="32"/>
+    <rect x="112" y="144" width="32" height="32"/>
+    <rect x="144" y="144" width="32" height="32"/>
+    <rect x="112" y="176" width="32" height="32"/>
+    <rect x="144" y="176" width="32" height="32"/>
+    <rect x="112" y="208" width="32" height="32"/>
+    <rect x="144" y="208" width="32" height="32"/>
+    <rect x="112" y="240" width="32" height="32"/>
+    <rect x="144" y="240" width="32" height="32"/>
+    <rect x="112" y="272" width="32" height="32"/>
+    <rect x="144" y="272" width="32" height="32"/>
+    <rect x="112" y="304" width="32" height="32"/>
+    <rect x="144" y="304" width="32" height="32"/>
+    <rect x="112" y="336" width="32" height="32"/>
+    <rect x="144" y="336" width="32" height="32"/>
+    <rect x="112" y="368" width="32" height="32"/>
+    <rect x="144" y="368" width="32" height="32"/>
+    <rect x="112" y="400" width="32" height="32"/>
+    <rect x="144" y="400" width="32" height="32"/>
+    <!-- Right vertical bar: cols 7-8, rows 0-10 -->
+    <rect x="336" y="80" width="32" height="32"/>
+    <rect x="368" y="80" width="32" height="32"/>
+    <rect x="336" y="112" width="32" height="32"/>
+    <rect x="368" y="112" width="32" height="32"/>
+    <rect x="336" y="144" width="32" height="32"/>
+    <rect x="368" y="144" width="32" height="32"/>
+    <rect x="336" y="176" width="32" height="32"/>
+    <rect x="368" y="176" width="32" height="32"/>
+    <rect x="336" y="208" width="32" height="32"/>
+    <rect x="368" y="208" width="32" height="32"/>
+    <rect x="336" y="240" width="32" height="32"/>
+    <rect x="368" y="240" width="32" height="32"/>
+    <rect x="336" y="272" width="32" height="32"/>
+    <rect x="368" y="272" width="32" height="32"/>
+    <rect x="336" y="304" width="32" height="32"/>
+    <rect x="368" y="304" width="32" height="32"/>
+    <rect x="336" y="336" width="32" height="32"/>
+    <rect x="368" y="336" width="32" height="32"/>
+    <rect x="336" y="368" width="32" height="32"/>
+    <rect x="368" y="368" width="32" height="32"/>
+    <rect x="336" y="400" width="32" height="32"/>
+    <rect x="368" y="400" width="32" height="32"/>
+    <!-- Crossbar: cols 2-6, rows 4-5 -->
+    <rect x="176" y="208" width="32" height="32"/>
+    <rect x="208" y="208" width="32" height="32"/>
+    <rect x="240" y="208" width="32" height="32"/>
+    <rect x="272" y="208" width="32" height="32"/>
+    <rect x="304" y="208" width="32" height="32"/>
+    <rect x="176" y="240" width="32" height="32"/>
+    <rect x="208" y="240" width="32" height="32"/>
+    <rect x="240" y="240" width="32" height="32"/>
+    <rect x="272" y="240" width="32" height="32"/>
+    <rect x="304" y="240" width="32" height="32"/>
+  </g>
+  <g id="grains" fill="#e5a00d">
+    <!-- Stray grains in negative space, none touching, varied opacity -->
+    <rect x="48" y="48" width="16" height="16" opacity="0.6"/>
+    <rect x="80" y="128" width="16" height="16" opacity="0.5"/>
+    <rect x="56" y="320" width="16" height="16" opacity="0.7"/>
+    <rect x="232" y="120" width="16" height="16" opacity="0.55"/>
+    <rect x="264" y="360" width="16" height="16" opacity="0.6"/>
+    <rect x="416" y="96" width="16" height="16" opacity="0.5"/>
+    <rect x="440" y="256" width="16" height="16" opacity="0.65"/>
+    <rect x="408" y="416" width="16" height="16" opacity="0.7"/>
+    <rect x="192" y="440" width="16" height="16" opacity="0.5"/>
+  </g>
+</svg>

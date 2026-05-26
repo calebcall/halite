@@ -1,0 +1,28 @@
+/*
+ * Halite brand color tokens.
+ *
+ * These are the source of truth for any external consumer (printers,
+ * marketing material, third-party integrations). The web app itself
+ * derives its theme from these same values, expressed as HSL in
+ * frontend/src/index.css.
+ */
+
+:root {
+  /* Primary — Plex-inspired amber. The brand color. */
+  --halite-amber:        #e5a00d;
+  --halite-amber-light:  #f5b938;  /* cube top face; highlight */
+  --halite-amber-dark:   #a77100;  /* cube shadow face; pressed states */
+
+  /* Neutrals — Plex aesthetic dark surfaces */
+  --halite-black:        #0e0e0e;  /* deepest background */
+  --halite-graphite:     #141414;  /* body background */
+  --halite-onyx:         #1f1f1f;  /* card surface */
+  --halite-slate:        #2a2a2a;  /* elevated surface, borders */
+  --halite-fog:          #999999;  /* muted text */
+  --halite-bone:         #ebebeb;  /* primary text on dark */
+
+  /* Semantic accents (matched to the app's index.css) */
+  --halite-success:      #36a361;
+  --halite-warning:      #e5a00d;  /* same as amber — by design */
+  --halite-danger:       #c83232;
+}

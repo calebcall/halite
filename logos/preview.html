@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Halite Logo Preview — Iterations</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 2rem;
+    transition: background-color 0.3s, color 0.3s;
+  }
+  body.light { background: #f5f5f5; color: #333; }
+  body.dark  { background: #141414; color: #ebebeb; }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  h1 { font-size: 1.5rem; font-weight: 600; }
+  h2 { font-size: 1rem; font-weight: 600; margin: 2.5rem 0 1rem; opacity: 0.8; }
+  .toggle {
+    padding: 0.5rem 1rem;
+    border: 1px solid currentColor;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+  .card {
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .card-img {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    min-height: 280px;
+  }
+  body.light .card-img { background: #fff; }
+  body.dark  .card-img { background: #1f1f1f; }
+  .card-img img { max-width: 100%; max-height: 240px; }
+  .card-label {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-top: 1px solid rgba(128, 128, 128, 0.3);
+  }
+  body.light .card-label { background: #fafafa; }
+  body.dark  .card-label { background: #181818; }
+  .favicon-strip {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    align-items: end;
+    padding: 1.25rem;
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    border-radius: 12px;
+  }
+  body.light .favicon-strip { background: #fff; }
+  body.dark  .favicon-strip { background: #1f1f1f; }
+  .favicon-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .favicon-group .lbl { font-size: 0.8rem; font-weight: 500; }
+  .favicon-sizes { display: flex; gap: 1rem; align-items: end; }
+  .favicon-sizes > div { display: flex; flex-direction: column; align-items: center; }
+  .favicon-sizes .size-lbl { font-size: 0.7rem; opacity: 0.5; margin-top: 0.25rem; }
+  .archive { opacity: 0.6; margin-top: 0.5rem; }
+</style>
+</head>
+<body class="dark">
+  <div class="header">
+    <h1>Halite Logo — Iterations</h1>
+    <div style="display:flex;gap:0.5rem;align-items:center;">
+      <a href="brand/brand-kit.html" style="padding:0.5rem 1rem;border:1px solid currentColor;border-radius:6px;color:inherit;text-decoration:none;font-size:0.875rem;">→ Brand Kit</a>
+      <button class="toggle" onclick="document.body.classList.toggle('dark'); document.body.classList.toggle('light'); this.textContent = document.body.classList.contains('dark') ? '☀ Light' : '☾ Dark';">☀ Light</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-img"><img src="iterations/iteration-7.svg" alt="iteration-7"></div>
+      <div class="card-label">iteration-7 · The Triple Stack — 3 rounded cubes piled into a triangular cluster</div>
+    </div>
+    <div class="card">
+      <div class="card-img"><img src="iterations/iteration-6.svg" alt="iteration-6"></div>
+      <div class="card-label">iteration-6 · The Cleavage Diamond — single mark with internal "+" cleavage planes</div>
+    </div>
+    <div class="card">
+      <div class="card-img"><img src="iterations/iteration-5.svg" alt="iteration-5"></div>
+      <div class="card-label">iteration-5 · The Salt Cube — single iso cube, three amber tones</div>
+    </div>
+    <div class="card">
+      <div class="card-img"><img src="iterations/iteration-4.svg" alt="iteration-4"></div>
+      <div class="card-label">iteration-4 · The Lattice</div>
+    </div>
+    <div class="card">
+      <div class="card-img"><img src="iterations/iteration-3.svg" alt="iteration-3"></div>
+      <div class="card-label">iteration-3 · cascading shoulder (kept for reference)</div>
+    </div>
+    <div class="card">
+      <div class="card-img"><img src="iterations/iteration-2.svg" alt="iteration-2"></div>
+      <div class="card-label">iteration-2 · smooth tongue shoulder (rejected)</div>
+    </div>
+    <div class="card">
+      <div class="card-img"><img src="iterations/iteration-1.svg" alt="iteration-1"></div>
+      <div class="card-label">iteration-1 · shoulder as 3 rounded squares</div>
+    </div>
+  </div>
+
+  <h2>Favicon size check (16 / 32 / 64 px)</h2>
+  <div class="favicon-strip">
+    <div class="favicon-group">
+      <div class="lbl">iteration-7</div>
+      <div class="favicon-sizes">
+        <div><img src="iterations/iteration-7.svg" width="64" height="64"><div class="size-lbl">64</div></div>
+        <div><img src="iterations/iteration-7.svg" width="32" height="32"><div class="size-lbl">32</div></div>
+        <div><img src="iterations/iteration-7.svg" width="16" height="16"><div class="size-lbl">16</div></div>
+      </div>
+    </div>
+    <div class="favicon-group">
+      <div class="lbl">iteration-6</div>
+      <div class="favicon-sizes">
+        <div><img src="iterations/iteration-6.svg" width="64" height="64"><div class="size-lbl">64</div></div>
+        <div><img src="iterations/iteration-6.svg" width="32" height="32"><div class="size-lbl">32</div></div>
+        <div><img src="iterations/iteration-6.svg" width="16" height="16"><div class="size-lbl">16</div></div>
+      </div>
+    </div>
+    <div class="favicon-group">
+      <div class="lbl">iteration-5</div>
+      <div class="favicon-sizes">
+        <div><img src="iterations/iteration-5.svg" width="64" height="64"><div class="size-lbl">64</div></div>
+        <div><img src="iterations/iteration-5.svg" width="32" height="32"><div class="size-lbl">32</div></div>
+        <div><img src="iterations/iteration-5.svg" width="16" height="16"><div class="size-lbl">16</div></div>
+      </div>
+    </div>
+    <div class="favicon-group">
+      <div class="lbl">iteration-4</div>
+      <div class="favicon-sizes">
+        <div><img src="iterations/iteration-4.svg" width="64" height="64"><div class="size-lbl">64</div></div>
+        <div><img src="iterations/iteration-4.svg" width="32" height="32"><div class="size-lbl">32</div></div>
+        <div><img src="iterations/iteration-4.svg" width="16" height="16"><div class="size-lbl">16</div></div>
+      </div>
+    </div>
+    <div class="favicon-group">
+      <div class="lbl">iteration-3</div>
+      <div class="favicon-sizes">
+        <div><img src="iterations/iteration-3.svg" width="64" height="64"><div class="size-lbl">64</div></div>
+        <div><img src="iterations/iteration-3.svg" width="32" height="32"><div class="size-lbl">32</div></div>
+        <div><img src="iterations/iteration-3.svg" width="16" height="16"><div class="size-lbl">16</div></div>
+      </div>
+    </div>
+    <div class="favicon-group">
+      <div class="lbl">iteration-1</div>
+      <div class="favicon-sizes">
+        <div><img src="iterations/iteration-1.svg" width="64" height="64"><div class="size-lbl">64</div></div>
+        <div><img src="iterations/iteration-1.svg" width="32" height="32"><div class="size-lbl">32</div></div>
+        <div><img src="iterations/iteration-1.svg" width="16" height="16"><div class="size-lbl">16</div></div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="archive">Earlier concepts (archived)</h2>
+  <div class="grid archive">
+    <div class="card">
+      <div class="card-img"><img src="concepts/concept-1.svg" alt="concept-1"></div>
+      <div class="card-label">concept-1 · uppercase H, depth shading (rejected)</div>
+    </div>
+    <div class="card">
+      <div class="card-img"><img src="concepts/concept-2.svg" alt="concept-2"></div>
+      <div class="card-label">concept-2 · uppercase 8-bit H</div>
+    </div>
+    <div class="card">
+      <div class="card-img"><img src="concepts/concept-3.svg" alt="concept-3"></div>
+      <div class="card-label">concept-3 · Bracket H</div>
+    </div>
+    <div class="card">
+      <div class="card-img"><img src="concepts/concept-4.svg" alt="concept-4"></div>
+      <div class="card-label">concept-4 · isometric (broken — drop)</div>
+    </div>
+  </div>
+</body>
+</html>

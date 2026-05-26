@@ -1,0 +1,37 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "halite": {
+    "amber": {
+      "$value": "#e5a00d",
+      "$type": "color",
+      "$description": "Primary brand color. Plex-inspired amber. HSL 41° 89% 47%."
+    },
+    "amber-light": {
+      "$value": "#f5b938",
+      "$type": "color",
+      "$description": "Lighter amber. Used as the top face of The Salt Cube and for highlight/hover states."
+    },
+    "amber-dark": {
+      "$value": "#a77100",
+      "$type": "color",
+      "$description": "Darker amber. Used as the shadow face of The Salt Cube and for pressed states."
+    },
+    "black":     { "$value": "#0e0e0e", "$type": "color", "$description": "Deepest background." },
+    "graphite":  { "$value": "#141414", "$type": "color", "$description": "Body background." },
+    "onyx":      { "$value": "#1f1f1f", "$type": "color", "$description": "Card surface." },
+    "slate":     { "$value": "#2a2a2a", "$type": "color", "$description": "Elevated surface, borders." },
+    "fog":       { "$value": "#999999", "$type": "color", "$description": "Muted text." },
+    "bone":      { "$value": "#ebebeb", "$type": "color", "$description": "Primary text on dark surfaces." },
+    "success":   { "$value": "#36a361", "$type": "color" },
+    "warning":   { "$value": "#e5a00d", "$type": "color" },
+    "danger":    { "$value": "#c83232", "$type": "color" }
+  },
+  "typography": {
+    "wordmark": {
+      "font-family": "Inter",
+      "font-weight": 600,
+      "letter-spacing": "-0.015em",
+      "$description": "Halite wordmark — lowercase, Inter Semibold, tracked slightly tight."
+    }
+  }
+}

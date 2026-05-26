@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <g id="icon">
+    <!-- Halite "Crystalline H": 5x7 cubic lattice. Cell 50, gap 6. Origin (119, 63). -->
+    <!-- Filled cells form an H: col 0 rows 0-6, col 4 rows 0-6, row 3 cols 1-3 -->
+
+    <!-- Column 0 (left vertical bar) -->
+    <rect x="119" y="63"  width="50" height="50" fill="#e5a00d"/>
+    <rect x="119" y="119" width="50" height="50" fill="#e5a00d"/>
+    <rect x="119" y="175" width="50" height="50" fill="#e5a00d"/>
+    <rect x="119" y="231" width="50" height="50" fill="#e5a00d"/>
+    <rect x="119" y="287" width="50" height="50" fill="#e5a00d"/>
+    <rect x="119" y="343" width="50" height="50" fill="#e5a00d"/>
+    <rect x="119" y="399" width="50" height="50" fill="#e5a00d"/>
+
+    <!-- Column 4 (right vertical bar) -->
+    <rect x="343" y="63"  width="50" height="50" fill="#e5a00d"/>
+    <rect x="343" y="119" width="50" height="50" fill="#e5a00d"/>
+    <rect x="343" y="175" width="50" height="50" fill="#e5a00d"/>
+    <rect x="343" y="231" width="50" height="50" fill="#e5a00d"/>
+    <rect x="343" y="287" width="50" height="50" fill="#e5a00d"/>
+    <rect x="343" y="343" width="50" height="50" fill="#e5a00d"/>
+    <rect x="343" y="399" width="50" height="50" fill="#e5a00d"/>
+
+    <!-- Row 3 crossbar (cols 1-3) -->
+    <rect x="175" y="231" width="50" height="50" fill="#e5a00d"/>
+    <rect x="231" y="231" width="50" height="50" fill="#e5a00d"/>
+    <rect x="287" y="231" width="50" height="50" fill="#e5a00d"/>
+
+    <!-- Subtle crystal depth: darker amber bevel on bottom-right of each cube -->
+    <!-- Right edge strips (6 units wide) -->
+    <rect x="163" y="63"  width="6" height="50" fill="#a77100"/>
+    <rect x="163" y="119" width="6" height="50" fill="#a77100"/>
+    <rect x="163" y="175" width="6" height="50" fill="#a77100"/>
+    <rect x="163" y="231" width="6" height="50" fill="#a77100"/>
+    <rect x="163" y="287" width="6" height="50" fill="#a77100"/>
+    <rect x="163" y="343" width="6" height="50" fill="#a77100"/>
+    <rect x="163" y="399" width="6" height="50" fill="#a77100"/>
+
+    <rect x="387" y="63"  width="6" height="50" fill="#a77100"/>
+    <rect x="387" y="119" width="6" height="50" fill="#a77100"/>
+    <rect x="387" y="175" width="6" height="50" fill="#a77100"/>
+    <rect x="387" y="231" width="6" height="50" fill="#a77100"/>
+    <rect x="387" y="287" width="6" height="50" fill="#a77100"/>
+    <rect x="387" y="343" width="6" height="50" fill="#a77100"/>
+    <rect x="387" y="399" width="6" height="50" fill="#a77100"/>
+
+    <rect x="219" y="231" width="6" height="50" fill="#a77100"/>
+    <rect x="275" y="231" width="6" height="50" fill="#a77100"/>
+    <rect x="331" y="231" width="6" height="50" fill="#a77100"/>
+
+    <!-- Bottom edge strips (6 units tall) -->
+    <rect x="119" y="107" width="50" height="6" fill="#a77100"/>
+    <rect x="119" y="163" width="50" height="6" fill="#a77100"/>
+    <rect x="119" y="219" width="50" height="6" fill="#a77100"/>
+    <rect x="119" y="275" width="50" height="6" fill="#a77100"/>
+    <rect x="119" y="331" width="50" height="6" fill="#a77100"/>
+    <rect x="119" y="387" width="50" height="6" fill="#a77100"/>
+    <rect x="119" y="443" width="50" height="6" fill="#a77100"/>
+
+    <rect x="343" y="107" width="50" height="6" fill="#a77100"/>
+    <rect x="343" y="163" width="50" height="6" fill="#a77100"/>
+    <rect x="343" y="219" width="50" height="6" fill="#a77100"/>
+    <rect x="343" y="275" width="50" height="6" fill="#a77100"/>
+    <rect x="343" y="331" width="50" height="6" fill="#a77100"/>
+    <rect x="343" y="387" width="50" height="6" fill="#a77100"/>
+    <rect x="343" y="443" width="50" height="6" fill="#a77100"/>
+
+    <rect x="175" y="275" width="50" height="6" fill="#a77100"/>
+    <rect x="231" y="275" width="50" height="6" fill="#a77100"/>
+    <rect x="287" y="275" width="50" height="6" fill="#a77100"/>
+  </g>
+</svg>

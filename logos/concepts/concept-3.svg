@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <g id="legs" fill="#e5a00d">
+    <rect x="96" y="80" width="60" height="352" rx="10" ry="10"/>
+    <rect x="356" y="80" width="60" height="352" rx="10" ry="10"/>
+  </g>
+  <g id="bar" fill="#e5a00d">
+    <rect x="161" y="226" width="60" height="60"/>
+    <rect x="226" y="226" width="60" height="60"/>
+    <rect x="291" y="226" width="60" height="60"/>
+  </g>
+</svg>

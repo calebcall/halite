@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!--
+    Halite — "The Salt Cube" monochrome variant.
+
+    Same isometric cube as icon.svg, drawn as a single-color wireframe
+    instead of three solid faces. Use this when the tri-tone version
+    won't render correctly (single-color print, foil stamping, embroidery,
+    amber-on-amber contexts).
+
+    Geometry:
+      - Hexagonal silhouette (the cube's outer outline)
+      - Three internal cube edges meeting at the FRONT-TOP corner at
+        (256, 256) — center of the hex:
+          • down to (256, 456) = front vertical edge
+          • up-right to (429, 156) = top-right edge
+          • up-left to (83, 156) = top-left edge
+        These are the actual visible cube edges; the Y opens upward with
+        its stem dropping toward the bottom of the hex.
+
+    Stroke width 14 is calibrated for 32px+ rendering. Below 32px the
+    wireframe gets thready — prefer the tri-tone icon.svg at favicon sizes.
+  -->
+  <g fill="none" stroke="#e5a00d" stroke-width="14"
+     stroke-linejoin="round" stroke-linecap="round">
+    <!-- Hexagonal silhouette of the cube -->
+    <polygon points="256,56 429,156 429,356 256,456 83,356 83,156"/>
+    <!-- Three internal cube edges meeting at the front-top corner -->
+    <path d="M 256 256 L 256 456
+             M 256 256 L 429 156
+             M 256 256 L 83 156"/>
+  </g>
+</svg>

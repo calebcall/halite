@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!--
+    Halite — "The Salt Cube".
+
+    One isometric cube — the literal cubic crystal habit of halite (NaCl).
+    Three rhombic faces tile a regular hexagonal silhouette; three amber
+    tones convey the 3D form without any actual gradients or shading
+    tricks. Each face is a single flat polygon.
+
+    Hexagonal silhouette inscribed in r=200 around canvas center (256, 256).
+    Front (peak) vertex of the cube sits at the canvas center.
+  -->
+  <g id="icon">
+    <!-- TOP face (lightest amber) -->
+    <polygon
+      points="256,56 429,156 256,256 83,156"
+      fill="#f5b938" />
+
+    <!-- FRONT-RIGHT face (Plex amber, brand color) -->
+    <polygon
+      points="429,156 429,356 256,456 256,256"
+      fill="#e5a00d" />
+
+    <!-- FRONT-LEFT face (darkest amber) -->
+    <polygon
+      points="83,156 256,256 256,456 83,356"
+      fill="#a77100" />
+  </g>
+</svg>

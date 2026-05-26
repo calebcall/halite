@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!--
+    Halite — "The Triple Stack".
+
+    Three rounded amber cubes piled in a triangular composition: two
+    matching 140-unit cubes form the base, with a slightly smaller
+    110-unit cube resting on top. The compact silhouette reads as a small
+    crystal aggregate — a tight bundle of grains caught mid-formation.
+
+    16-unit gaps between adjacent cubes preserve the pixel rhythm from the
+    earlier iterations. Bottom row sits flat at y=248; top cube centers
+    horizontally on the canvas axis at x=256.
+  -->
+  <g id="icon" fill="#e5a00d">
+    <!-- Top cube — slightly smaller, centered above the gap -->
+    <rect x="201" y="122" width="110" height="110" rx="18"/>
+
+    <!-- Bottom-left cube -->
+    <rect x="108" y="248" width="140" height="140" rx="24"/>
+
+    <!-- Bottom-right cube -->
+    <rect x="264" y="248" width="140" height="140" rx="24"/>
+  </g>
+</svg>
