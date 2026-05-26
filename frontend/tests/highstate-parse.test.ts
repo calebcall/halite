@@ -108,6 +108,28 @@ describe('parseHighstate', () => {
     })
     expect(out?.[0].comment).toBe('42')
   })
+
+  it('handles state names with embedded newlines (multi-line cmd.run scripts)', () => {
+    // Real-world key from a teleport-install cmd.run state — the `name`
+    // field is a multi-line shell pipe containing literal \n characters.
+    const multiLineKey =
+      'cmd_|-teleport_install_|-VERSION=$(curl -s https://example.com/v)\ncurl https://goteleport.com/install.sh | bash\n_|-run'
+    const out = parseHighstate({
+      [multiLineKey]: {
+        result: true,
+        comment: 'Command ran',
+        changes: { retcode: 0 },
+        __run_num__: 0,
+      },
+    })
+    expect(out).not.toBeNull()
+    expect(out).toHaveLength(1)
+    expect(out?.[0].module).toBe('cmd')
+    expect(out?.[0].stateId).toBe('teleport_install')
+    expect(out?.[0].fun).toBe('run')
+    expect(out?.[0].name).toContain('curl')
+    expect(out?.[0].name).toContain('\n')
+  })
 })
 
 describe('hasChanges', () => {

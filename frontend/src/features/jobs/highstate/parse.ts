@@ -1,11 +1,13 @@
 // frontend/src/features/jobs/highstate/parse.ts
 
 // Salt's low-state result keys: "module_|-state_id_|-name_|-fun".
-// State IDs and names can contain anything (including underscores and
-// the substring `_|`), so we anchor with `^` and `$` and use the unique
-// `_|-` separator (underscore-pipe-dash) which doesn't legally appear
-// inside any of the four positions.
-const LOWSTATE_KEY = /^([a-z_]+)_\|-(.*?)_\|-(.*?)_\|-([a-z_]+)$/
+// State IDs and names can contain anything (including underscores,
+// newlines, and the substring `_|`), so we anchor with `^` and `$`
+// and use the unique `_|-` separator (underscore-pipe-dash) which
+// doesn't legally appear inside any of the four positions. The `s`
+// (dotall) flag is required because cmd.run state names commonly
+// contain multi-line shell scripts with literal newline characters.
+const LOWSTATE_KEY = /^([a-z_]+)_\|-(.*?)_\|-(.*?)_\|-([a-z_]+)$/s
 
 export type ParsedState = {
   module: string
