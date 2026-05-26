@@ -298,4 +298,22 @@ export const api = {
         path: '/api/salt/functions',
       }),
   },
+  templates: {
+    list: () =>
+      request<paths['/api/templates']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/templates',
+      }),
+    create: (body: paths['/api/templates']['post']['requestBody']['content']['application/json']) =>
+      request<paths['/api/templates']['post']['responses']['201']['content']['application/json']>({
+        method: 'POST',
+        path: '/api/templates',
+        body,
+      }),
+    delete: (id: string) =>
+      request<void>({
+        method: 'DELETE',
+        path: `/api/templates/${encodeURIComponent(id)}`,
+      }),
+  },
 }

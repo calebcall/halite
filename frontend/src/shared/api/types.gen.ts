@@ -483,6 +483,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Templates Route */
+        get: operations["list_templates_route_api_templates_get"];
+        put?: never;
+        /** Create Template Route */
+        post: operations["create_template_route_api_templates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Template Route */
+        delete: operations["delete_template_route_api_templates__template_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users": {
         parameters: {
             query?: never;
@@ -615,6 +650,86 @@ export interface components {
             current_password: string;
             /** New Password */
             new_password: string;
+        };
+        /** CommandTemplateCreate */
+        CommandTemplateCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Target */
+            target: string;
+            /**
+             * Target Type
+             * @default glob
+             * @enum {string}
+             */
+            target_type: "glob" | "list" | "pcre" | "grain" | "nodegroup" | "compound";
+            /** Fun */
+            fun: string;
+            /**
+             * Args
+             * @default []
+             */
+            args: string[];
+            /** Kwargs */
+            kwargs?: {
+                [key: string]: unknown;
+            };
+        };
+        /** CommandTemplateListOut */
+        CommandTemplateListOut: {
+            /** Total */
+            total: number;
+            /** Templates */
+            templates: components["schemas"]["CommandTemplateOut"][];
+        };
+        /** CommandTemplateOut */
+        CommandTemplateOut: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Target */
+            target: string;
+            /**
+             * Target Type
+             * @default glob
+             * @enum {string}
+             */
+            target_type: "glob" | "list" | "pcre" | "grain" | "nodegroup" | "compound";
+            /** Fun */
+            fun: string;
+            /**
+             * Args
+             * @default []
+             */
+            args: string[];
+            /** Kwargs */
+            kwargs?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2027,6 +2142,88 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SaltFunctionsOut"];
+                };
+            };
+        };
+    };
+    list_templates_route_api_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandTemplateListOut"];
+                };
+            };
+        };
+    };
+    create_template_route_api_templates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommandTemplateCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandTemplateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_template_route_api_templates__template_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
