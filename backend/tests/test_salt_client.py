@@ -444,15 +444,19 @@ async def test_repeated_5xx_raises_salt_api_error_with_body(fake_salt_api):
 
 
 @pytest.mark.asyncio
-async def test_list_execution_functions_returns_sorted_keys(fake_salt_api):
+async def test_list_execution_functions_queries_a_minion_and_sorts(fake_salt_api):
+    """list_execution_functions picks a connected minion and asks it for
+    sys.list_functions (avoiding the catastrophically slow runner.doc.execution
+    path). The list comes back sorted, deduped against junk values."""
     def handler(payload):
-        return {
-            "return": [{
-                "test.ping": "Ping the master",
-                "cmd.run": "Run a shell command",
-                "pkg.install": "Install a package",
-            }],
-        }
+        fun = payload.get("fun", "")
+        if fun == "manage.present":
+            # runner.manage.present returns [[id, ip], ...]
+            return {"return": [[["web-01", "10.0.0.1"]]]}
+        if fun == "sys.list_functions":
+            # local_call shape: salt-api returns {minion-id: result}
+            return {"return": [{"web-01": ["test.ping", "cmd.run", "pkg.install", 42]}]}
+        return {"return": [{}]}
 
     fake_salt_api.run_handler = handler
     client = _make_client(fake_salt_api)
@@ -460,7 +464,26 @@ async def test_list_execution_functions_returns_sorted_keys(fake_salt_api):
         result = await client.list_execution_functions()
     finally:
         await client.aclose()
+    # Sorted; the non-string `42` is filtered out
     assert result == ["cmd.run", "pkg.install", "test.ping"]
+
+
+@pytest.mark.asyncio
+async def test_list_execution_functions_returns_empty_when_no_minions_connected(fake_salt_api):
+    """No connected minions → return [] without raising. Autocomplete just
+    doesn't populate that day."""
+    def handler(payload):
+        if payload.get("fun") == "manage.present":
+            return {"return": [[]]}
+        return {"return": [{}]}
+
+    fake_salt_api.run_handler = handler
+    client = _make_client(fake_salt_api)
+    try:
+        result = await client.list_execution_functions()
+    finally:
+        await client.aclose()
+    assert result == []
 
 
 @pytest.mark.asyncio

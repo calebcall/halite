@@ -440,13 +440,35 @@ class SaltAPIClient:
         return result
 
     async def list_execution_functions(self) -> list[str]:
-        """Return the sorted list of execution function names the master knows
-        about. Calls runner.doc.execution which returns a dict of
-        function_name → docstring; we extract the keys."""
-        result = await self.runner_call("doc.execution")
+        """Return the sorted list of execution function names a minion knows
+        about.
+
+        Approach: pick any one connected minion and ask it for
+        sys.list_functions. This runs against the minion's already-loaded
+        module registry in <1s. We deliberately do NOT call runner.doc.execution
+        — that runner enumerates docstrings for every execution module on
+        the master's filesystem and takes 60-120+ seconds on busy masters,
+        which exceeds any reasonable HTTP timeout.
+
+        Returns an empty list when there are no connected minions
+        (autocomplete simply doesn't populate that day) — does NOT raise,
+        because "no minions" is a soft empty state, not an error.
+        """
+        connected = await self.list_connected_minions()
+        if not connected:
+            return []
+        first_minion = next(iter(connected.keys()))
+        result = await self.local_call(
+            first_minion,
+            "sys.list_functions",
+            target_type="glob",
+        )
         if not isinstance(result, dict):
             return []
-        return sorted(str(k) for k in result.keys() if isinstance(k, str))
+        funs = result.get(first_minion)
+        if not isinstance(funs, list):
+            return []
+        return sorted(str(f) for f in funs if isinstance(f, str))
 
 
 # ---------- helpers ----------

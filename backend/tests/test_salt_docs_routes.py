@@ -57,13 +57,16 @@ async def test_list_functions_returns_sorted_names(app_db, session, fake_salt_ap
     sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
     await session.commit()
 
-    fake_salt_api.run_handler = lambda payload: {
-        "return": [{
-            "test.ping": "Ping",
-            "cmd.run": "Run",
-            "state.apply": "Apply",
-        }],
-    }
+    # list_execution_functions: runner.manage.present + local sys.list_functions
+    def handler(payload):
+        fun = payload.get("fun", "")
+        if fun == "manage.present":
+            return {"return": [[["web-01", "10.0.0.1"]]]}
+        if fun == "sys.list_functions":
+            return {"return": [{"web-01": ["test.ping", "cmd.run", "state.apply"]}]}
+        return {"return": [{}]}
+
+    fake_salt_api.run_handler = handler
 
     app = create_app(settings=settings, codec=codec)
     client = _attach_salt_client(app, fake_salt_api)
@@ -90,11 +93,21 @@ async def test_list_functions_serves_from_cache_on_second_call(app_db, session, 
     sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
     await session.commit()
 
-    call_count = 0
+    # Only count the actual list_functions call (manage.present is the
+    # connected-minions lookup that always precedes it). The cache should
+    # prevent BOTH from firing on the second request.
+    list_funcs_calls = 0
+    manage_present_calls = 0
     def handler(payload):
-        nonlocal call_count
-        call_count += 1
-        return {"return": [{"test.ping": "Ping"}]}
+        nonlocal list_funcs_calls, manage_present_calls
+        fun = payload.get("fun", "")
+        if fun == "manage.present":
+            manage_present_calls += 1
+            return {"return": [[["web-01", "10.0.0.1"]]]}
+        if fun == "sys.list_functions":
+            list_funcs_calls += 1
+            return {"return": [{"web-01": ["test.ping"]}]}
+        return {"return": [{}]}
 
     fake_salt_api.run_handler = handler
 
@@ -116,8 +129,10 @@ async def test_list_functions_serves_from_cache_on_second_call(app_db, session, 
     assert r1.status_code == 200
     assert r2.status_code == 200
     assert r1.json() == r2.json()
-    # salt-api should only be called once thanks to the cache
-    assert call_count == 1
+    # salt-api should only be called once thanks to the cache.
+    # Both manage.present AND sys.list_functions fire on first call only.
+    assert list_funcs_calls == 1
+    assert manage_present_calls == 1
 
 
 @pytest.mark.asyncio
