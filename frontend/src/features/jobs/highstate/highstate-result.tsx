@@ -6,13 +6,25 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { hasChanges, type ParsedState, summarize } from './parse'
 
-export function HighstateResult({ states }: { states: ParsedState[] }) {
+export function HighstateResult({
+  states,
+  filterFailures = false,
+}: {
+  states: ParsedState[]
+  filterFailures?: boolean
+}) {
   const stats = summarize(states)
+  const visibleStates = filterFailures
+    ? states.filter((s) => s.result === false)
+    : states
   return (
     <div className="flex flex-col gap-2 p-3">
       <HighstateSummary stats={stats} />
+      {filterFailures && visibleStates.length === 0 && (
+        <p className="text-xs text-muted-foreground italic px-1">No failed states.</p>
+      )}
       <div className="flex flex-col gap-1">
-        {states.map((s) => (
+        {visibleStates.map((s) => (
           <HighstateRow key={`${s.runNum}-${s.module}-${s.stateId}-${s.fun}`} state={s} />
         ))}
       </div>
