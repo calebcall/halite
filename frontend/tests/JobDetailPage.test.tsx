@@ -189,6 +189,102 @@ describe('JobDetailPage', () => {
     expect(screen.getByText('service.running')).toBeInTheDocument()
   })
 
+  it('shows job-level summary and failures-only filter for highstate jobs', async () => {
+    const okMinion = {
+      minion: 'web-01',
+      success: true,
+      retcode: 0,
+      return_value: {
+        'pkg_|-install_nginx_|-nginx_|-installed': {
+          name: 'nginx',
+          result: true,
+          comment: 'Already installed',
+          changes: {},
+          __run_num__: 0,
+        },
+      },
+    }
+    const failedMinion = {
+      minion: 'web-02',
+      success: false,
+      retcode: 1,
+      return_value: {
+        'pkg_|-install_nginx_|-nginx_|-installed': {
+          name: 'nginx',
+          result: false,
+          comment: 'Package install failed',
+          changes: {},
+          __run_num__: 0,
+        },
+      },
+    }
+    server.use(
+      http.get('/api/jobs/:jid', () =>
+        HttpResponse.json({
+          jid: 'j-mixed',
+          function: 'state.apply',
+          arguments: ['webserver'],
+          kwargs: {},
+          target: 'web-*',
+          target_type: 'glob',
+          user: 'halite-service',
+          start_time: '2025-10-19T12:00:00',
+          minions: ['web-01', 'web-02'],
+          results: [okMinion, failedMinion],
+        }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderAt('j-mixed')
+
+    // Job-level summary renders with mixed counts.
+    // The summary uses nested <span>s, so we wait for the outer wrapper whose
+    // textContent includes both the count and the label.
+    await screen.findByText((_content, element) => {
+      if (!element) return false
+      return element.tagName === 'SPAN' && /2.*minion/i.test(element.textContent ?? '')
+    })
+    // The inner <span> contains exactly "with failures" — use getAllBy to handle
+    // any ancestor span that also contains the same substring.
+    expect(screen.getAllByText(/with failures/i).length).toBeGreaterThan(0)
+
+    // Both minion rows visible initially
+    expect(screen.getByRole('button', { name: /web-01/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /web-02/i })).toBeInTheDocument()
+
+    // Toggle the Switch
+    await user.click(screen.getByRole('switch', { name: /show failures only/i }))
+
+    // web-01 (healthy) hidden; web-02 (failed) still visible
+    expect(screen.queryByRole('button', { name: /web-01/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /web-02/i })).toBeInTheDocument()
+  })
+
+  it('does not show job-level summary or filter Switch for non-highstate jobs', async () => {
+    server.use(
+      http.get('/api/jobs/:jid', () =>
+        HttpResponse.json({
+          jid: 'j-plain',
+          function: 'test.ping',
+          arguments: [],
+          kwargs: {},
+          target: '*',
+          target_type: 'glob',
+          user: 'halite-service',
+          start_time: '2025-10-19T12:00:00',
+          minions: ['web-01'],
+          results: [{ minion: 'web-01', success: true, retcode: 0, return_value: true }],
+        }),
+      ),
+    )
+    renderAt('j-plain')
+    await screen.findByRole('button', { name: /web-01/i })
+    // The highstate-specific aggregate language should NOT appear
+    expect(screen.queryByText(/with failures/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/state changes/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('switch', { name: /show failures only/i })).not.toBeInTheDocument()
+  })
+
   it('renders Run again button with encoded search params', async () => {
     server.use(
       http.get('/api/jobs/:jid', () =>
