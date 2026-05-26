@@ -7,7 +7,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
@@ -15,19 +15,31 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 
 import { JobsListPage } from '@/features/jobs/jobs-list-page'
 
+let lastKillJid: string | null = null
+
 const server = setupServer(
   http.get('/api/auth/me', () =>
     HttpResponse.json({
       username: 'admin',
       display_name: 'admin',
       must_change_pw: false,
-      permissions: [{ verb: 'view', resource_glob: 'job:*' }],
+      permissions: [
+        { verb: 'view', resource_glob: 'job:*' },
+        { verb: 'kill', resource_glob: 'job:*' },
+      ],
     }),
   ),
+  http.post('/api/jobs/:jid/kill', ({ params }) => {
+    lastKillJid = String(params.jid)
+    return new HttpResponse(null, { status: 202 })
+  }),
 )
 
 beforeAll(() => server.listen())
-afterEach(() => server.resetHandlers())
+afterEach(() => {
+  server.resetHandlers()
+  lastKillJid = null
+})
 afterAll(() => server.close())
 
 function renderInRouter() {
@@ -117,5 +129,41 @@ describe('JobsListPage', () => {
     )
     renderInRouter()
     expect(await screen.findByText(/salt-api is not configured/i)).toBeInTheDocument()
+  })
+
+  it('shows the "Kill by JID" button when the user has kill:job:*', async () => {
+    server.use(
+      http.get('/api/jobs', () => HttpResponse.json({ total: 0, jobs: [] })),
+    )
+    renderInRouter()
+    expect(await screen.findByRole('button', { name: /kill by jid/i })).toBeInTheDocument()
+  })
+
+  it('validates the jid format before submitting', async () => {
+    server.use(
+      http.get('/api/jobs', () => HttpResponse.json({ total: 0, jobs: [] })),
+    )
+    const user = userEvent.setup()
+    renderInRouter()
+    await user.click(await screen.findByRole('button', { name: /kill by jid/i }))
+    // Type a non-numeric jid
+    await user.type(await screen.findByLabelText(/^jid$/i), 'not-a-jid')
+    await user.click(screen.getByRole('button', { name: /^kill job$/i }))
+    expect(await screen.findByText(/JIDs are numeric strings/i)).toBeInTheDocument()
+    expect(lastKillJid).toBeNull()
+  })
+
+  it('fires the kill mutation with a valid jid', async () => {
+    server.use(
+      http.get('/api/jobs', () => HttpResponse.json({ total: 0, jobs: [] })),
+    )
+    const user = userEvent.setup()
+    renderInRouter()
+    await user.click(await screen.findByRole('button', { name: /kill by jid/i }))
+    await user.type(await screen.findByLabelText(/^jid$/i), '20260123120000000000')
+    await user.click(screen.getByRole('button', { name: /^kill job$/i }))
+    await waitFor(() => {
+      expect(lastKillJid).toBe('20260123120000000000')
+    })
   })
 })
