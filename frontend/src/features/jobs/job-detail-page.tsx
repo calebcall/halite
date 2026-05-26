@@ -13,6 +13,8 @@ import { useHasPerm } from '@/features/auth/use-has-perm'
 import type { JobMinionResult } from './api'
 import { KillJobDialog } from './kill-job-dialog'
 import { useJob } from './use-jobs'
+import { groupByState } from './highstate/group-by-state'
+import { HighstateByStateView } from './highstate/highstate-by-state-view'
 import { HighstateResult } from './highstate/highstate-result'
 import { JobHighstateSummary } from './highstate/job-highstate-summary'
 import { isBlockedReturn, minionHasFailures, summarizeJobHighstate } from './highstate/job-summary'
@@ -33,6 +35,7 @@ function JobDetailPageInner() {
   const canKill = useHasPerm('kill', 'job:*')
   const [killOpen, setKillOpen] = useState(false)
   const [failuresOnly, setFailuresOnly] = useState(false)
+  const [view, setView] = useState<'by-minion' | 'by-state'>('by-minion')
   const detail = errorDetail(error)
 
   if (isPending) {
@@ -90,6 +93,9 @@ function JobDetailPageInner() {
 
   const isRunning = data.results.length < data.minions.length
   const jobHighstate = summarizeJobHighstate(data.results)
+  const stateGroups = jobHighstate && view === 'by-state'
+    ? groupByState(data.results)
+    : null
 
   return (
     <div className="flex flex-col gap-4">
@@ -163,21 +169,47 @@ function JobDetailPageInner() {
       )}
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-lg font-semibold tracking-tight">Results</h3>
-          {jobHighstate && jobHighstate.minionsWithFailures > 0 && (
-            <div className="flex items-center gap-2">
-              <Switch
-                id="failures-only"
-                checked={failuresOnly}
-                onCheckedChange={setFailuresOnly}
-              />
-              <Label htmlFor="failures-only" className="text-sm">Show failures only</Label>
+          {jobHighstate && (
+            <div className="flex flex-wrap items-center gap-3">
+              {jobHighstate.minionsWithFailures > 0 && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="failures-only"
+                    checked={failuresOnly}
+                    onCheckedChange={setFailuresOnly}
+                  />
+                  <Label htmlFor="failures-only" className="text-sm">Show failures only</Label>
+                </div>
+              )}
+              <div className="flex items-center gap-0.5 rounded-md border bg-muted/30 p-0.5">
+                <Button
+                  type="button"
+                  variant={view === 'by-minion' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-3 text-xs"
+                  onClick={() => setView('by-minion')}
+                >
+                  By minion
+                </Button>
+                <Button
+                  type="button"
+                  variant={view === 'by-state' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-3 text-xs"
+                  onClick={() => setView('by-state')}
+                >
+                  By state
+                </Button>
+              </div>
             </div>
           )}
         </div>
         {data.results.length === 0 ? (
           <p className="text-sm text-muted-foreground">No results yet — the job may still be running.</p>
+        ) : view === 'by-state' && stateGroups ? (
+          <HighstateByStateView groups={stateGroups} failuresOnly={failuresOnly} />
         ) : (
           <>
             {data.results
