@@ -30,6 +30,9 @@ const server = setupServer(
     lastBody = await request.json()
     return HttpResponse.json({ jid: '20260123120000000000', minions: ['web-01'] }, { status: 202 })
   }),
+  http.get('/api/salt/functions', () =>
+    HttpResponse.json({ functions: [], cached_at: '2026-05-26T00:00:00Z' }),
+  ),
 )
 
 beforeAll(() => server.listen())

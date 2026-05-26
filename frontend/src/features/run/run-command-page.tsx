@@ -17,7 +17,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { MustChangePassword } from '@/features/auth/guards'
 import { ApiError, errorDetail } from '@/shared/api/client'
 
+import { FunctionInput } from './function-input'
 import { useRunCommand } from './use-run'
+import { useSaltFunctions } from './use-salt-docs'
 
 const TARGET_TYPES = ['glob', 'list', 'pcre', 'grain', 'nodegroup', 'compound'] as const
 
@@ -69,6 +71,9 @@ function RunCommandPageInner() {
   const initialFun = search.fun || ''
   const initialArgs = parseSearchArgs(search.args)
   const initialKwargs = parseSearchKwargs(search.kwargs)
+
+  const { data: saltFunctions } = useSaltFunctions()
+  const functionList = saltFunctions?.functions ?? []
 
   const [target, setTarget] = useState(initialTarget)
   const [targetType, setTargetType] = useState<(typeof TARGET_TYPES)[number]>(initialTargetType)
@@ -173,11 +178,12 @@ function RunCommandPageInner() {
 
         <div className="grid gap-2">
           <Label htmlFor="fun">Function</Label>
-          <Input
+          <FunctionInput
             id="fun"
             required
             value={fun}
-            onChange={(e) => setFun(e.target.value)}
+            onChange={setFun}
+            functions={functionList}
             placeholder="e.g. test.ping or cmd.run"
             className="font-mono"
           />
