@@ -43,9 +43,7 @@ def _is_unwanted_ip(ip: str) -> bool:
         return True
     if ip.startswith("127."):
         return True
-    if ip.startswith("169.254."):
-        return True
-    return False
+    return bool(ip.startswith("169.254."))
 
 
 def _prefix_octet_match(a: str, b: str) -> int:

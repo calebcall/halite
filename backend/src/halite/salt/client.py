@@ -267,7 +267,7 @@ class SaltAPIClient:
             return {str(k): str(v) for k, v in result.items()}
         if isinstance(result, list):
             for item in result:
-                if isinstance(item, (list, tuple)) and len(item) >= 2:
+                if isinstance(item, list | tuple) and len(item) >= 2:
                     out[str(item[0])] = str(item[1])
                 elif isinstance(item, str):
                     # show_ip=True was ignored or unsupported — fall back to id
