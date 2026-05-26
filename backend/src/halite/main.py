@@ -101,6 +101,7 @@ def create_app(
     from halite.rbac.routes import router as rbac_router
     from halite.run.routes import router as run_router
     from halite.salt_docs.routes import router as salt_docs_router
+    from halite.templates.routes import router as templates_router
     from halite.users.routes import router as users_router
     app.include_router(health_router)
     app.include_router(auth_router)
@@ -112,6 +113,7 @@ def create_app(
     app.include_router(rbac_router)
     app.include_router(run_router)
     app.include_router(salt_docs_router)
+    app.include_router(templates_router)
     app.include_router(users_router)
 
     if settings.static_dir:
