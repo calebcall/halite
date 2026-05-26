@@ -33,6 +33,9 @@ const server = setupServer(
   http.get('/api/salt/functions', () =>
     HttpResponse.json({ functions: [], cached_at: '2026-05-26T00:00:00Z' }),
   ),
+  http.get('/api/templates', () =>
+    HttpResponse.json({ total: 0, templates: [] }),
+  ),
 )
 
 beforeAll(() => server.listen())

@@ -18,8 +18,11 @@ import { MustChangePassword } from '@/features/auth/guards'
 import { ApiError, errorDetail } from '@/shared/api/client'
 
 import { FunctionInput } from './function-input'
+import { SaveTemplateDialog } from './save-template-dialog'
+import { TemplatePicker } from './template-picker'
 import { useRunCommand } from './use-run'
 import { useSaltFunctions } from './use-salt-docs'
+import type { CommandTemplate, CommandTemplateCreate } from './use-templates'
 
 const TARGET_TYPES = ['glob', 'list', 'pcre', 'grain', 'nodegroup', 'compound'] as const
 
@@ -81,6 +84,44 @@ function RunCommandPageInner() {
   const [argsText, setArgsText] = useState(initialArgs)
   const [kwargsText, setKwargsText] = useState(initialKwargs)
   const [error, setError] = useState<string | null>(null)
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+
+  function applyTemplate(t: CommandTemplate) {
+    setTarget(t.target)
+    setTargetType(
+      TARGET_TYPES.includes(t.target_type as never)
+        ? (t.target_type as (typeof TARGET_TYPES)[number])
+        : 'glob',
+    )
+    setFun(t.fun)
+    setArgsText(t.args.join('\n'))
+    setKwargsText(
+      Object.entries(t.kwargs as Record<string, unknown>)
+        .map(([k, v]) => `${k}=${typeof v === 'string' ? v : JSON.stringify(v)}`)
+        .join('\n'),
+    )
+  }
+
+  function buildBodyForSave(): Omit<CommandTemplateCreate, 'name' | 'description'> {
+    const args = argsText.split('\n').map((s) => s.trim()).filter((s) => s.length > 0)
+    const kwargs: Record<string, unknown> = {}
+    for (const line of kwargsText.split('\n')) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+      const eq = trimmed.indexOf('=')
+      if (eq === -1) continue
+      const key = trimmed.slice(0, eq).trim()
+      const rawValue = trimmed.slice(eq + 1).trim()
+      let value: unknown = rawValue
+      try {
+        value = JSON.parse(rawValue)
+      } catch {
+        // not JSON; keep as string
+      }
+      kwargs[key] = value
+    }
+    return { target, target_type: targetType, fun, args, kwargs }
+  }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -151,6 +192,11 @@ function RunCommandPageInner() {
 
       <form className="grid max-w-2xl gap-4 rounded-md border p-4" onSubmit={onSubmit}>
         <div className="grid gap-2">
+          <Label>Templates</Label>
+          <TemplatePicker onSelect={applyTemplate} />
+        </div>
+
+        <div className="grid gap-2">
           <Label htmlFor="target">Target</Label>
           <Input
             id="target"
@@ -215,13 +261,27 @@ function RunCommandPageInner() {
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setSaveDialogOpen(true)}
+            disabled={mutation.isPending || !fun}
+          >
+            Save as template
+          </Button>
           <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {mutation.isPending ? 'Running…' : 'Run'}
           </Button>
         </div>
       </form>
+
+      <SaveTemplateDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        body={buildBodyForSave()}
+      />
     </div>
   )
 }
