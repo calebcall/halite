@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -8,6 +10,8 @@ from halite.auth.cookies import CookieCodec
 from halite.config import Settings, get_settings
 from halite.db import dispose_engine, init_engine
 from halite.health import router as health_router
+
+logger = logging.getLogger(__name__)
 
 
 def create_app(
@@ -51,9 +55,35 @@ def create_app(
             )
         app.state.salt_client = salt_client
 
+        # Inventory background refresh — only when salt-api is configured AND
+        # the operator opted in via INVENTORY_REFRESH_MINUTES > 0. Otherwise
+        # refreshes are entirely on-demand via the UI.
+        inventory_task: asyncio.Task[None] | None = None
+        if salt_client is not None and settings.inventory_refresh_minutes > 0:
+            from halite.inventory.scheduler import run_inventory_scheduler
+            assert db_module._sessionmaker is not None
+            inventory_task = asyncio.create_task(
+                run_inventory_scheduler(
+                    sessionmaker=db_module._sessionmaker,
+                    client=salt_client,
+                    interval_minutes=settings.inventory_refresh_minutes,
+                    initial_delay_s=settings.inventory_refresh_initial_delay_s,
+                ),
+                name="inventory-scheduler",
+            )
+
         try:
             yield
         finally:
+            if inventory_task is not None:
+                inventory_task.cancel()
+                try:
+                    await inventory_task
+                except (asyncio.CancelledError, Exception) as exc:
+                    # Swallow cancellation; log anything else so a buggy
+                    # scheduler doesn't take down the shutdown path silently.
+                    if not isinstance(exc, asyncio.CancelledError):
+                        logger.exception("inventory scheduler exited with error")
             if salt_client is not None:
                 await salt_client.aclose()
             await dispose_engine()
@@ -64,6 +94,7 @@ def create_app(
 
     from halite.audit.routes import router as audit_router
     from halite.auth.routes import router as auth_router
+    from halite.inventory.routes import router as inventory_router
     from halite.jobs.routes import router as jobs_router
     from halite.keys.routes import router as keys_router
     from halite.minions.routes import router as minions_router
@@ -73,6 +104,7 @@ def create_app(
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(audit_router)
+    app.include_router(inventory_router)
     app.include_router(jobs_router)
     app.include_router(keys_router)
     app.include_router(minions_router)

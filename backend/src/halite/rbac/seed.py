@@ -32,6 +32,7 @@ BUILTIN_ROLES: dict[str, tuple[str, list[tuple[str, str]]]] = {
             ("view", "pillar:*"),
             ("view", "event:*"),
             ("view", "setting:*"),
+            ("view", "inventory:*"),
         ],
     ),
 }

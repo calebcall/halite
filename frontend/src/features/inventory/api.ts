@@ -124,7 +124,7 @@ async function postJson<TReq, TRes>(path: string, body: TReq): Promise<TRes> {
   if (!res.ok) {
     throw new ApiError(res.status, parsed, extractDetail(parsed));
   }
-  return parsed as TRes;
+  return assertJsonObject<TRes>(parsed, path);
 }
 
 async function getJson<TRes>(
@@ -144,7 +144,30 @@ async function getJson<TRes>(
   if (!res.ok) {
     throw new ApiError(res.status, parsed, extractDetail(parsed));
   }
-  return parsed as TRes;
+  return assertJsonObject<TRes>(parsed, path);
+}
+
+/**
+ * Catches the "200 OK with HTML body" failure mode — e.g. when the inventory
+ * routes aren't registered on the backend, the SPA catch-all returns
+ * index.html with a 200 status. Without this guard, ``data.items`` becomes
+ * undefined and the page crashes deep inside React render. Surfacing it as
+ * a 502 lets <ErrorPanel> render a real message.
+ */
+function assertJsonObject<T>(parsed: unknown, path: string): T {
+  if (
+    parsed === null ||
+    parsed === undefined ||
+    typeof parsed !== "object" ||
+    Array.isArray(parsed)
+  ) {
+    throw new ApiError(
+      502,
+      parsed,
+      `Unexpected non-JSON response from ${path}. The backend route may not be registered.`,
+    );
+  }
+  return parsed as T;
 }
 
 function safeJson(text: string): unknown {

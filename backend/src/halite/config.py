@@ -30,6 +30,12 @@ class Settings(BaseSettings):
 
     audit_audit_reads: bool = False
 
+    # Inventory background scheduler.
+    # 0 disables the timer; manual refreshes via the UI still work either way.
+    inventory_refresh_minutes: int = 0
+    # Seconds between process start and the first scheduled refresh.
+    inventory_refresh_initial_delay_s: int = 30
+
     # Static SPA — path to the built frontend dist. None disables SPA serving.
     static_dir: str | None = Field(default=None, validation_alias="HALITE_STATIC_DIR")
 
