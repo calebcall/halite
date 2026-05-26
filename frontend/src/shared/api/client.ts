@@ -291,4 +291,11 @@ export const api = {
         body,
       }),
   },
+  salt: {
+    functions: () =>
+      request<paths['/api/salt/functions']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/salt/functions',
+      }),
+  },
 }

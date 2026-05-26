@@ -123,6 +123,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/inventory/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Packages Route
+         * @description Fleet-wide aggregate: one row per package name. Default landing view.
+         */
+        get: operations["list_packages_route_api_inventory_packages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inventory/packages/{name}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Versions Route
+         * @description All distinct versions of one named package, with per-version minion counts.
+         */
+        get: operations["list_versions_route_api_inventory_packages__name__versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inventory/packages/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search Packages Route
+         * @description Row-level package search. Used by level 3 (minions with one specific
+         *     name+version) and as a power-user query endpoint (version comparison,
+         *     multi-field filter).
+         */
+        post: operations["search_packages_route_api_inventory_packages_search_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inventory/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh Route */
+        post: operations["refresh_route_api_inventory_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/jobs": {
         parameters: {
             query?: never;
@@ -375,6 +454,29 @@ export interface paths {
         put?: never;
         /** Run Command Route */
         post: operations["run_command_route_api_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/salt/functions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Functions Route
+         * @description List the names of execution functions the salt master knows about.
+         *
+         *     Requires authentication (any logged-in user). Cached for 1 hour to
+         *     avoid hammering salt-api on every page render.
+         */
+        get: operations["list_functions_route_api_salt_functions_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -667,6 +769,110 @@ export interface components {
              */
             status: "online" | "offline" | "pending" | "rejected" | "denied";
         };
+        /**
+         * NameFilter
+         * @description A name-side filter. ``op="eq"`` becomes ``name = ?``;
+         *     ``op="prefix"`` becomes ``name LIKE ? || '%'`` (cheap, hits the index);
+         *     ``op="contains"`` becomes ``name LIKE '%' || ? || '%'`` (slower, full scan
+         *     of the (name)-indexed range but acceptable at our fleet size).
+         */
+        NameFilter: {
+            /**
+             * Op
+             * @default eq
+             * @enum {string}
+             */
+            op: "eq" | "prefix" | "contains";
+            /** Value */
+            value: string;
+        };
+        /**
+         * PackageAggregate
+         * @description One row in the fleet-wide package list.
+         */
+        PackageAggregate: {
+            /** Name */
+            name: string;
+            /** Minion Count */
+            minion_count: number;
+            /** Version Count */
+            version_count: number;
+            /**
+             * Last Seen
+             * Format: date-time
+             */
+            last_seen: string;
+        };
+        /** PackageAggregateOut */
+        PackageAggregateOut: {
+            /** Total */
+            total: number;
+            /** Items */
+            items: components["schemas"]["PackageAggregate"][];
+        };
+        /**
+         * PackageQueryHit
+         * @description One row in the response to a package query.
+         */
+        PackageQueryHit: {
+            /** Minion Id */
+            minion_id: string;
+            /** Name */
+            name: string;
+            /** Version */
+            version: string;
+            /** Arch */
+            arch?: string | null;
+            /** Source */
+            source?: string | null;
+            /**
+             * Collected At
+             * Format: date-time
+             */
+            collected_at: string;
+        };
+        /**
+         * PackageQueryIn
+         * @description Filter for ``GET /api/inventory/packages``.
+         *
+         *     At least one of ``name`` or ``minion_id`` MUST be supplied — we don't
+         *     want to accidentally let the UI fetch the entire fleet's package list
+         *     in one request. (A future "browse all" endpoint can lift this rule.)
+         */
+        PackageQueryIn: {
+            name?: components["schemas"]["NameFilter"] | null;
+            version?: components["schemas"]["VersionFilter"] | null;
+            /** Source */
+            source?: ("apt" | "rpm" | "pacman") | null;
+            /** Minion Id */
+            minion_id?: string | null;
+            /**
+             * Limit
+             * @default 500
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+        };
+        /**
+         * PackageQueryOut
+         * @description Wrapper that lets us tack pagination metadata on later without breaking
+         *     the wire format.
+         */
+        PackageQueryOut: {
+            /** Total */
+            total: number;
+            /** Hits */
+            hits: components["schemas"]["PackageQueryHit"][];
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+        };
         /** PasswordResetPayload */
         PasswordResetPayload: {
             /** New Password */
@@ -702,6 +908,35 @@ export interface components {
             verb: string;
             /** Resource Glob */
             resource_glob: string;
+        };
+        /**
+         * RefreshIn
+         * @description Body for ``POST /api/inventory/refresh``.
+         *
+         *     ``target='*'`` + ``target_type='glob'`` means "every connected minion".
+         *     Pin the target down if you want to refresh just one host.
+         */
+        RefreshIn: {
+            /**
+             * Target
+             * @default *
+             */
+            target: string;
+            /**
+             * Target Type
+             * @default glob
+             * @enum {string}
+             */
+            target_type: "glob" | "list" | "pcre" | "grain" | "nodegroup" | "compound";
+        };
+        /** RefreshOut */
+        RefreshOut: {
+            /** Minions Refreshed */
+            minions_refreshed: number;
+            /** Package Counts */
+            package_counts: {
+                [key: string]: number;
+            };
         };
         /** RoleAssignmentPayload */
         RoleAssignmentPayload: {
@@ -792,6 +1027,16 @@ export interface components {
             /** Minions */
             minions: string[];
         };
+        /** SaltFunctionsOut */
+        SaltFunctionsOut: {
+            /** Functions */
+            functions: string[];
+            /**
+             * Cached At
+             * Format: date-time
+             */
+            cached_at: string;
+        };
         /** UserCreatePayload */
         UserCreatePayload: {
             /** Username */
@@ -878,6 +1123,42 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * VersionAggregate
+         * @description One row in the per-package version list.
+         */
+        VersionAggregate: {
+            /** Version */
+            version: string;
+            /** Arch */
+            arch?: string | null;
+            /** Source */
+            source?: string | null;
+            /** Minion Count */
+            minion_count: number;
+        };
+        /** VersionAggregateOut */
+        VersionAggregateOut: {
+            /** Name */
+            name: string;
+            /** Total */
+            total: number;
+            /** Items */
+            items: components["schemas"]["VersionAggregate"][];
+        };
+        /**
+         * VersionFilter
+         * @description A version comparison applied per-row in Python after SQL narrowing.
+         */
+        VersionFilter: {
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: "eq" | "ne" | "lt" | "lte" | "gt" | "gte";
+            /** Value */
+            value: string;
         };
     };
     responses: never;
@@ -1056,6 +1337,139 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_packages_route_api_inventory_packages_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                source?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageAggregateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_versions_route_api_inventory_packages__name__versions_get: {
+        parameters: {
+            query?: {
+                source?: string | null;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionAggregateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_packages_route_api_inventory_packages_search_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageQueryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageQueryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_route_api_inventory_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefreshOut"];
                 };
             };
             /** @description Validation Error */
@@ -1593,6 +2007,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_functions_route_api_salt_functions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaltFunctionsOut"];
                 };
             };
         };
