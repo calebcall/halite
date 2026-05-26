@@ -102,7 +102,7 @@ function RunCommandPageInner() {
     )
   }
 
-  function buildBodyForSave(): Omit<CommandTemplateCreate, 'name' | 'description'> {
+  function buildBodyForSave(): Omit<CommandTemplateCreate, 'description' | 'is_shared' | 'name'> {
     const args = argsText.split('\n').map((s) => s.trim()).filter((s) => s.length > 0)
     const kwargs: Record<string, unknown> = {}
     for (const line of kwargsText.split('\n')) {
@@ -120,7 +120,7 @@ function RunCommandPageInner() {
       }
       kwargs[key] = value
     }
-    return { fun, args, is_shared: false, kwargs, target, target_type: targetType }
+    return { args, fun, kwargs, target, target_type: targetType }
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
