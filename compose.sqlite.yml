@@ -14,13 +14,21 @@ services:
       SALT_API_PASSWORD: ${SALT_API_PASSWORD:-}
       SALT_API_VERIFY: ${SALT_API_VERIFY:-true}
       SALT_API_EAUTH: ${SALT_API_EAUTH:-pam}
+      INVENTORY_REFRESH_MINUTES: ${INVENTORY_REFRESH_MINUTES:-0}
+      INVENTORY_REFRESH_INITIAL_DELAY_S: ${INVENTORY_REFRESH_INITIAL_DELAY_S:-30}
       HALITE_STATIC_DIR: /app/frontend/dist
     volumes:
       - halite-sqlite:/data
     ports:
       - "8080:8080"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')",
+        ]
       interval: 10s
       timeout: 3s
       retries: 6
