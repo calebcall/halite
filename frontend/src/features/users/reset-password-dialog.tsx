@@ -118,7 +118,7 @@ export function ResetPasswordDialog({
             />
           </div>
           {serverError && <p className="text-sm text-destructive">{serverError}</p>}
-          {success && <p className="text-sm text-emerald-600">Password reset.</p>}
+          {success && <p className="text-sm text-success">Password reset.</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Close

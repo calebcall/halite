@@ -117,7 +117,7 @@ export function ChangePasswordPage() {
             </div>
             {serverError && <p className="text-sm text-destructive">{serverError}</p>}
             {success && !forced && (
-              <p className="text-sm text-emerald-600">Password updated.</p>
+              <p className="text-sm text-success">Password updated.</p>
             )}
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Saving…' : 'Update password'}

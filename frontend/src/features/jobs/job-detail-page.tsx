@@ -41,7 +41,7 @@ function JobDetailPageInner() {
     return (
       <div className="flex flex-col gap-3">
         <BackToList />
-        <div className="rounded-md border border-amber-400/40 bg-amber-50 p-6 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+        <div className="rounded-md border border-warning/40 bg-warning/10 p-6 text-sm text-foreground">
           Job <code className="font-mono">{jid}</code> is not in the master cache. Salt expires jobs after the configured <code>keep_jobs</code> window.
         </div>
       </div>
@@ -61,7 +61,7 @@ function JobDetailPageInner() {
     return (
       <div className="flex flex-col gap-3">
         <BackToList />
-        <div className="rounded-md border border-amber-400/40 bg-amber-50 p-6 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+        <div className="rounded-md border border-warning/40 bg-warning/10 p-6 text-sm text-foreground">
           <p>Salt-API is not configured. Set <code>SALT_API_URL</code>, <code>SALT_API_USERNAME</code>, and <code>SALT_API_PASSWORD</code> in your <code>.env</code> and restart the stack.</p>
           {detail && <p className="mt-2 font-mono text-xs">{detail}</p>}
         </div>
@@ -207,10 +207,10 @@ function MinionResultCard({ result }: { result: JobMinionResult }) {
         onClick={() => setOpen((o) => !o)}
       >
         <div className="flex items-center gap-3">
-          {ok && <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
+          {ok && <CheckCircle2 className="h-4 w-4 text-success" />}
           {failed && <XCircle className="h-4 w-4 text-destructive" />}
           <span className="font-mono text-sm">{result.minion}</span>
-          {ok && <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200">success</Badge>}
+          {ok && <Badge variant="success">success</Badge>}
           {failed && <Badge variant="destructive">failed</Badge>}
           {result.retcode !== null && result.retcode !== undefined && (
             <span className="text-xs text-muted-foreground">retcode {result.retcode}</span>

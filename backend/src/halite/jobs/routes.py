@@ -6,8 +6,8 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from halite.audit.writer import record as audit_record
 from halite.db import SessionDep
 from halite.deps import CurrentUser, require_perm
-from halite.jobs.schemas import JobDetail, JobsListOut
-from halite.jobs.service import get_job_detail, list_recent_jobs
+from halite.jobs.schemas import JobActivityOut, JobDetail, JobsListOut
+from halite.jobs.service import get_job_activity, get_job_detail, list_recent_jobs
 from halite.salt.client import SaltAPIError, SaltAPIUnavailable
 from halite.salt.deps import salt_client_or_503, wrap_salt_errors
 
@@ -29,6 +29,24 @@ async def list_jobs_route(
     except (SaltAPIUnavailable, SaltAPIError) as exc:
         raise wrap_salt_errors(exc) from None
     return JobsListOut(total=len(jobs), jobs=jobs)
+
+
+@router.get(
+    "/activity",
+    response_model=JobActivityOut,
+    dependencies=[require_perm("view", "job:*")],
+)
+async def jobs_activity_route(
+    request: Request,
+    # Cap at 168 (7 days). Beyond that the cache is usually pruned and the
+    # client-side chart starts to chart mostly empty buckets.
+    hours: int = Query(default=24, ge=1, le=168),
+) -> JobActivityOut:
+    client = salt_client_or_503(request)
+    try:
+        return await get_job_activity(client, hours=hours)
+    except (SaltAPIUnavailable, SaltAPIError) as exc:
+        raise wrap_salt_errors(exc) from None
 
 
 @router.get(

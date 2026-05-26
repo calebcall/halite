@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
+import { BrandMark } from '@/app/layout/BrandMark'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ApiError } from '@/shared/api/client'
@@ -41,12 +41,25 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold">Sign in to Halite</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background p-4">
+      <BackgroundGlow />
+      <div className="relative z-10 w-full max-w-sm">
+        <div className="mb-6 flex items-center gap-3">
+          <BrandMark className="h-11 w-11" />
+          <div className="flex flex-col leading-tight">
+            <span className="text-base font-semibold tracking-tight">Halite</span>
+            <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              Salt Console
+            </span>
+          </div>
+        </div>
+        <div className="rounded-xl border border-border/80 bg-card/80 p-6 shadow-lg shadow-black/20 backdrop-blur">
+          <div className="mb-5">
+            <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Enter your credentials to continue.
+            </p>
+          </div>
           <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
@@ -67,13 +80,30 @@ export function LoginPage() {
                 <p className="text-sm text-destructive">{errors.password.message}</p>
               )}
             </div>
-            {serverError && <p className="text-sm text-destructive">{serverError}</p>}
+            {serverError && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {serverError}
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BackgroundGlow() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      <div className="absolute -top-32 left-1/2 h-72 w-[36rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+      <div className="absolute bottom-0 left-1/2 h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-border to-transparent" />
     </div>
   )
 }

@@ -18,6 +18,17 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    // Split recharts + its d3 deps into their own chunk so the initial
+    // payload stays lean and the charts cache independently from app code.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          charts: ['recharts'],
+        },
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],

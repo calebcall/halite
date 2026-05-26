@@ -83,7 +83,7 @@ export function RolePermissionsDialog({
         </DialogHeader>
 
         {role.is_builtin && (
-          <div className="flex items-start gap-2 rounded-md border border-amber-400/40 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-foreground">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
               Modifying permissions on built-in roles can lock users out. Proceed with caution.
@@ -117,7 +117,7 @@ export function RolePermissionsDialog({
                   </div>
                   <Button
                     variant="ghost"
-                    size="icon"
+                    size="icon-touch"
                     disabled={busy}
                     onClick={() => void onRemove(p)}
                     aria-label={`Remove ${p.verb} ${p.resource_glob}`}

@@ -47,7 +47,7 @@ function MinionDetailPageInner() {
   }
   if (error instanceof ApiError && error.status === 503) {
     return (
-      <div className="rounded-md border border-amber-400/40 bg-amber-50 p-6 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+      <div className="rounded-md border border-warning/40 bg-warning/10 p-6 text-sm text-foreground">
         <p>Salt-API is not configured.</p>
         {detail && <p className="mt-2 font-mono text-xs">{detail}</p>}
       </div>

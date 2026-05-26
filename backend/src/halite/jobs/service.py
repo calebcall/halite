@@ -2,9 +2,16 @@
 from __future__ import annotations
 
 import contextlib
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from halite.jobs.schemas import JobDetail, JobMinionResult, JobSummary
+from halite.jobs.schemas import (
+    JobActivityBucket,
+    JobActivityOut,
+    JobDetail,
+    JobMinionResult,
+    JobSummary,
+)
 from halite.salt.client import SaltAPIClient, SaltAPIError, SaltAPIUnavailable
 
 
@@ -85,6 +92,78 @@ async def get_job_detail(client: SaltAPIClient, jid: str) -> JobDetail | None:
         start_time=_opt_str(raw.get("StartTime")),
         minions=minions,
         results=results,
+    )
+
+
+def _jid_to_utc(jid: str) -> datetime | None:
+    """Parse a Salt JID (``YYYYMMDDHHMMSSffffff``, UTC) into a datetime.
+    Returns None for non-JID-shaped keys so aggregation can skip them
+    rather than 500-ing on stray cache entries.
+    """
+    if len(jid) != 20 or not jid.isdigit():
+        return None
+    try:
+        return datetime(
+            year=int(jid[0:4]),
+            month=int(jid[4:6]),
+            day=int(jid[6:8]),
+            hour=int(jid[8:10]),
+            minute=int(jid[10:12]),
+            second=int(jid[12:14]),
+            microsecond=int(jid[14:20]),
+            tzinfo=UTC,
+        )
+    except ValueError:
+        return None
+
+
+async def get_job_activity(client: SaltAPIClient, *, hours: int) -> JobActivityOut:
+    """Aggregate the master's job cache into per-hour buckets.
+
+    Uses ``runner.jobs.list_jobs`` directly (no limit slice) and buckets by
+    JID-derived UTC timestamp. ``running`` is independent of the window —
+    jobs that started before the window but are still executing still count.
+    Falls back to ``running=0`` if ``jobs.active`` fails.
+    """
+    raw = await client.runner_call("jobs.list_jobs")
+    if not isinstance(raw, dict):
+        raw = {}
+
+    # Snap "now" to the top of the current hour so the X-axis is stable
+    # within a single hour and identical buckets line up across consecutive
+    # polls (the chart doesn't shift sideways every 30s).
+    now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+    window_start = now - timedelta(hours=hours - 1)
+    counts = [0] * hours
+    for jid in raw.keys():
+        ts = _jid_to_utc(str(jid))
+        if ts is None:
+            continue
+        if ts < window_start or ts >= now + timedelta(hours=1):
+            continue
+        idx = int((ts - window_start).total_seconds() // 3600)
+        if 0 <= idx < hours:
+            counts[idx] += 1
+
+    buckets = [
+        JobActivityBucket(
+            hour_start=(window_start + timedelta(hours=i))
+                .strftime("%Y-%m-%dT%H:%M:%SZ"),
+            count=counts[i],
+        )
+        for i in range(hours)
+    ]
+
+    running = 0
+    with contextlib.suppress(SaltAPIError, SaltAPIUnavailable):
+        active = await client.list_active_jobs()
+        running = len(active)
+
+    return JobActivityOut(
+        hours=hours,
+        buckets=buckets,
+        total=sum(counts),
+        running=running,
     )
 
 

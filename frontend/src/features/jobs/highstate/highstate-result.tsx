@@ -107,12 +107,12 @@ function rowTone(state: ParsedState): { border: string; icon: React.ReactNode } 
   }
   if (hasChanges(state)) {
     return {
-      border: 'border-blue-400',
-      icon: <Check className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />,
+      border: 'border-primary/60',
+      icon: <Check className="h-3.5 w-3.5 text-primary" />,
     }
   }
   return {
-    border: 'border-emerald-400',
-    icon: <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />,
+    border: 'border-success/60',
+    icon: <Check className="h-3.5 w-3.5 text-success" />,
   }
 }

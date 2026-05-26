@@ -52,7 +52,7 @@ function JobsListPageInner() {
   }
   if (error instanceof ApiError && error.status === 503) {
     return (
-      <div className="rounded-md border border-amber-400/40 bg-amber-50 p-6 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+      <div className="rounded-md border border-warning/40 bg-warning/10 p-6 text-sm text-foreground">
         <p>Salt-API is not configured. Set <code>SALT_API_URL</code>, <code>SALT_API_USERNAME</code>, and <code>SALT_API_PASSWORD</code> in your <code>.env</code> and restart the stack.</p>
         {detail && <p className="mt-2 font-mono text-xs">{detail}</p>}
       </div>
@@ -146,11 +146,7 @@ function JobsListPageInner() {
 
 function JobStatusBadge({ status }: { status: 'running' | 'complete' }) {
   if (status === 'running') {
-    return (
-      <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200">
-        running
-      </Badge>
-    )
+    return <Badge variant="warning">running</Badge>
   }
-  return <Badge variant="outline" className="text-muted-foreground">complete</Badge>
+  return <Badge variant="info">complete</Badge>
 }

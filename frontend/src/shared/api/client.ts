@@ -183,6 +183,12 @@ export const api = {
         path: '/api/jobs',
         query: params,
       }),
+    activity: (params?: { hours?: number }) =>
+      request<paths['/api/jobs/activity']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/jobs/activity',
+        query: params,
+      }),
     get: (jid: string) =>
       request<paths['/api/jobs/{jid}']['get']['responses']['200']['content']['application/json']>({
         method: 'GET',

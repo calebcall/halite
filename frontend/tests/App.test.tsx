@@ -33,7 +33,7 @@ function renderWithProviders(ui: React.ReactElement) {
 describe('LoginPage', () => {
   it('renders the form', () => {
     renderWithProviders(<LoginPage />)
-    expect(screen.getByRole('heading', { name: /sign in to halite/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /sign in/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
   })

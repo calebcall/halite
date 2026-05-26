@@ -2,6 +2,7 @@
 import { Loader2, MoreHorizontal, Plus } from 'lucide-react'
 import { useState } from 'react'
 
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -109,20 +110,16 @@ function UsersListPageInner() {
                 <TableCell>{u.display_name || '—'}</TableCell>
                 <TableCell>{u.email || '—'}</TableCell>
                 <TableCell>
-                  <span
-                    className={
-                      u.is_active
-                        ? 'text-sm text-emerald-600'
-                        : 'text-sm text-muted-foreground'
-                    }
-                  >
-                    {u.is_active ? 'Active' : 'Inactive'}
-                  </span>
+                  {u.is_active ? (
+                    <Badge variant="success">Active</Badge>
+                  ) : (
+                    <Badge variant="secondary">Inactive</Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" aria-label={`Actions for ${u.username}`}>
+                      <Button variant="ghost" size="icon-touch" aria-label={`Actions for ${u.username}`}>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>

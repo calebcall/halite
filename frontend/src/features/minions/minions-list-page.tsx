@@ -48,7 +48,7 @@ function MinionsListPageInner() {
 
   if (error instanceof ApiError && error.status === 503) {
     return (
-      <div className="rounded-md border border-amber-400/40 bg-amber-50 p-6 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+      <div className="rounded-md border border-warning/40 bg-warning/10 p-6 text-sm text-foreground">
         <p>Salt-API is not configured. Set <code>SALT_API_URL</code>, <code>SALT_API_USERNAME</code>,
         and <code>SALT_API_PASSWORD</code> in your <code>.env</code> and restart the stack.</p>
         {detail && <p className="mt-2 font-mono text-xs">{detail}</p>}
@@ -121,7 +121,7 @@ function MinionsListPageInner() {
                   {canRun && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label={`Actions for ${m.id}`}>
+                        <Button variant="ghost" size="icon-touch" aria-label={`Actions for ${m.id}`}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -154,19 +154,11 @@ function MinionsListPageInner() {
 export function StatusBadge({ status }: { status: MinionStatus }) {
   switch (status) {
     case 'online':
-      return (
-        <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200">
-          online
-        </Badge>
-      )
+      return <Badge variant="success">online</Badge>
     case 'offline':
       return <Badge variant="secondary">offline</Badge>
     case 'pending':
-      return (
-        <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200">
-          pending
-        </Badge>
-      )
+      return <Badge variant="warning">pending</Badge>
     case 'rejected':
       return <Badge variant="destructive">rejected</Badge>
     case 'denied':

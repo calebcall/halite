@@ -140,6 +140,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/jobs/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Jobs Activity Route */
+        get: operations["jobs_activity_route_api_jobs_activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/jobs/{jid}": {
         parameters: {
             query?: never;
@@ -501,6 +518,24 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** JobActivityBucket */
+        JobActivityBucket: {
+            /** Hour Start */
+            hour_start: string;
+            /** Count */
+            count: number;
+        };
+        /** JobActivityOut */
+        JobActivityOut: {
+            /** Hours */
+            hours: number;
+            /** Buckets */
+            buckets: components["schemas"]["JobActivityBucket"][];
+            /** Total */
+            total: number;
+            /** Running */
+            running: number;
         };
         /** JobDetail */
         JobDetail: {
@@ -1052,6 +1087,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobsListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    jobs_activity_route_api_jobs_activity_get: {
+        parameters: {
+            query?: {
+                hours?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobActivityOut"];
                 };
             };
             /** @description Validation Error */

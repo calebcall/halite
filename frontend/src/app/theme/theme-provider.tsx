@@ -14,10 +14,10 @@ export const ThemeContext = createContext<ThemeContextValue | null>(null)
 const STORAGE_KEY = 'halite-theme'
 
 function readStored(): Theme {
-  if (typeof localStorage === 'undefined') return 'system'
+  if (typeof localStorage === 'undefined') return 'dark'
   const v = localStorage.getItem(STORAGE_KEY)
   if (v === 'light' || v === 'dark' || v === 'system') return v
-  return 'system'
+  return 'dark'
 }
 
 function systemPrefersDark(): boolean {

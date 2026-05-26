@@ -1,12 +1,26 @@
 // frontend/src/features/jobs/use-jobs.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { type JobDetail, type JobsListOut, jobsApi, jobsQueryKeys } from './api'
+import {
+  type JobActivityOut,
+  type JobDetail,
+  type JobsListOut,
+  jobsApi,
+  jobsQueryKeys,
+} from './api'
 
 export function useJobsList(limit?: number) {
   return useQuery<JobsListOut>({
     queryFn: () => jobsApi.list(limit !== undefined ? { limit } : undefined),
     queryKey: jobsQueryKeys.list(limit),
+    refetchInterval: 30_000,
+  })
+}
+
+export function useJobActivity(hours = 24) {
+  return useQuery<JobActivityOut>({
+    queryFn: () => jobsApi.activity({ hours }),
+    queryKey: jobsQueryKeys.activity(hours),
     refetchInterval: 30_000,
   })
 }

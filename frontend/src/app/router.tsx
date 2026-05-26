@@ -9,12 +9,15 @@ import {
 import { LoginPage } from '@/features/auth/login-page'
 import { ChangePasswordPage } from '@/features/auth/change-password-page'
 import { LoginRequired, MustChangePassword, PublicOnly } from '@/features/auth/guards'
+import { AboutPage } from '@/features/about/about-page'
 import { AuditViewerPage } from '@/features/audit/audit-viewer-page'
+import { InventoryPackagesPage } from '@/features/inventory/inventory-packages-page'
 import { JobDetailPage } from '@/features/jobs/job-detail-page'
 import { JobsListPage } from '@/features/jobs/jobs-list-page'
 import { KeysListPage } from '@/features/keys/keys-list-page'
 import { MinionDetailPage } from '@/features/minions/minion-detail-page'
 import { MinionsListPage } from '@/features/minions/minions-list-page'
+import { OverviewPage } from '@/features/overview/overview-page'
 import { RolesListPage } from '@/features/roles/roles-list-page'
 import { RunCommandPage } from '@/features/run/run-command-page'
 import { UsersListPage } from '@/features/users/users-list-page'
@@ -53,13 +56,7 @@ const homeRoute = createRoute({
   path: '/',
   component: () => (
     <MustChangePassword>
-      <div className="prose">
-        <h2 className="text-xl font-semibold">Welcome to Halite</h2>
-        <p className="text-muted-foreground">
-          Feature pages arrive in subsequent plans. For now this is a working app shell on top of
-          Plan&nbsp;1+2&apos;s backend.
-        </p>
-      </div>
+      <OverviewPage />
     </MustChangePassword>
   ),
 })
@@ -133,6 +130,31 @@ const auditRoute = createRoute({
   component: () => <AuditViewerPage />,
 })
 
+const aboutRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/about',
+  component: () => <AboutPage />,
+})
+
+// Inventory state lives in the URL — three drill-down levels controlled
+// by which of (name, version, minion) are set.
+type InventorySearch = {
+  minion?: string
+  name?: string
+  version?: string
+}
+
+const inventoryRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/inventory',
+  validateSearch: (search: Record<string, unknown>): InventorySearch => ({
+    minion: typeof search.minion === 'string' ? search.minion : undefined,
+    name: typeof search.name === 'string' ? search.name : undefined,
+    version: typeof search.version === 'string' ? search.version : undefined,
+  }),
+  component: () => <InventoryPackagesPage />,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   appRoute.addChildren([
@@ -143,10 +165,12 @@ const routeTree = rootRoute.addChildren([
     keysRoute,
     jobsRoute,
     jobDetailRoute,
+    inventoryRoute,
     usersRoute,
     rolesRoute,
     runRoute,
     auditRoute,
+    aboutRoute,
   ]),
 ])
 

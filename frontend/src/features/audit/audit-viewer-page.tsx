@@ -162,8 +162,8 @@ function AuditViewerPageInner() {
                   <span
                     className={
                       e.decision === 'allow'
-                        ? 'rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200'
-                        : 'rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-900 dark:bg-red-950/40 dark:text-red-200'
+                        ? 'rounded bg-success/15 px-1.5 py-0.5 text-xs font-medium text-success ring-1 ring-inset ring-success/30'
+                        : 'rounded bg-destructive/15 px-1.5 py-0.5 text-xs font-medium text-destructive ring-1 ring-inset ring-destructive/40'
                     }
                   >
                     {e.decision}

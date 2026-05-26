@@ -47,3 +47,21 @@ class JobDetail(BaseModel):
     start_time: str | None = None
     minions: list[str] = []
     results: list[JobMinionResult] = []
+
+
+class JobActivityBucket(BaseModel):
+    # ISO-8601 UTC, e.g. "2026-05-25T10:00:00Z" — the start of the bucket's hour.
+    hour_start: str
+    count: int
+
+
+class JobActivityOut(BaseModel):
+    # Width of the rolling window the buckets span, in hours.
+    hours: int
+    # Always exactly `hours` entries, oldest first, in chronological order.
+    buckets: list[JobActivityBucket]
+    # Sum of bucket counts — total jobs dispatched in the window.
+    total: int
+    # Jobs currently executing, regardless of when they started (some may
+    # predate the window).
+    running: int
