@@ -14,10 +14,26 @@ export interface JobHighstateAggregate {
   totalMinions: number
   minionsAllSuccess: number   // produced highstate output AND every state succeeded
   minionsWithFailures: number // produced highstate output AND at least one state failed
-  minionsNonHighstate: number // produced output but NOT highstate-shaped
+  minionsBlocked: number      // returned salt's "function already running" message
+  minionsNonHighstate: number // produced output but NOT highstate-shaped (and not blocked)
   // State-level counts (summed across all minions)
   totalStateFailures: number
   totalStatesWithChanges: number
+}
+
+// Matches salt's per-minion "function already running" busy response.
+// Format example:
+//   The function "state.apply" is running as PID 544532 and was started at
+//   2026, May 26 16:10:22.541673 with jid 20260526161022541673
+// salt-api typically wraps the string in a one-element list.
+const BLOCKED_RE = /The function ".+" is running as PID/
+
+export function isBlockedReturn(value: unknown): boolean {
+  if (typeof value === 'string') return BLOCKED_RE.test(value)
+  if (Array.isArray(value)) {
+    return value.some((v) => typeof v === 'string' && BLOCKED_RE.test(v))
+  }
+  return false
 }
 
 /**
@@ -34,6 +50,7 @@ export function summarizeJobHighstate(
   let totalMinions = 0
   let minionsAllSuccess = 0
   let minionsWithFailures = 0
+  let minionsBlocked = 0
   let minionsNonHighstate = 0
   let totalStateFailures = 0
   let totalStatesWithChanges = 0
@@ -41,6 +58,13 @@ export function summarizeJobHighstate(
 
   for (const r of results) {
     totalMinions++
+    // Check blocked BEFORE parseHighstate — blocked returns are
+    // list/string-shaped and parseHighstate would otherwise lump them
+    // into the generic non-highstate bucket.
+    if (isBlockedReturn(r.return_value)) {
+      minionsBlocked++
+      continue
+    }
     const parsed = parseHighstate(r.return_value)
     if (!parsed) {
       minionsNonHighstate++
@@ -67,6 +91,7 @@ export function summarizeJobHighstate(
     totalMinions,
     minionsAllSuccess,
     minionsWithFailures,
+    minionsBlocked,
     minionsNonHighstate,
     totalStateFailures,
     totalStatesWithChanges,

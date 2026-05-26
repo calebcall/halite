@@ -1,6 +1,6 @@
 // frontend/src/features/jobs/job-detail-page.tsx
 import { Link, useParams } from '@tanstack/react-router'
-import { ArrowLeft, CheckCircle2, ChevronDown, Loader2, Square, Terminal, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronDown, Loader2, Lock, Square, Terminal, XCircle } from 'lucide-react'
 import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +15,7 @@ import { KillJobDialog } from './kill-job-dialog'
 import { useJob } from './use-jobs'
 import { HighstateResult } from './highstate/highstate-result'
 import { JobHighstateSummary } from './highstate/job-highstate-summary'
-import { minionHasFailures, summarizeJobHighstate } from './highstate/job-summary'
+import { isBlockedReturn, minionHasFailures, summarizeJobHighstate } from './highstate/job-summary'
 import { parseHighstate } from './highstate/parse'
 
 export function JobDetailPage() {
@@ -230,8 +230,9 @@ function MinionResultCard({
 }) {
   const [open, setOpen] = useState(false)
   const panelId = `minion-result-${result.minion}`
-  const ok = result.success === true
-  const failed = result.success === false
+  const blocked = isBlockedReturn(result.return_value)
+  const ok = result.success === true && !blocked
+  const failed = result.success === false && !blocked
   const highstate = parseHighstate(result.return_value)
   return (
     <div className="rounded-md border">
@@ -246,9 +247,11 @@ function MinionResultCard({
         <div className="flex items-center gap-3">
           {ok && <CheckCircle2 className="h-4 w-4 text-success" />}
           {failed && <XCircle className="h-4 w-4 text-destructive" />}
+          {blocked && <Lock className="h-4 w-4 text-warning" />}
           <span className="font-mono text-sm">{result.minion}</span>
           {ok && <Badge variant="success">success</Badge>}
           {failed && <Badge variant="destructive">failed</Badge>}
+          {blocked && <Badge variant="warning">blocked</Badge>}
           {result.retcode !== null && result.retcode !== undefined && (
             <span className="text-xs text-muted-foreground">retcode {result.retcode}</span>
           )}

@@ -2,10 +2,15 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  isBlockedReturn,
   type MinionResultLite,
   minionHasFailures,
   summarizeJobHighstate,
 } from '@/features/jobs/highstate/job-summary'
+
+const blockedString =
+  'The function "state.apply" is running as PID 544532 and was started at 2026, May 26 16:10:22.541673 with jid 20260526161022541673'
+const blockedListReturn = [blockedString]
 
 const stateOk = (id: string) => ({
   [`pkg_|-${id}_|-x_|-installed`]: {
@@ -67,6 +72,7 @@ describe('summarizeJobHighstate', () => {
       totalMinions: 2,
       minionsAllSuccess: 2,
       minionsWithFailures: 0,
+      minionsBlocked: 0,
       minionsNonHighstate: 0,
       totalStateFailures: 0,
       totalStatesWithChanges: 1,
@@ -83,6 +89,7 @@ describe('summarizeJobHighstate', () => {
       totalMinions: 3,
       minionsAllSuccess: 1,
       minionsWithFailures: 2,
+      minionsBlocked: 0,
       minionsNonHighstate: 0,
       totalStateFailures: 2,
       totalStatesWithChanges: 0,
@@ -99,6 +106,7 @@ describe('summarizeJobHighstate', () => {
       totalMinions: 3,
       minionsAllSuccess: 1,
       minionsWithFailures: 0,
+      minionsBlocked: 0,
       minionsNonHighstate: 2,
       totalStateFailures: 0,
       totalStatesWithChanges: 0,
@@ -112,6 +120,46 @@ describe('summarizeJobHighstate', () => {
       minion('c', stateOkWithChanges('c')),
     ])
     expect(out?.totalStatesWithChanges).toBe(2)
+  })
+
+  it('counts blocked minions separately from non-highstate output', () => {
+    const out = summarizeJobHighstate([
+      minion('a', stateOk('one')),
+      minion('b', blockedListReturn, false),
+      minion('c', blockedListReturn, false),
+      minion('d', 'plain string', false),
+    ])
+    expect(out).toEqual({
+      totalMinions: 4,
+      minionsAllSuccess: 1,
+      minionsWithFailures: 0,
+      minionsBlocked: 2,
+      minionsNonHighstate: 1,
+      totalStateFailures: 0,
+      totalStatesWithChanges: 0,
+    })
+  })
+})
+
+describe('isBlockedReturn', () => {
+  it('detects the salt-busy message inside a one-element list', () => {
+    expect(isBlockedReturn(blockedListReturn)).toBe(true)
+  })
+
+  it('detects the salt-busy message as a plain string', () => {
+    expect(isBlockedReturn(blockedString)).toBe(true)
+  })
+
+  it('false for arbitrary strings', () => {
+    expect(isBlockedReturn('something failed')).toBe(false)
+    expect(isBlockedReturn(['a', 'b'])).toBe(false)
+  })
+
+  it('false for dicts and other shapes', () => {
+    expect(isBlockedReturn({ result: false })).toBe(false)
+    expect(isBlockedReturn(null)).toBe(false)
+    expect(isBlockedReturn(undefined)).toBe(false)
+    expect(isBlockedReturn(42)).toBe(false)
   })
 })
 

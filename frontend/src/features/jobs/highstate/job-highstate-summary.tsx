@@ -1,10 +1,11 @@
 // frontend/src/features/jobs/highstate/job-highstate-summary.tsx
-import { Server, ServerCog, ServerCrash } from 'lucide-react'
+import { Lock, Server, ServerCog, ServerCrash } from 'lucide-react'
 
 import type { JobHighstateAggregate } from './job-summary'
 
 export function JobHighstateSummary({ stats }: { stats: JobHighstateAggregate }) {
   const hasFailures = stats.minionsWithFailures > 0
+  const hasBlocked = stats.minionsBlocked > 0
   return (
     <div className="rounded-md border bg-muted/20 p-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
@@ -25,6 +26,16 @@ export function JobHighstateSummary({ stats }: { stats: JobHighstateAggregate })
           <span className="font-semibold">{stats.minionsWithFailures}</span>
           <span className={hasFailures ? '' : 'text-muted-foreground'}>with failures</span>
         </span>
+        {hasBlocked && (
+          <>
+            <span className="text-muted-foreground">·</span>
+            <span className="inline-flex items-center gap-1.5 text-warning">
+              <Lock className="h-4 w-4" />
+              <span className="font-semibold">{stats.minionsBlocked}</span>
+              <span>blocked</span>
+            </span>
+          </>
+        )}
         {stats.minionsNonHighstate > 0 && (
           <>
             <span className="text-muted-foreground">·</span>
