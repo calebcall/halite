@@ -92,10 +92,10 @@ class FleetIngestScheduler:
 
     async def _refresh_connectivity(self) -> None:
         try:
-            conn_map = await self._salt.list_connected_minions()
-            self._connected_minions = set(conn_map.keys())
+            ids = await self._salt.list_present_minion_ids()
+            self._connected_minions = ids
             self._connected_refreshed_at = datetime.now(tz=UTC)
-            log.info("fleet connectivity refreshed: %d minions online", len(self._connected_minions))
+            log.info("fleet connectivity refreshed: %d minions online", len(ids))
         except Exception:
             log.exception("fleet connectivity refresh failed; keeping last-known set")
 

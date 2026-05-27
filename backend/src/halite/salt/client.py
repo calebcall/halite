@@ -275,6 +275,23 @@ class SaltAPIClient:
                     out[item] = ""
         return out
 
+    async def list_present_minion_ids(self) -> set[str]:
+        """Returns just the set of minion_ids currently present on the master.
+
+        Uses runner.manage.present WITHOUT show_ip — pure master-side session
+        state, no per-minion mine.get round-trip, no minion-pinging. Use this
+        when you only need the connectivity set (e.g., the fleet dashboard's
+        background refresh) and don't need the IP. Sub-second on a healthy
+        master regardless of fleet size.
+        """
+        result = await self.runner_call("manage.present")
+        if isinstance(result, list):
+            return {str(item) for item in result if isinstance(item, str)}
+        if isinstance(result, dict):
+            # Some salt versions wrap as {id: <whatever>}
+            return {str(k) for k in result}
+        return set()
+
     async def get_network_grains_map(
         self,
         target: str = "*",
