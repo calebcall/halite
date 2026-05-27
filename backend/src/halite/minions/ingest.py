@@ -104,14 +104,19 @@ def _denorm(row: MinionSnapshot, grains: dict[str, Any]) -> None:
 
 
 async def refresh_grains(db: AsyncSession, salt: Any) -> int:
-    """Pull master-cached grains for every minion and update its snapshot.
-    Rows without an existing snapshot are skipped — keys are the source
-    of truth."""
-    cache = await salt.cache_grains()
+    """Pull master-cached grains for known accepted minions and update
+    their snapshot rows. Rows missing a snapshot entry are skipped — keys
+    are the source of truth."""
+    # Source of truth for "which minions to fetch" is the snapshot table.
+    # We only care about accepted minions for grains.
+    rows = (await db.execute(select(MinionSnapshot))).scalars().all()
+    accepted_ids = [r.minion_id for r in rows if r.key_status == "accepted"]
+    if not accepted_ids:
+        return 0
+    cache = await salt.cache_grains(minion_ids=accepted_ids)
     if not isinstance(cache, dict):
         return 0
     now = datetime.now(tz=UTC)
-    rows = (await db.execute(select(MinionSnapshot))).scalars().all()
     by_id = {r.minion_id: r for r in rows}
     touched = 0
     for mid, grains in cache.items():

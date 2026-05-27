@@ -292,22 +292,38 @@ class SaltAPIClient:
             return {str(k) for k in result}
         return set()
 
-    async def cache_grains(self) -> dict[str, dict[str, Any]]:
-        """Returns ``{minion_id: grains_dict}`` for every minion the master
-        has cached grains for. Uses ``runner.cache.grains`` — pure master-side
-        cache read, no minion is contacted. Sub-second on any reasonable
-        fleet.
+    async def cache_grains(
+        self,
+        minion_ids: list[str] | None = None,
+        batch_size: int = 20,
+    ) -> dict[str, dict[str, Any]]:
+        """Returns ``{minion_id: grains_dict}`` from master-cached grains.
 
-        ``cache.grains`` requires a ``tgt`` argument; ``'*'`` selects all
-        minions from the master cache without contacting any of them.
+        Uses ``runner.cache.grains`` — pure master-side cache read, no minion
+        contact. When ``minion_ids`` is None, batches with a wildcard target
+        are NOT used (some masters drop the connection on full-fleet payloads
+        over ~5 MB); instead the caller should pass an explicit list of
+        minion ids. We chunk to ``batch_size`` per call and aggregate.
         """
-        result = await self.runner_call("cache.grains", tgt="*")
-        if not isinstance(result, dict):
+        if not minion_ids:
+            # No-op rather than blow up the master with a wildcard. The
+            # caller (refresh_grains) is responsible for supplying the
+            # list of minions it cares about.
             return {}
+
         out: dict[str, dict[str, Any]] = {}
-        for mid, g in result.items():
-            if isinstance(g, dict):
-                out[str(mid)] = g
+        for i in range(0, len(minion_ids), batch_size):
+            chunk = minion_ids[i : i + batch_size]
+            result = await self.runner_call(
+                "cache.grains",
+                tgt=",".join(chunk),
+                tgt_type="list",
+            )
+            if not isinstance(result, dict):
+                continue
+            for mid, g in result.items():
+                if isinstance(g, dict):
+                    out[str(mid)] = g
         return out
 
     async def get_network_grains_map(
