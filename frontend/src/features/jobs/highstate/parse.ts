@@ -7,7 +7,11 @@
 // doesn't legally appear inside any of the four positions. The `s`
 // (dotall) flag is required because cmd.run state names commonly
 // contain multi-line shell scripts with literal newline characters.
-const LOWSTATE_KEY = /^([a-z_]+)_\|-(.*?)_\|-(.*?)_\|-([a-z_]+)$/s
+// Module + fun segments allow digits (e.g. `x509`, `keystone_v3`) — salt
+// has perfectly normal modules with digits in the name. Restricting to
+// [a-z_]+ would (and did) make the master's TLS-cert states show as
+// "unknown JSON" in the UI.
+const LOWSTATE_KEY = /^([a-z0-9_]+)_\|-(.*?)_\|-(.*?)_\|-([a-z0-9_]+)$/s
 
 export type ParsedState = {
   module: string

@@ -6,8 +6,10 @@ from typing import Any
 
 # Anchored regex matching salt's low-state key format "module_|-state_id_|-name_|-fun".
 # DOTALL because cmd.run state names commonly contain multi-line shell scripts.
+# Module + fun segments allow digits (e.g. `x509`, `keystone_v3`) — keep this
+# in sync with the frontend regex in features/jobs/highstate/parse.ts.
 _LOWSTATE_KEY = re.compile(
-    r"^([a-z_]+)_\|-(.*?)_\|-(.*?)_\|-([a-z_]+)$",
+    r"^([a-z0-9_]+)_\|-(.*?)_\|-(.*?)_\|-([a-z0-9_]+)$",
     re.DOTALL,
 )
 
