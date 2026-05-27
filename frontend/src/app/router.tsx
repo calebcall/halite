@@ -21,6 +21,8 @@ import { OverviewPage } from '@/features/overview/overview-page'
 import { RolesListPage } from '@/features/roles/roles-list-page'
 import { RunCommandPage } from '@/features/run/run-command-page'
 import { SettingsPage } from '@/features/admin/settings-page'
+import { SetupGuard } from '@/features/setup/setup-guard'
+import { SetupWizardPage } from '@/features/setup/setup-wizard-page'
 import { UsersListPage } from '@/features/users/users-list-page'
 import { AppShell } from './layout/AppShell'
 
@@ -41,7 +43,9 @@ const appRoute = createRoute({
   id: 'app',
   component: () => (
     <LoginRequired>
-      <AppShell />
+      <SetupGuard>
+        <AppShell />
+      </SetupGuard>
     </LoginRequired>
   ),
 })
@@ -50,6 +54,16 @@ const changePasswordRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/change-password',
   component: () => <ChangePasswordPage />,
+})
+
+const setupRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/setup',
+  component: () => (
+    <MustChangePassword>
+      <SetupWizardPage />
+    </MustChangePassword>
+  ),
 })
 
 const homeRoute = createRoute({
@@ -166,6 +180,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   appRoute.addChildren([
     changePasswordRoute,
+    setupRoute,
     homeRoute,
     minionsRoute,
     minionDetailRoute,
