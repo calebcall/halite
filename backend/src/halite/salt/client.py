@@ -438,23 +438,14 @@ class SaltAPIClient:
         non-existent minions."""
         await self.wheel_call("key.delete", match=minion_id)
 
-    async def list_jobs(
-        self, limit: int = 50, *, timeout: float | None = 15.0
-    ) -> dict[str, dict[str, Any]]:
+    async def list_jobs(self, limit: int = 50) -> dict[str, dict[str, Any]]:
         """Return recent jobs from the master's job cache.
 
         Calls runner.jobs.list_jobs and slices to the most recent `limit` entries
         (ordered by jid descending, since salt jids are timestamp-based and
         sort lexicographically by time).
-
-        Default timeout is 15s with 1 attempt — masters with thousands of
-        cached jobs return multi-MB JSON payloads and can stall the default
-        30s/3-retry path past a minute. Callers can pass ``timeout=None`` to
-        opt back into the global default.
         """
-        result = await self.runner_call(
-            "jobs.list_jobs", timeout=timeout, max_retries=1
-        )
+        result = await self.runner_call("jobs.list_jobs")
         if not isinstance(result, dict):
             return {}
         ordered = sorted(result.keys(), reverse=True)[:limit]
