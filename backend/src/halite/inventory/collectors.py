@@ -122,7 +122,24 @@ async def collect_packages(
 
     The two salt calls are fired in parallel — they're independent and the
     fan-out savings are meaningful on large fleets.
+
+    When the caller asks for the whole fleet (``target="*"`` + glob), we
+    intersect with ``manage.present`` first. Offline minions can't respond
+    to ``pkg.list_pkgs`` anyway, and waiting on their salt-side timeouts
+    gates the entire fan-out (with 60+ offline minions that's enough to
+    blow httpx's read timeout). Explicit non-glob targets are passed
+    through unchanged — caller is presumably targeting on purpose.
     """
+    if target == "*" and target_type == "glob":
+        try:
+            present = await client.list_present_minion_ids()
+        except Exception:
+            present = set()
+        if not present:
+            return []
+        target = ",".join(sorted(present))
+        target_type = "list"
+
     pkgs_call, family_call = await asyncio.gather(
         client.local_call(
             target,

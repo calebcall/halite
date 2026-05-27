@@ -129,6 +129,8 @@ async def test_collect_packages_happy_path(fake_salt_api):
 
     def handler(payload):
         fun = payload.get("fun")
+        if fun == "manage.present":
+            return {"return": [["web-01", "db-01"]]}
         if fun == "pkg.list_pkgs":
             return {
                 "return": [
@@ -177,6 +179,8 @@ async def test_collect_packages_skips_offline_minion(fake_salt_api):
     error string). We drop those instead of writing empty snapshots."""
 
     def handler(payload):
+        if payload.get("fun") == "manage.present":
+            return {"return": [["web-01", "offline-01", "errored-01"]]}
         if payload.get("fun") == "pkg.list_pkgs":
             return {
                 "return": [
@@ -206,6 +210,8 @@ async def test_collect_packages_skips_empty_response(fake_salt_api):
     and skipped — better to keep the previous snapshot than wipe it."""
 
     def handler(payload):
+        if payload.get("fun") == "manage.present":
+            return {"return": [["web-01", "empty-01"]]}
         if payload.get("fun") == "pkg.list_pkgs":
             return {"return": [{"web-01": {"vim": "2:9.0.1378-2"}, "empty-01": {}}]}
         if payload.get("fun") == "grains.get":
@@ -224,6 +230,8 @@ async def test_collect_packages_skips_empty_response(fake_salt_api):
 @pytest.mark.asyncio
 async def test_collect_packages_unknown_os_family_yields_none_source(fake_salt_api):
     def handler(payload):
+        if payload.get("fun") == "manage.present":
+            return {"return": [["odd-01"]]}
         if payload.get("fun") == "pkg.list_pkgs":
             return {"return": [{"odd-01": {"some-pkg": "1.0"}}]}
         if payload.get("fun") == "grains.get":
@@ -250,6 +258,8 @@ async def test_collect_packages_uses_attr_kwarg(fake_salt_api):
 
     def handler(payload):
         seen_payloads.append(payload)
+        if payload.get("fun") == "manage.present":
+            return {"return": [["web-01"]]}
         if payload.get("fun") == "pkg.list_pkgs":
             return {"return": [{"web-01": {"vim": "1.0"}}]}
         if payload.get("fun") == "grains.get":

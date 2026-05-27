@@ -270,6 +270,8 @@ async def test_search_packages_403_without_view_inventory(app_db, session):
 def _refresh_handler():
     def handler(payload):
         fun = payload.get("fun")
+        if fun == "manage.present":
+            return {"return": [["web-01"]]}
         if fun == "pkg.list_pkgs":
             return {"return": [{"web-01": {"vim": "2:9.0"}}]}
         if fun == "grains.get":
