@@ -43,6 +43,24 @@ type NavSection = {
   items: NavItem[]
 }
 
+// Items whose `to` is a prefix of another item's `to` need exact match —
+// otherwise both light up when the deeper route is active (e.g. /jobs
+// matching /jobs/timeline). Computed below from navSections.
+function _computePrefixMatchedPaths(sections: NavSection[]): Set<string> {
+  const allTos = sections.flatMap((s) => s.items.map((i) => i.to))
+  const out = new Set<string>()
+  for (const a of allTos) {
+    for (const b of allTos) {
+      if (a !== b && b.startsWith(a + '/')) {
+        out.add(a)
+        break
+      }
+    }
+  }
+  return out
+}
+
+
 const navSections: NavSection[] = [
   {
     label: 'Infrastructure',
@@ -83,6 +101,8 @@ const navSections: NavSection[] = [
     ],
   },
 ]
+
+const EXACT_MATCH_TOS = _computePrefixMatchedPaths(navSections)
 
 /** Desktop sidebar — visible only at lg and up. */
 export function Sidebar() {
@@ -206,7 +226,7 @@ function NavLink({ item }: { item: NavItem }) {
         baseRow,
         'text-sidebar-foreground hover:bg-sidebar-accent/10 hover:text-foreground',
       )}
-      activeOptions={{ exact: item.to === '/' }}
+      activeOptions={{ exact: item.to === '/' || EXACT_MATCH_TOS.has(item.to) }}
       activeProps={{
         className:
           'bg-sidebar-accent/15 text-foreground font-medium before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r before:bg-sidebar-accent',

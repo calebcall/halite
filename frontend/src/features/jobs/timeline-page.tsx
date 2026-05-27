@@ -59,14 +59,22 @@ export function TimelinePage() {
           <span
             className={cn(
               'inline-flex items-center gap-1.5 text-xs',
-              data.active_known ? 'text-muted-foreground' : 'text-warning',
+              // Only flag a warning when we have NO data AND no active-jids
+              // refresh has happened — that's the genuine "scheduler is off"
+              // signal. Bars present is proof the scheduler ran at least once.
+              data.total_bars > 0 || data.last_polled_at
+                ? 'text-muted-foreground'
+                : 'text-warning',
             )}
             title={data.last_polled_at ? new Date(data.last_polled_at).toLocaleString() : undefined}
           >
-            {data.last_polled_at ? (
+            {data.total_bars > 0 || data.last_polled_at ? (
               <>
                 <Clock className="size-3" />
-                Updated {formatRelative(new Date(data.last_polled_at))} · {data.total_bars} bars
+                {data.last_polled_at && (
+                  <>Updated {formatRelative(new Date(data.last_polled_at))} · </>
+                )}
+                {data.total_bars} bars
               </>
             ) : (
               <>
