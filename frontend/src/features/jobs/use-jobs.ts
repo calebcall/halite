@@ -21,7 +21,12 @@ export function useJobActivity(hours = 24) {
   return useQuery<JobActivityOut>({
     queryFn: () => jobsApi.activity({ hours }),
     queryKey: jobsQueryKeys.activity(hours),
-    refetchInterval: 30_000,
+    // 5-minute refetch — the data is DB-backed by the jobs-index
+    // scheduler, so polling at the same cadence as the scheduler
+    // (5 min default) is sufficient. Was 30s when the endpoint
+    // hit salt-api directly.
+    refetchInterval: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
   })
 }
 

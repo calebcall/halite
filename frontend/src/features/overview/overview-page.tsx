@@ -1,6 +1,8 @@
 import {
   Activity,
+  AlertTriangle,
   ArrowRight,
+  Clock,
   FileClock,
   Key,
   KeyRound,
@@ -14,6 +16,7 @@ import {
 import { Link } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 
+import { cn } from '@/lib/utils'
 import { ComplianceSparkline } from '@/features/fleet/compliance-sparkline'
 import { FleetHeatmap } from '@/features/fleet/fleet-heatmap'
 import { MinionRunPanel } from '@/features/fleet/minion-run-panel'
@@ -33,6 +36,17 @@ import { MinionStatusDonut } from './minion-status-donut'
 import { StatCard } from './stat-card'
 
 type Minion = components['schemas']['MinionHealthOut']
+
+function formatRelativeTime(d: Date): string {
+  const diff = Date.now() - d.getTime()
+  const sec = Math.round(diff / 1000)
+  if (sec < 60) return 'just now'
+  const min = Math.round(sec / 60)
+  if (min < 60) return `${min}m ago`
+  const hr = Math.round(min / 60)
+  if (hr < 24) return `${hr}h ago`
+  return `${Math.round(hr / 24)}d ago`
+}
 
 type Tile = {
   to: string
@@ -221,43 +235,70 @@ function KpiRow({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <StatCard
-        label="Online minions"
-        value={
-          canViewMinions
-            ? `${minionMetrics.online}${minionMetrics.total ? ` / ${minionMetrics.total}` : ''}`
-            : '—'
-        }
-        hint={canViewMinions ? 'Currently connected' : 'No access'}
-        icon={ServerCog}
-        tone="success"
-        loading={canViewMinions && minions.isPending}
-      />
-      <StatCard
-        label="Pending keys"
-        value={canViewKeys ? pendingKeys : '—'}
-        hint={canViewKeys ? 'Awaiting approval' : 'No access'}
-        icon={KeyRound}
-        tone={pendingKeys > 0 ? 'amber' : 'muted'}
-        loading={canViewKeys && keys.isPending}
-      />
-      <StatCard
-        label="Running jobs"
-        value={canViewJobs ? jobMetrics.running : '—'}
-        hint={canViewJobs ? 'In flight right now' : 'No access'}
-        icon={Play}
-        tone={jobMetrics.running > 0 ? 'amber' : 'muted'}
-        loading={canViewJobs && jobs.isPending}
-      />
-      <StatCard
-        label="Jobs · 24h"
-        value={canViewJobs ? jobMetrics.last24h : '—'}
-        hint={canViewJobs ? 'Dispatched today' : 'No access'}
-        icon={Activity}
-        tone="amber"
-        loading={canViewJobs && jobs.isPending}
-      />
+    <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          label="Online minions"
+          value={
+            canViewMinions
+              ? `${minionMetrics.online}${minionMetrics.total ? ` / ${minionMetrics.total}` : ''}`
+              : '—'
+          }
+          hint={canViewMinions ? 'Currently connected' : 'No access'}
+          icon={ServerCog}
+          tone="success"
+          loading={canViewMinions && minions.isPending}
+        />
+        <StatCard
+          label="Pending keys"
+          value={canViewKeys ? pendingKeys : '—'}
+          hint={canViewKeys ? 'Awaiting approval' : 'No access'}
+          icon={KeyRound}
+          tone={pendingKeys > 0 ? 'amber' : 'muted'}
+          loading={canViewKeys && keys.isPending}
+        />
+        <StatCard
+          label="Running jobs"
+          value={canViewJobs ? jobMetrics.running : '—'}
+          hint={canViewJobs ? 'In flight right now' : 'No access'}
+          icon={Play}
+          tone={jobMetrics.running > 0 ? 'amber' : 'muted'}
+          loading={canViewJobs && jobs.isPending}
+        />
+        <StatCard
+          label="Jobs · 24h"
+          value={canViewJobs ? jobMetrics.last24h : '—'}
+          hint={canViewJobs ? 'Dispatched today' : 'No access'}
+          icon={Activity}
+          tone="amber"
+          loading={canViewJobs && jobs.isPending}
+        />
+      </div>
+      {canViewJobs && jobs.data && (
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 text-xs',
+            jobs.data.active_known
+              ? 'text-muted-foreground'
+              : 'text-warning',
+          )}
+          title={jobs.data.last_polled_at
+            ? new Date(jobs.data.last_polled_at).toLocaleString()
+            : undefined}
+        >
+          {jobs.data.last_polled_at ? (
+            <>
+              <Clock className="size-3" />
+              Updated {formatRelativeTime(new Date(jobs.data.last_polled_at))}
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="size-3" />
+              Jobs scheduler not running — enable in Settings → Pollers
+            </>
+          )}
+        </span>
+      )}
     </div>
   )
 }
