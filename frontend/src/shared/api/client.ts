@@ -223,6 +223,18 @@ export const api = {
         method: 'POST',
         path: `/api/jobs/${encodeURIComponent(jid)}/kill`,
       }),
+    timeline: (params: {
+      function_filter?: string
+      group_by?: 'function' | 'user'
+      include_system?: boolean
+      user?: string
+      window?: '1h' | '4h' | '24h' | '7d'
+    } = {}) =>
+      request<paths['/api/jobs/timeline']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/jobs/timeline',
+        query: params,
+      }),
   },
   keys: {
     list: () =>

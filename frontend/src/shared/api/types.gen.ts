@@ -304,6 +304,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/jobs/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Jobs Timeline Route */
+        get: operations["jobs_timeline_route_api_jobs_timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/jobs/{jid}": {
         parameters: {
             query?: never;
@@ -1640,6 +1657,87 @@ export interface components {
             /** Minion Count */
             minion_count?: number | null;
         };
+        /**
+         * TimelineBar
+         * @description One job invocation on the timeline.
+         */
+        TimelineBar: {
+            /** Jid */
+            jid: string;
+            /** Function */
+            function: string;
+            /** Target */
+            target: string | null;
+            /** User */
+            user: string | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Completed At */
+            completed_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pass" | "changed" | "failed" | "running" | "unknown";
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "state" | "cmd" | "pkg" | "service" | "test" | "runner" | "wheel" | "manage" | "other";
+            /** Minion Count */
+            minion_count: number | null;
+            /** Failed Minion Count */
+            failed_minion_count: number | null;
+        };
+        /**
+         * TimelineGroup
+         * @description A row on the timeline. ``key`` identifies the group (function name
+         *     or username), ``label`` is what the UI displays.
+         */
+        TimelineGroup: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "state" | "cmd" | "pkg" | "service" | "test" | "runner" | "wheel" | "manage" | "other";
+            /** Bar Count */
+            bar_count: number;
+            /** Bars */
+            bars: components["schemas"]["TimelineBar"][];
+        };
+        /** TimelineOut */
+        TimelineOut: {
+            /**
+             * Window Start
+             * Format: date-time
+             */
+            window_start: string;
+            /**
+             * Window End
+             * Format: date-time
+             */
+            window_end: string;
+            /**
+             * Group By
+             * @enum {string}
+             */
+            group_by: "function" | "user";
+            /** Groups */
+            groups: components["schemas"]["TimelineGroup"][];
+            /** Total Bars */
+            total_bars: number;
+            /** Last Polled At */
+            last_polled_at: string | null;
+            /** Active Known */
+            active_known: boolean;
+        };
         /** TopFailureOut */
         TopFailureOut: {
             /** State Id */
@@ -2265,6 +2363,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobActivityOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    jobs_timeline_route_api_jobs_timeline_get: {
+        parameters: {
+            query?: {
+                window?: string;
+                group_by?: string;
+                include_system?: boolean;
+                function_filter?: string | null;
+                user?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineOut"];
                 };
             };
             /** @description Validation Error */
