@@ -19,8 +19,6 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://halite:halite@db:5432/halite
       COOKIE_SECRET: ${COOKIE_SECRET:?Run scripts/gen-bootstrap-secret.sh and set COOKIE_SECRET}
-      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
-      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-changeme}
       LOG_FORMAT: ${LOG_FORMAT:-json}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       SALT_API_URL: ${SALT_API_URL:-}

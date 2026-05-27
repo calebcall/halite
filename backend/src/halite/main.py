@@ -35,7 +35,7 @@ def create_app(
         async with db_module._sessionmaker() as s:
             await seed_builtin_roles(s)
             await s.commit()
-            await bootstrap_admin(s, settings)
+            await bootstrap_admin(s)
             await s.commit()
 
         # RuntimeConfig owns the salt client + all schedulers. At boot it

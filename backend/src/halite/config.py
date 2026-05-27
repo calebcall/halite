@@ -18,9 +18,6 @@ class Settings(BaseSettings):
     salt_api_username: str | None = None
     salt_api_password: str | None = None
 
-    bootstrap_admin_username: str | None = None
-    bootstrap_admin_password: str | None = None
-
     listen_host: str = "0.0.0.0"
     listen_port: int = 8080
     trusted_proxies: str = ""

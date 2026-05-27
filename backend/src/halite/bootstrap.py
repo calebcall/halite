@@ -7,19 +7,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from halite.auth.models import User
 from halite.auth.password import hash_password
-from halite.config import Settings
 from halite.rbac.models import Role, UserRole
 
+_BOOTSTRAP_USERNAME = "admin"
+_BOOTSTRAP_PASSWORD = "changeme"
 
-async def bootstrap_admin(session: AsyncSession, settings: Settings) -> None:
-    """Create the bootstrap admin from env vars iff no users exist yet.
 
-    Idempotent: a second call is a no-op if any user already exists, or if the
-    bootstrap env vars are unset.
+async def bootstrap_admin(session: AsyncSession) -> None:
+    """Create the default admin/changeme user iff no users exist yet.
+
+    Idempotent: a second call is a no-op if any user already exists.
+    The bootstrapped user is created with must_change_pw=True so the
+    operator is forced to choose a real password on first login.
     """
-    if not settings.bootstrap_admin_username or not settings.bootstrap_admin_password:
-        return
-
     user_count = (await session.execute(select(func.count()).select_from(User))).scalar_one()
     if user_count > 0:
         return
@@ -31,10 +31,10 @@ async def bootstrap_admin(session: AsyncSession, settings: Settings) -> None:
         return
 
     user = User(
-        username_lower=settings.bootstrap_admin_username.lower(),
-        username=settings.bootstrap_admin_username,
-        password_hash=hash_password(settings.bootstrap_admin_password),
-        display_name=settings.bootstrap_admin_username,
+        username_lower=_BOOTSTRAP_USERNAME.lower(),
+        username=_BOOTSTRAP_USERNAME,
+        password_hash=hash_password(_BOOTSTRAP_PASSWORD),
+        display_name=_BOOTSTRAP_USERNAME,
         is_active=True,
         is_builtin=True,
         must_change_pw=True,
