@@ -28,6 +28,7 @@ class AppSettings(Base):
     inventory_refresh_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     inventory_refresh_initial_delay_s: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
     fleet_poll_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    jobs_poll_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     minion_state_keys_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=300)
     minion_state_presence_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
     minion_state_grains_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=300)

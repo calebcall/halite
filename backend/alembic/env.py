@@ -27,6 +27,9 @@ with contextlib.suppress(ImportError):
     from halite.fleet import models as _fleet_models  # noqa: F401
 
 with contextlib.suppress(ImportError):
+    from halite.jobs import index_model as _jobs_index_model  # noqa: F401
+
+with contextlib.suppress(ImportError):
     from halite.minions import snapshot_model as _minion_snapshot_model  # noqa: F401
 
 with contextlib.suppress(ImportError):
