@@ -337,6 +337,7 @@ const pollersSchema = z.object({
   fleet_poll_interval_seconds: z.coerce.number().int().min(0),
   inventory_refresh_initial_delay_s: z.coerce.number().int().min(0),
   inventory_refresh_minutes: z.coerce.number().int().min(0),
+  jobs_poll_interval_seconds: z.coerce.number().int().min(0),
   minion_state_grains_interval_seconds: z.coerce.number().int().min(0),
   minion_state_initial_delay_seconds: z.coerce.number().int().min(0),
   minion_state_keys_interval_seconds: z.coerce.number().int().min(0),
@@ -366,6 +367,11 @@ const POLLER_FIELDS: PollerField[] = [
     help: '0 disables. Heavy — sequential list_job calls per recent jid. Use a high value or disable.',
     id: 'fleet_poll_interval_seconds',
     label: 'Fleet highstate poll (seconds)',
+  },
+  {
+    help: '0 disables. When > 0, polls runner.jobs.list_jobs + runner.jobs.active on this cadence so the overview metrics read from DB instead of hammering the master. Recommended: 300.',
+    id: 'jobs_poll_interval_seconds',
+    label: 'Jobs index poll (seconds)',
   },
   {
     help: '0 disables. Recommended: 300.',
@@ -402,6 +408,7 @@ function PollersSection({ initial }: { initial: PollerSettingsOut }) {
       fleet_poll_interval_seconds: initial.fleet_poll_interval_seconds,
       inventory_refresh_initial_delay_s: initial.inventory_refresh_initial_delay_s,
       inventory_refresh_minutes: initial.inventory_refresh_minutes,
+      jobs_poll_interval_seconds: initial.jobs_poll_interval_seconds,
       minion_state_grains_interval_seconds: initial.minion_state_grains_interval_seconds,
       minion_state_initial_delay_seconds: initial.minion_state_initial_delay_seconds,
       minion_state_keys_interval_seconds: initial.minion_state_keys_interval_seconds,

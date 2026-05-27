@@ -995,6 +995,13 @@ export interface components {
             total: number;
             /** Running */
             running: number;
+            /** Last Polled At */
+            last_polled_at?: string | null;
+            /**
+             * Active Known
+             * @default false
+             */
+            active_known: boolean;
         };
         /** JobDetail */
         JobDetail: {
@@ -1068,6 +1075,13 @@ export interface components {
             total: number;
             /** Jobs */
             jobs: components["schemas"]["JobSummary"][];
+            /** Last Polled At */
+            last_polled_at?: string | null;
+            /**
+             * Active Known
+             * @default false
+             */
+            active_known: boolean;
         };
         /** KeyEntry */
         KeyEntry: {
@@ -1337,6 +1351,8 @@ export interface components {
             inventory_refresh_initial_delay_s?: number | null;
             /** Fleet Poll Interval Seconds */
             fleet_poll_interval_seconds?: number | null;
+            /** Jobs Poll Interval Seconds */
+            jobs_poll_interval_seconds?: number | null;
             /** Minion State Keys Interval Seconds */
             minion_state_keys_interval_seconds?: number | null;
             /** Minion State Presence Interval Seconds */
@@ -1354,6 +1370,8 @@ export interface components {
             inventory_refresh_initial_delay_s: number;
             /** Fleet Poll Interval Seconds */
             fleet_poll_interval_seconds: number;
+            /** Jobs Poll Interval Seconds */
+            jobs_poll_interval_seconds: number;
             /** Minion State Keys Interval Seconds */
             minion_state_keys_interval_seconds: number;
             /** Minion State Presence Interval Seconds */
@@ -2201,6 +2219,7 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                live?: boolean;
             };
             header?: never;
             path?: never;

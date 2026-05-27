@@ -25,6 +25,7 @@ class PollerSettingsOut(BaseModel):
     inventory_refresh_minutes: int
     inventory_refresh_initial_delay_s: int
     fleet_poll_interval_seconds: int
+    jobs_poll_interval_seconds: int
     minion_state_keys_interval_seconds: int
     minion_state_presence_interval_seconds: int
     minion_state_grains_interval_seconds: int
@@ -77,6 +78,7 @@ class PollerSettingsIn(BaseModel):
     inventory_refresh_minutes: int | None = Field(default=None, ge=0, le=1440)
     inventory_refresh_initial_delay_s: int | None = Field(default=None, ge=0, le=3600)
     fleet_poll_interval_seconds: int | None = Field(default=None, ge=0, le=86400)
+    jobs_poll_interval_seconds: int | None = Field(default=None, ge=0, le=86400)
     minion_state_keys_interval_seconds: int | None = Field(default=None, ge=0, le=86400)
     minion_state_presence_interval_seconds: int | None = Field(default=None, ge=0, le=86400)
     minion_state_grains_interval_seconds: int | None = Field(default=None, ge=0, le=86400)
