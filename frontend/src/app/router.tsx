@@ -20,6 +20,7 @@ import { MinionsListPage } from '@/features/minions/minions-list-page'
 import { OverviewPage } from '@/features/overview/overview-page'
 import { RolesListPage } from '@/features/roles/roles-list-page'
 import { RunCommandPage } from '@/features/run/run-command-page'
+import { SettingsPage } from '@/features/admin/settings-page'
 import { UsersListPage } from '@/features/users/users-list-page'
 import { AppShell } from './layout/AppShell'
 
@@ -130,6 +131,12 @@ const auditRoute = createRoute({
   component: () => <AuditViewerPage />,
 })
 
+const settingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/admin/settings',
+  component: () => <SettingsPage />,
+})
+
 const aboutRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/about',
@@ -170,6 +177,7 @@ const routeTree = rootRoute.addChildren([
     rolesRoute,
     runRoute,
     auditRoute,
+    settingsRoute,
     aboutRoute,
   ]),
 ])
