@@ -4,6 +4,7 @@ import {
   FileClock,
   Info,
   Key,
+  LineChart,
   Menu,
   PackageSearch,
   Server,
@@ -55,6 +56,7 @@ const navSections: NavSection[] = [
     label: 'Operations',
     items: [
       { to: '/jobs', label: 'Jobs', icon: Activity, requires: { verb: 'view', resource: 'job:*' } },
+      { to: '/jobs/timeline', label: 'Timeline', icon: LineChart, requires: { verb: 'view', resource: 'job:*' } },
       { to: '/run', label: 'Run', icon: Terminal, requires: { verb: 'execute', resource: 'salt:*' } },
       {
         to: '/inventory',

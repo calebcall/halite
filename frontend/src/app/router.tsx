@@ -14,6 +14,7 @@ import { AuditViewerPage } from '@/features/audit/audit-viewer-page'
 import { InventoryPackagesPage } from '@/features/inventory/inventory-packages-page'
 import { JobDetailPage } from '@/features/jobs/job-detail-page'
 import { JobsListPage } from '@/features/jobs/jobs-list-page'
+import { TimelinePage } from '@/features/jobs/timeline-page'
 import { KeysListPage } from '@/features/keys/keys-list-page'
 import { MinionDetailPage } from '@/features/minions/minion-detail-page'
 import { MinionsListPage } from '@/features/minions/minions-list-page'
@@ -92,6 +93,12 @@ const jobsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/jobs',
   component: () => <JobsListPage />,
+})
+
+const jobsTimelineRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/jobs/timeline',
+  component: () => <TimelinePage />,
 })
 
 const jobDetailRoute = createRoute({
@@ -186,6 +193,7 @@ const routeTree = rootRoute.addChildren([
     minionDetailRoute,
     keysRoute,
     jobsRoute,
+    jobsTimelineRoute,
     jobDetailRoute,
     inventoryRoute,
     usersRoute,
