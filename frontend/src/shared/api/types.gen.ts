@@ -123,6 +123,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/fleet/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fleet Health Route */
+        get: operations["fleet_health_route_api_fleet_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fleet/compliance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compliance Route */
+        get: operations["compliance_route_api_fleet_compliance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fleet/top-failures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Top Failures Route */
+        get: operations["top_failures_route_api_fleet_top_failures_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fleet/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Run Detail Route */
+        get: operations["run_detail_route_api_fleet_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/inventory/packages": {
         parameters: {
             query?: never;
@@ -749,6 +817,34 @@ export interface components {
              */
             updated_at: string;
         };
+        /** ComplianceBucketOut */
+        ComplianceBucketOut: {
+            /**
+             * Bucketed At
+             * Format: date-time
+             */
+            bucketed_at: string;
+            /** Pass Count */
+            pass_count: number;
+            /** Fail Count */
+            fail_count: number;
+            /** Change Count */
+            change_count: number;
+            /** Blocked Count */
+            blocked_count: number;
+        };
+        /** ComplianceSeriesOut */
+        ComplianceSeriesOut: {
+            /** Buckets */
+            buckets: components["schemas"]["ComplianceBucketOut"][];
+        };
+        /** FleetHealthOut */
+        FleetHealthOut: {
+            /** Total Minions */
+            total_minions: number;
+            /** Minions */
+            minions: components["schemas"]["MinionHealthOut"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -882,6 +978,32 @@ export interface components {
             ip?: string | null;
             /** Grains */
             grains?: Record<string, never> | null;
+        };
+        /** MinionHealthOut */
+        MinionHealthOut: {
+            /** Minion Id */
+            minion_id: string;
+            /** Run Id */
+            run_id: string | null;
+            /** Jid */
+            jid: string | null;
+            /** Completed At */
+            completed_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pass" | "changed" | "fail" | "blocked" | "stale" | "unknown";
+            /** Pass Count */
+            pass_count: number;
+            /** Fail Count */
+            fail_count: number;
+            /** Change Count */
+            change_count: number;
+            /** Total Count */
+            total_count: number;
+            /** Duration Ms */
+            duration_ms: number;
         };
         /** MinionListOut */
         MinionListOut: {
@@ -1160,6 +1282,39 @@ export interface components {
             /** Minions */
             minions: string[];
         };
+        /** RunDetailOut */
+        RunDetailOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Minion Id */
+            minion_id: string;
+            /** Jid */
+            jid: string;
+            /** Fun */
+            fun: string;
+            /**
+             * Completed At
+             * Format: date-time
+             */
+            completed_at: string;
+            /** Pass Count */
+            pass_count: number;
+            /** Fail Count */
+            fail_count: number;
+            /** Change Count */
+            change_count: number;
+            /** Total Count */
+            total_count: number;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Blocked */
+            blocked: boolean;
+            /** Raw Result */
+            raw_result: Record<string, never>;
+        };
         /** SaltFunctionsOut */
         SaltFunctionsOut: {
             /** Functions */
@@ -1174,6 +1329,22 @@ export interface components {
         TemplateShareUpdate: {
             /** Is Shared */
             is_shared: boolean;
+        };
+        /** TopFailureOut */
+        TopFailureOut: {
+            /** State Id */
+            state_id: string;
+            /** Name */
+            name: string;
+            /** Fun */
+            fun: string;
+            /** Failure Count */
+            failure_count: number;
+        };
+        /** TopFailuresOut */
+        TopFailuresOut: {
+            /** Failures */
+            failures: components["schemas"]["TopFailureOut"][];
         };
         /** UserCreatePayload */
         UserCreatePayload: {
@@ -1475,6 +1646,119 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fleet_health_route_api_fleet_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FleetHealthOut"];
+                };
+            };
+        };
+    };
+    compliance_route_api_fleet_compliance_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComplianceSeriesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    top_failures_route_api_fleet_top_failures_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopFailuresOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_detail_route_api_fleet_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunDetailOut"];
                 };
             };
             /** @description Validation Error */

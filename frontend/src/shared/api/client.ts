@@ -176,6 +176,30 @@ export const api = {
         query,
       }),
   },
+  fleet: {
+    health: () =>
+      request<paths['/api/fleet/health']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/fleet/health',
+      }),
+    compliance: (limit = 30) =>
+      request<paths['/api/fleet/compliance']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/fleet/compliance',
+        query: { limit },
+      }),
+    topFailures: (limit = 10) =>
+      request<paths['/api/fleet/top-failures']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/fleet/top-failures',
+        query: { limit },
+      }),
+    runDetail: (id: string) =>
+      request<paths['/api/fleet/runs/{run_id}']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: `/api/fleet/runs/${encodeURIComponent(id)}`,
+      }),
+  },
   jobs: {
     list: (params?: { limit?: number }) =>
       request<paths['/api/jobs']['get']['responses']['200']['content']['application/json']>({
