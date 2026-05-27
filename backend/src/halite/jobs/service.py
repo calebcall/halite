@@ -123,11 +123,18 @@ async def get_job_activity(client: SaltAPIClient, *, hours: int) -> JobActivityO
     Uses ``runner.jobs.list_jobs`` directly (no limit slice) and buckets by
     JID-derived UTC timestamp. ``running`` is independent of the window —
     jobs that started before the window but are still executing still count.
-    Falls back to ``running=0`` if ``jobs.active`` fails.
+    Falls back to empty buckets / ``running=0`` if salt is slow.
     """
-    raw = await client.runner_call("jobs.list_jobs")
-    if not isinstance(raw, dict):
-        raw = {}
+    raw: dict[str, Any] = {}
+    # Short timeout + single attempt — list_jobs on a master with thousands
+    # of cached jobs returns multi-MB JSON, and we'd rather show empty
+    # buckets than make the overview hang forever.
+    with contextlib.suppress(SaltAPIError, SaltAPIUnavailable):
+        result = await client.runner_call(
+            "jobs.list_jobs", timeout=15.0, max_retries=1
+        )
+        if isinstance(result, dict):
+            raw = result
 
     # Snap "now" to the top of the current hour so the X-axis is stable
     # within a single hour and identical buckets line up across consecutive
@@ -135,7 +142,7 @@ async def get_job_activity(client: SaltAPIClient, *, hours: int) -> JobActivityO
     now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
     window_start = now - timedelta(hours=hours - 1)
     counts = [0] * hours
-    for jid in raw.keys():
+    for jid in raw:
         ts = _jid_to_utc(str(jid))
         if ts is None:
             continue
