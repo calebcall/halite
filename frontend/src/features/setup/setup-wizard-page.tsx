@@ -1,9 +1,10 @@
 // frontend/src/features/setup/setup-wizard-page.tsx
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { Check, Loader2, RefreshCw, X } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
@@ -17,7 +18,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { useTestSalt, useUpdateSalt } from '@/features/admin/use-settings'
+import {
+  settingsKeys,
+  useTestSalt,
+  useUpdateSalt,
+} from '@/features/admin/use-settings'
 import type { components } from '@/shared/api/types.gen'
 
 type TestSaltConnectionOut = components['schemas']['TestSaltConnectionOut']
@@ -34,6 +39,7 @@ type SetupFormValues = z.infer<typeof setupSchema>
 
 export function SetupWizardPage() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const testMut = useTestSalt()
   const saveMut = useUpdateSalt()
   const [testResult, setTestResult] = useState<TestSaltConnectionOut | null>(null)
@@ -98,6 +104,13 @@ export function SetupWizardPage() {
         url: values.url,
         username: values.username,
         verify: values.verify,
+      })
+      // Seed the status cache synchronously so the SetupGuard sees
+      // configured=true on the very next render and doesn't bounce us
+      // back to /setup before the invalidation-driven refetch lands.
+      qc.setQueryData(settingsKeys.status(), {
+        configured: true,
+        missing: [],
       })
       void navigate({ to: '/' })
     } catch (e) {

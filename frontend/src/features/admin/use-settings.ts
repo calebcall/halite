@@ -33,7 +33,10 @@ export function useUpdateLogging() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: api.settings.putLogging,
-    onSuccess: () => void qc.invalidateQueries({ queryKey: settingsKeys.all }),
+    // Returning the Promise makes mutateAsync wait for the active
+    // settings queries to refetch before resolving — callers can
+    // navigate immediately afterward without racing the cache.
+    onSuccess: () => qc.invalidateQueries({ queryKey: settingsKeys.all }),
   })
 }
 
@@ -41,7 +44,7 @@ export function useUpdatePollers() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: api.settings.putPollers,
-    onSuccess: () => void qc.invalidateQueries({ queryKey: settingsKeys.all }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: settingsKeys.all }),
   })
 }
 
@@ -49,6 +52,6 @@ export function useUpdateSalt() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: api.settings.putSalt,
-    onSuccess: () => void qc.invalidateQueries({ queryKey: settingsKeys.all }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: settingsKeys.all }),
   })
 }
