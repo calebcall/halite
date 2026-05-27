@@ -59,6 +59,14 @@ class FleetIngestScheduler:
             self._settings.fleet_poll_interval_seconds,
             self._settings.fleet_highstate_funs,
         )
+        # Give the inventory scheduler's startup bulk write a head start so we
+        # don't deadlock on the SQLite write lock during cold boot.
+        # Uses wait_for so a stop() during the grace period exits cleanly.
+        try:
+            await asyncio.wait_for(self._stop.wait(), timeout=5)
+            return  # stop requested before we even ticked
+        except TimeoutError:
+            pass
         # Tick once immediately so the dashboard has data on first load.
         await self._tick()
         while not self._stop.is_set():
@@ -83,6 +91,8 @@ class FleetIngestScheduler:
                 await session.commit()
             if count:
                 log.info("fleet scheduler tick: ingested %d runs", count)
+            else:
+                log.debug("fleet scheduler tick: 0 new runs")
         except Exception:
             log.exception("fleet scheduler tick failed")
 

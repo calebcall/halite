@@ -19,6 +19,10 @@ def build_engine(url: str) -> AsyncEngine:
     connect_args: dict = {}
     if url.startswith("sqlite"):
         connect_args["check_same_thread"] = False
+        # aiosqlite busy-timeout — wait up to 15s when another writer holds
+        # the lock instead of failing immediately. Mitigates the cold-start
+        # race between the fleet and inventory schedulers.
+        connect_args["timeout"] = 15
     return create_async_engine(url, connect_args=connect_args, future=True)
 
 
