@@ -22,5 +22,4 @@ def test_settings_defaults(monkeypatch):
     monkeypatch.setenv("COOKIE_SECRET", "x" * 64)
     s = Settings()
     assert s.session_ttl_minutes == 480
-    assert s.log_format == "json"
     assert s.listen_port == 8080

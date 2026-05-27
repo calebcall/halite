@@ -19,15 +19,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://halite:halite@db:5432/halite
       COOKIE_SECRET: ${COOKIE_SECRET:?Run scripts/gen-bootstrap-secret.sh and set COOKIE_SECRET}
-      LOG_FORMAT: ${LOG_FORMAT:-json}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
-      SALT_API_URL: ${SALT_API_URL:-}
-      SALT_API_USERNAME: ${SALT_API_USERNAME:-}
-      SALT_API_PASSWORD: ${SALT_API_PASSWORD:-}
-      SALT_API_VERIFY: ${SALT_API_VERIFY:-true}
-      SALT_API_EAUTH: ${SALT_API_EAUTH:-pam}
-      INVENTORY_REFRESH_MINUTES: ${INVENTORY_REFRESH_MINUTES:-0}
-      INVENTORY_REFRESH_INITIAL_DELAY_S: ${INVENTORY_REFRESH_INITIAL_DELAY_S:-30}
       HALITE_STATIC_DIR: /app/frontend/dist
     depends_on:
       db:
