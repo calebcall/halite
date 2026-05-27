@@ -82,6 +82,12 @@ class SaltAPIClient:
     async def aclose(self) -> None:
         await self._client.aclose()
 
+    async def login(self) -> None:
+        """Eagerly acquire a salt-api token. Raises SaltAPIError /
+        SaltAPIUnavailable on failure. Useful for verifying credentials at
+        startup before the first real request."""
+        await self._ensure_token(force=True)
+
     # ---------- low-level ----------
 
     async def _login(self) -> None:

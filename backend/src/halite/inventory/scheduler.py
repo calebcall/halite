@@ -3,16 +3,15 @@
 
 This is a deliberately small piece of code. A single ``asyncio.Task`` runs
 in the FastAPI event loop, calling ``refresh_packages(target='*')`` every
-``Settings.inventory_refresh_minutes`` minutes. No external scheduler,
-no cron, no celery — for a homelab-to-mid-fleet salt console that's
-overkill.
+``interval_minutes`` minutes. No external scheduler, no cron, no celery —
+for a homelab-to-mid-fleet salt console that's overkill.
 
 Design rules
 ------------
 
-* **Opt-in.** ``inventory_refresh_minutes=0`` (the default) disables the
-  scheduler entirely. Existing deployments that upgrade keep their old
-  behaviour until they choose to turn it on.
+* **Opt-in.** ``interval_minutes=0`` (the default) disables the scheduler
+  entirely. Existing deployments that upgrade keep their old behaviour until
+  they choose to turn it on.
 * **Don't pile up.** One iteration completes (or fails) before the next is
   considered. We use ``asyncio.sleep`` between runs, not a wall-clock alarm,
   so a slow refresh doesn't queue more refreshes behind it.
@@ -20,8 +19,8 @@ Design rules
   logged at WARNING and the loop sleeps the normal interval — no exponential
   backoff, no alerting, no death-spiral. A persistent outage shows up as a
   steady stream of warnings; nothing crashes.
-* **Cancellable.** Lifespan shutdown cancels the task and awaits it; the
-  task swallows ``CancelledError`` cleanly and re-raises so asyncio sees it.
+* **Cancellable.** ``stop()`` cancels the task and awaits it; the task
+  swallows ``CancelledError`` cleanly and re-raises so asyncio sees it.
 * **No DB session is held across the sleep.** Each iteration opens its own
   ``AsyncSession``, runs one refresh, closes the session, then sleeps.
 """
@@ -40,8 +39,74 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
     from halite.salt.client import SaltAPIClient
+    from halite.settings.models import AppSettings
 
 logger = logging.getLogger(__name__)
+
+
+class InventoryScheduler:
+    """Background task for periodic inventory refresh.
+
+    Use ``start()`` / ``stop()`` from app lifespan, and ``reconfigure()``
+    when settings change at runtime."""
+
+    def __init__(
+        self,
+        interval_minutes: int,
+        sessionmaker: async_sessionmaker[AsyncSession],
+        client: SaltAPIClient,
+        *,
+        initial_delay_s: int = 30,
+    ) -> None:
+        self._interval_minutes = interval_minutes
+        self._sessionmaker = sessionmaker
+        self._client = client
+        self._initial_delay_s = initial_delay_s
+        self._task: asyncio.Task[None] | None = None
+
+    @classmethod
+    def from_row(
+        cls,
+        row: AppSettings,
+        salt: SaltAPIClient,
+        sessionmaker: async_sessionmaker[AsyncSession],
+    ) -> InventoryScheduler:
+        return cls(
+            interval_minutes=row.inventory_refresh_minutes,
+            sessionmaker=sessionmaker,
+            client=salt,
+            initial_delay_s=row.inventory_refresh_initial_delay_s,
+        )
+
+    def start(self) -> None:
+        if self._interval_minutes <= 0:
+            return
+        if self._task is None:
+            self._task = asyncio.create_task(
+                run_inventory_scheduler(
+                    sessionmaker=self._sessionmaker,
+                    client=self._client,
+                    interval_minutes=self._interval_minutes,
+                    initial_delay_s=self._initial_delay_s,
+                ),
+                name="inventory-scheduler",
+            )
+
+    async def stop(self) -> None:
+        if self._task is not None:
+            self._task.cancel()
+            try:
+                await self._task
+            except (asyncio.CancelledError, Exception) as exc:
+                if not isinstance(exc, asyncio.CancelledError):
+                    logger.exception("inventory scheduler exited with error during stop")
+            self._task = None
+
+    async def reconfigure(self, interval_minutes: int, initial_delay_s: int = 30) -> None:
+        await self.stop()
+        self._interval_minutes = interval_minutes
+        self._initial_delay_s = initial_delay_s
+        self.start()
 
 
 async def run_inventory_scheduler(

@@ -30,7 +30,12 @@ router = APIRouter(prefix="/api/fleet", tags=["fleet"])
 async def fleet_health_route(
     request: Request, db: SessionDep, _: CurrentUser
 ) -> FleetHealthOut:
-    scheduler = getattr(request.app.state, "fleet_scheduler", None)
+    runtime = getattr(request.app.state, "runtime", None)
+    scheduler = (
+        runtime.fleet_scheduler
+        if runtime is not None
+        else getattr(request.app.state, "fleet_scheduler", None)
+    )
     cached_connected = (
         scheduler.connected_minions if scheduler is not None else None
     )

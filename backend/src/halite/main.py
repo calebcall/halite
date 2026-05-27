@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -29,7 +28,7 @@ def create_app(
         from halite import db as db_module
         from halite.bootstrap import bootstrap_admin
         from halite.rbac.seed import seed_builtin_roles
-        from halite.salt.client import SaltAPIClient
+        from halite.runtime import RuntimeConfig
 
         init_engine(settings.database_url)
         assert db_module._sessionmaker is not None
@@ -39,89 +38,19 @@ def create_app(
             await bootstrap_admin(s, settings)
             await s.commit()
 
-        # Optional salt-api client. Only instantiate when fully configured.
-        salt_client: SaltAPIClient | None = None
-        if (
-            settings.salt_api_url
-            and settings.salt_api_username
-            and settings.salt_api_password
-        ):
-            salt_client = SaltAPIClient(
-                base_url=settings.salt_api_url,
-                username=settings.salt_api_username,
-                password=settings.salt_api_password,
-                eauth=settings.salt_api_eauth,
-                verify=_parse_verify(settings.salt_api_verify),
-            )
-        app.state.salt_client = salt_client
-
-        # Inventory background refresh — only when salt-api is configured AND
-        # the operator opted in via INVENTORY_REFRESH_MINUTES > 0. Otherwise
-        # refreshes are entirely on-demand via the UI.
-        inventory_task: asyncio.Task[None] | None = None
-        if salt_client is not None and settings.inventory_refresh_minutes > 0:
-            from halite.inventory.scheduler import run_inventory_scheduler
-            assert db_module._sessionmaker is not None
-            inventory_task = asyncio.create_task(
-                run_inventory_scheduler(
-                    sessionmaker=db_module._sessionmaker,
-                    client=salt_client,
-                    interval_minutes=settings.inventory_refresh_minutes,
-                    initial_delay_s=settings.inventory_refresh_initial_delay_s,
-                ),
-                name="inventory-scheduler",
-            )
-
-        # Fleet highstate ingestion scheduler — only when salt-api is configured
-        # AND the operator opted in via FLEET_POLL_INTERVAL_SECONDS > 0.
-        fleet_scheduler = None
-        if salt_client is not None and settings.fleet_poll_interval_seconds > 0:
-            from halite.fleet.scheduler import FleetIngestScheduler
-            assert db_module._sessionmaker is not None
-            fleet_scheduler = FleetIngestScheduler(
-                settings=settings,
-                salt=salt_client,
-                sessionmaker=db_module._sessionmaker,
-            )
-            fleet_scheduler.start()
-        app.state.fleet_scheduler = fleet_scheduler
-
-        # Minion-state scheduler (keys / presence / grains) — each loop is
-        # independently opt-in via its own interval setting. All default 0.
-        from halite.minions.scheduler import MinionStateScheduler
-        minion_state_scheduler: MinionStateScheduler | None = None
-        if salt_client is not None and (
-            settings.minion_state_keys_interval_seconds > 0
-            or settings.minion_state_presence_interval_seconds > 0
-            or settings.minion_state_grains_interval_seconds > 0
-        ):
-            assert db_module._sessionmaker is not None
-            minion_state_scheduler = MinionStateScheduler(
-                settings=settings,
-                salt=salt_client,
-                sessionmaker=db_module._sessionmaker,
-            )
-            minion_state_scheduler.start()
-        app.state.minion_state_scheduler = minion_state_scheduler
+        # RuntimeConfig owns the salt client + all schedulers. At boot it
+        # reads the AppSettings row from the DB. If no credentials are stored,
+        # salt is None and schedulers stay off — all endpoints degrade
+        # gracefully to 503 / empty data.
+        runtime = RuntimeConfig(infra=settings, sessionmaker=db_module._sessionmaker)
+        async with db_module._sessionmaker() as db:
+            await runtime.boot(db)
+        app.state.runtime = runtime
 
         try:
             yield
         finally:
-            if minion_state_scheduler is not None:
-                await minion_state_scheduler.stop()
-            if fleet_scheduler is not None:
-                await fleet_scheduler.stop()
-            if inventory_task is not None:
-                inventory_task.cancel()
-                try:
-                    await inventory_task
-                except (asyncio.CancelledError, Exception) as exc:
-                    # Swallow cancellation; log anything else so a buggy
-                    # scheduler doesn't take down the shutdown path silently.
-                    if not isinstance(exc, asyncio.CancelledError):
-                        logger.exception("inventory scheduler exited with error")
-            if salt_client is not None:
-                await salt_client.aclose()
+            await runtime.shutdown()
             await dispose_engine()
 
     app = FastAPI(title="Halite", version="0.1.0", lifespan=lifespan)
@@ -189,15 +118,6 @@ def create_app(
                 return FileResponse(static_path / "index.html")
 
     return app
-
-
-def _parse_verify(value: str) -> bool | str:
-    """SALT_API_VERIFY can be 'true', 'false', or a path to a CA bundle."""
-    if value.lower() == "true":
-        return True
-    if value.lower() == "false":
-        return False
-    return value
 
 
 # Module-level `app` is intentionally NOT created here — Settings() reads env

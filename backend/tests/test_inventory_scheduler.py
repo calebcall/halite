@@ -32,11 +32,18 @@ class _StubClient:
 
 
 class _StubSessionmaker:
-    """Stand-in for async_sessionmaker — never actually entered because the
-    monkey-patched ``refresh_packages`` returns before touching it."""
+    """Stand-in for async_sessionmaker. Returns a trivial async context manager
+    that yields None; the real session is never needed because refresh_packages
+    is monkeypatched and never touches the DB."""
 
-    def __call__(self):  # pragma: no cover - never called when patched
-        raise AssertionError("sessionmaker was entered unexpectedly")
+    def __call__(self):
+        return self
+
+    async def __aenter__(self):
+        return None
+
+    async def __aexit__(self, *args) -> None:
+        return None
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,15 @@
 # backend/tests/test_minions_routes.py
+"""Route-level tests for /api/minions and /api/minions/{id}.
+
+The minions routes read from the MinionSnapshot DB table (populated by the
+MinionStateScheduler). They do not call salt-api directly, so there is no
+fake_salt_api wiring here. Behaviour is verified by seeding MinionSnapshot
+rows and asserting the API response.
+
+Detailed DB-service coverage lives in test_minion_db_routes.py; this file
+focuses on auth/permission guards and basic response shapes at the route layer.
+"""
+
 from datetime import UTC, datetime
 
 import pytest
@@ -10,8 +21,8 @@ from halite.auth.password import hash_password
 from halite.auth.service import create_session
 from halite.config import Settings
 from halite.main import create_app
+from halite.minions.snapshot_model import MinionSnapshot
 from halite.rbac.models import Permission, Role, UserRole
-from halite.salt.client import SaltAPIClient
 
 
 async def _viewer(session) -> User:
@@ -48,74 +59,13 @@ async def _user_without_view(session) -> User:
     return user
 
 
-def _attach_salt_client(app, fake_salt_api) -> SaltAPIClient:
-    """Construct a SaltAPIClient with the fake transport and attach it to app.state."""
-    client = SaltAPIClient(
-        base_url="http://salt.test",
-        username="halite-service",
-        password="pw",
-        transport=fake_salt_api.transport,
-    )
-    app.state.salt_client = client
-    return client
-
-
-def _salt_router(
-    connected: dict[str, str] | None = None,
-    keys: dict[str, list[str]] | None = None,
-    grains: dict[str, dict | None] | None = None,
-    network_grains: dict[str, dict] | None = None,
-):
-    """Returns a run_handler that responds to wheel/local calls based on the
-    payload's `fun` field. Pass dicts for the data this test cares about.
-
-    ``network_grains`` is the subset returned by the batched ``grains.item``
-    call the list endpoint makes (fqdn_ip4, ip4_gw, ip4_interfaces).
-    """
-    connected = connected or {}
-    keys = keys or {
-        "minions": [],
-        "minions_pre": [],
-        "minions_rejected": [],
-        "minions_denied": [],
-        "local": [],
-    }
-    grains = grains or {}
-    network_grains = network_grains or {}
-
-    def handler(payload):
-        fun = payload.get("fun", "")
-        if fun == "manage.present":
-            # runner.manage.present(show_ip=True) returns a list of [id, ip] pairs.
-            pairs = [[mid, ip] for mid, ip in connected.items()]
-            return {"return": [pairs]}
-        if fun == "key.list_all":
-            return {"return": [{"data": {"return": keys}}]}
-        if fun == "grains.item":
-            # local '...' grains.item fqdn_ip4 ip4_gw ip4_interfaces
-            # -> {minion: {grain: value, ...}}
-            tgt = payload.get("tgt", "")
-            tgt_type = payload.get("tgt_type", "glob")
-            if tgt_type == "list":
-                targets = [t for t in tgt.split(",") if t]
-            elif tgt == "*":
-                targets = list(connected.keys())
-            else:
-                targets = [tgt]
-            return {"return": [{mid: network_grains.get(mid, {}) for mid in targets}]}
-        if fun == "grains.items":
-            target = payload.get("tgt", "")
-            return {"return": [{target: grains.get(target)} if target in grains else {}]}
-        return {"return": [None]}
-
-    return handler
-
-
 # ---------- List endpoint ----------
 
 
 @pytest.mark.asyncio
-async def test_minions_503_when_salt_not_configured(app_db, session):
+async def test_minions_returns_empty_list_when_salt_not_configured(app_db, session):
+    """The minions list route reads from the DB — it does not require a live
+    salt-api connection, so it returns 200 with an empty list when unconfigured."""
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _viewer(session)
@@ -128,11 +78,12 @@ async def test_minions_503_when_salt_not_configured(app_db, session):
         app.router.lifespan_context(app),
     ):
         r = await ac.get("/api/minions", cookies={settings.cookie_name: codec.sign(sess.id)})
-    assert r.status_code == 503
+    assert r.status_code == 200
+    assert r.json()["total"] == 0
 
 
 @pytest.mark.asyncio
-async def test_minions_403_without_permission(app_db, session, fake_salt_api):
+async def test_minions_403_without_permission(app_db, session):
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _user_without_view(session)
@@ -140,41 +91,52 @@ async def test_minions_403_without_permission(app_db, session, fake_salt_api):
     await session.commit()
 
     app = create_app(settings=settings, codec=codec)
-    client = _attach_salt_client(app, fake_salt_api)
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get("/api/minions", cookies={settings.cookie_name: codec.sign(sess.id)})
-    finally:
-        await client.aclose()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get("/api/minions", cookies={settings.cookie_name: codec.sign(sess.id)})
     assert r.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_minions_list_returns_status_per_minion(app_db, session, fake_salt_api):
+async def test_minions_list_returns_status_per_minion(app_db, session):
+    """List returns one entry per MinionSnapshot row with correct status fields."""
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _viewer(session)
     sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    now = datetime.now(tz=UTC)
+
+    session.add(MinionSnapshot(
+        minion_id="web-01",
+        key_status="accepted",
+        online=True,
+        primary_ip="10.0.0.1",
+        keys_refreshed_at=now,
+        presence_refreshed_at=now,
+    ))
+    session.add(MinionSnapshot(
+        minion_id="db-01",
+        key_status="accepted",
+        online=False,
+        keys_refreshed_at=now,
+        presence_refreshed_at=now,
+    ))
+    session.add(MinionSnapshot(
+        minion_id="new-host",
+        key_status="pending",
+        online=False,
+        keys_refreshed_at=now,
+    ))
+    session.add(MinionSnapshot(
+        minion_id="bad-host",
+        key_status="rejected",
+        online=False,
+        keys_refreshed_at=now,
+    ))
     await session.commit()
 
-    fake_salt_api.run_handler = _salt_router(
-        connected={"web-01": "10.0.0.1"},
-        keys={
-            "minions": ["web-01", "db-01"],
-            "minions_pre": ["new-host"],
-            "minions_rejected": ["bad-host"],
-            "minions_denied": [],
-            "local": [],
-        },
-    )
-
     app = create_app(settings=settings, codec=codec)
-    client = _attach_salt_client(app, fake_salt_api)
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get("/api/minions", cookies={settings.cookie_name: codec.sign(sess.id)})
-    finally:
-        await client.aclose()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get("/api/minions", cookies={settings.cookie_name: codec.sign(sess.id)})
 
     assert r.status_code == 200
     body = r.json()
@@ -192,179 +154,61 @@ async def test_minions_list_returns_status_per_minion(app_db, session, fake_salt
 
 
 @pytest.mark.asyncio
-async def test_minion_detail_online_returns_grains(app_db, session, fake_salt_api):
+async def test_minion_detail_online_returns_grains(app_db, session):
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _viewer(session)
     sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    now = datetime.now(tz=UTC)
+
+    session.add(MinionSnapshot(
+        minion_id="web-01",
+        key_status="accepted",
+        online=True,
+        primary_ip="10.0.0.1",
+        grains={"os": "Ubuntu", "kernel": "Linux"},
+        keys_refreshed_at=now,
+        presence_refreshed_at=now,
+        grains_refreshed_at=now,
+    ))
     await session.commit()
 
-    fake_salt_api.run_handler = _salt_router(
-        connected={"web-01": "10.0.0.1"},
-        keys={
-            "minions": ["web-01"],
-            "minions_pre": [],
-            "minions_rejected": [],
-            "minions_denied": [],
-            "local": [],
-        },
-        grains={"web-01": {"os": "Ubuntu", "kernel": "Linux"}},
-    )
-
     app = create_app(settings=settings, codec=codec)
-    client = _attach_salt_client(app, fake_salt_api)
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get(
-                "/api/minions/web-01", cookies={settings.cookie_name: codec.sign(sess.id)}
-            )
-    finally:
-        await client.aclose()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get(
+            "/api/minions/web-01", cookies={settings.cookie_name: codec.sign(sess.id)}
+        )
 
     assert r.status_code == 200
     body = r.json()
-    assert body == {
-        "id": "web-01",
-        "status": "online",
-        "ip": "10.0.0.1",
-        "grains": {"os": "Ubuntu", "kernel": "Linux"},
-    }
-
-
-@pytest.mark.asyncio
-async def test_minions_list_prefers_fqdn_ip4_over_manage_present_ip(app_db, session, fake_salt_api):
-    """manage.present(show_ip=True) often returns the docker0 bridge IP from
-    the minion's ``ipv4`` grain. ``fqdn_ip4`` is the real primary address —
-    when present, it must win."""
-    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
-    codec = CookieCodec(settings.cookie_secret)
-    user = await _viewer(session)
-    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
-    await session.commit()
-
-    fake_salt_api.run_handler = _salt_router(
-        connected={"web-01": "172.17.0.1", "db-01": "10.0.0.5"},
-        keys={
-            "minions": ["web-01", "db-01"],
-            "minions_pre": [],
-            "minions_rejected": [],
-            "minions_denied": [],
-            "local": [],
-        },
-        # web-01: classic docker-host shape. fqdn_ip4 is polluted with bridge
-        # IPs, but the real interface IP shares /24 with the gateway.
-        # db-01: no gateway info or interfaces — we fall back to fqdn_ip4,
-        # then ultimately to the manage.present value.
-        network_grains={
-            "web-01": {
-                "fqdn_ip4": ["172.18.0.1", "172.17.0.1", "203.0.113.10"],
-                "ip4_gw": "203.0.113.1",
-                "ip4_interfaces": {
-                    "lo": ["127.0.0.1"],
-                    "eth0": ["203.0.113.10"],
-                    "docker0": ["172.17.0.1"],
-                    "br-abc": ["172.18.0.1"],
-                },
-            },
-            "db-01": {},
-        },
-    )
-
-    app = create_app(settings=settings, codec=codec)
-    client = _attach_salt_client(app, fake_salt_api)
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get("/api/minions", cookies={settings.cookie_name: codec.sign(sess.id)})
-    finally:
-        await client.aclose()
-
-    assert r.status_code == 200
-    by_id = {m["id"]: m for m in r.json()["minions"]}
-    # gateway-shared /24 wins over the polluted fqdn_ip4 entries.
-    assert by_id["web-01"]["ip"] == "203.0.113.10"
-    # db-01: nothing useful in grains — fall back to manage.present's value.
-    assert by_id["db-01"]["ip"] == "10.0.0.5"
-
-
-@pytest.mark.asyncio
-async def test_minion_detail_prefers_fqdn_ip4_from_grains(app_db, session, fake_salt_api):
-    """Detail view should pull the IP from grains.fqdn_ip4 rather than the IP
-    returned by manage.present."""
-    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
-    codec = CookieCodec(settings.cookie_secret)
-    user = await _viewer(session)
-    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
-    await session.commit()
-
-    fake_salt_api.run_handler = _salt_router(
-        connected={"web-01": "172.17.0.1"},
-        keys={
-            "minions": ["web-01"],
-            "minions_pre": [],
-            "minions_rejected": [],
-            "minions_denied": [],
-            "local": [],
-        },
-        grains={
-            "web-01": {
-                "os": "Ubuntu",
-                "fqdn_ip4": ["172.18.0.1", "172.17.0.1", "203.0.113.10"],
-                "ip4_gw": "203.0.113.1",
-                "ip4_interfaces": {
-                    "lo": ["127.0.0.1"],
-                    "eth0": ["203.0.113.10"],
-                    "docker0": ["172.17.0.1"],
-                    "br-abc": ["172.18.0.1"],
-                },
-                "ipv4": ["127.0.0.1", "172.17.0.1", "203.0.113.10"],
-            }
-        },
-    )
-
-    app = create_app(settings=settings, codec=codec)
-    client = _attach_salt_client(app, fake_salt_api)
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get(
-                "/api/minions/web-01", cookies={settings.cookie_name: codec.sign(sess.id)}
-            )
-    finally:
-        await client.aclose()
-
-    assert r.status_code == 200
-    body = r.json()
-    assert body["ip"] == "203.0.113.10"
+    assert body["id"] == "web-01"
     assert body["status"] == "online"
+    assert body["ip"] == "10.0.0.1"
+    assert body["grains"] == {"os": "Ubuntu", "kernel": "Linux"}
 
 
 @pytest.mark.asyncio
-async def test_minion_detail_offline_omits_grains(app_db, session, fake_salt_api):
+async def test_minion_detail_offline_omits_grains(app_db, session):
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _viewer(session)
     sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    now = datetime.now(tz=UTC)
+
+    session.add(MinionSnapshot(
+        minion_id="db-01",
+        key_status="accepted",
+        online=False,
+        keys_refreshed_at=now,
+        presence_refreshed_at=now,
+    ))
     await session.commit()
 
-    fake_salt_api.run_handler = _salt_router(
-        connected={},
-        keys={
-            "minions": ["db-01"],
-            "minions_pre": [],
-            "minions_rejected": [],
-            "minions_denied": [],
-            "local": [],
-        },
-    )
-
     app = create_app(settings=settings, codec=codec)
-    client = _attach_salt_client(app, fake_salt_api)
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get(
-                "/api/minions/db-01", cookies={settings.cookie_name: codec.sign(sess.id)}
-            )
-    finally:
-        await client.aclose()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get(
+            "/api/minions/db-01", cookies={settings.cookie_name: codec.sign(sess.id)}
+        )
 
     assert r.status_code == 200
     body = r.json()
@@ -374,71 +218,50 @@ async def test_minion_detail_offline_omits_grains(app_db, session, fake_salt_api
 
 
 @pytest.mark.asyncio
-async def test_minion_detail_pending(app_db, session, fake_salt_api):
+async def test_minion_detail_pending(app_db, session):
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _viewer(session)
     sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    now = datetime.now(tz=UTC)
+
+    session.add(MinionSnapshot(
+        minion_id="new-host",
+        key_status="pending",
+        online=False,
+        keys_refreshed_at=now,
+    ))
     await session.commit()
 
-    fake_salt_api.run_handler = _salt_router(
-        connected={},
-        keys={
-            "minions": [],
-            "minions_pre": ["new-host"],
-            "minions_rejected": [],
-            "minions_denied": [],
-            "local": [],
-        },
-    )
-
     app = create_app(settings=settings, codec=codec)
-    client = _attach_salt_client(app, fake_salt_api)
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get(
-                "/api/minions/new-host", cookies={settings.cookie_name: codec.sign(sess.id)}
-            )
-    finally:
-        await client.aclose()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get(
+            "/api/minions/new-host", cookies={settings.cookie_name: codec.sign(sess.id)}
+        )
 
     assert r.status_code == 200
     assert r.json()["status"] == "pending"
 
 
 @pytest.mark.asyncio
-async def test_minion_detail_404(app_db, session, fake_salt_api):
+async def test_minion_detail_404(app_db, session):
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _viewer(session)
     sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
     await session.commit()
 
-    fake_salt_api.run_handler = _salt_router(
-        connected={},
-        keys={
-            "minions": [],
-            "minions_pre": [],
-            "minions_rejected": [],
-            "minions_denied": [],
-            "local": [],
-        },
-    )
-
     app = create_app(settings=settings, codec=codec)
-    client = _attach_salt_client(app, fake_salt_api)
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get(
-                "/api/minions/ghost", cookies={settings.cookie_name: codec.sign(sess.id)}
-            )
-    finally:
-        await client.aclose()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get(
+            "/api/minions/ghost", cookies={settings.cookie_name: codec.sign(sess.id)}
+        )
     assert r.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_minion_detail_503_when_salt_not_configured(app_db, session):
+async def test_minion_detail_404_when_salt_not_configured(app_db, session):
+    """Detail route reads from DB — salt unconfigured means no rows, so 404."""
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _viewer(session)
@@ -451,4 +274,4 @@ async def test_minion_detail_503_when_salt_not_configured(app_db, session):
         app.router.lifespan_context(app),
     ):
         r = await ac.get("/api/minions/web-01", cookies={settings.cookie_name: codec.sign(sess.id)})
-    assert r.status_code == 503
+    assert r.status_code == 404

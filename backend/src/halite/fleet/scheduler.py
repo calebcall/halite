@@ -1,15 +1,15 @@
 """Periodic, in-process fleet highstate ingestion.
 
 A single ``asyncio.Task`` runs in the FastAPI event loop, calling
-``ingest_recent_highstates`` every ``Settings.fleet_poll_interval_seconds``
-seconds. The first tick fires immediately on startup so the dashboard has data
-on first load without waiting a full interval.
+``ingest_recent_highstates`` every ``interval_seconds`` seconds. The first
+tick fires immediately on startup so the dashboard has data on first load
+without waiting a full interval.
 
 Design rules
 ------------
 
-* **Opt-in.** ``fleet_poll_interval_seconds=0`` (or unset) disables the
-  scheduler. Manual API calls can still trigger ingestion.
+* **Opt-in.** ``interval_seconds=0`` (or unset) disables the scheduler.
+  Manual API calls can still trigger ingestion.
 * **Tick-then-sleep.** The loop ticks once immediately, then waits for the
   configured interval before each subsequent tick. No pile-up if a tick is slow.
 * **Errors are swallowed.** Salt-api hiccups are logged but never crash the
@@ -32,8 +32,8 @@ from halite.fleet.ingest import ingest_recent_highstates
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-    from halite.config import Settings
     from halite.salt.client import SaltAPIClient
+    from halite.settings.models import AppSettings
 
 log = logging.getLogger(__name__)
 
@@ -44,17 +44,40 @@ class FleetIngestScheduler:
 
     def __init__(
         self,
-        settings: Settings,
+        interval_seconds: int,
         salt: SaltAPIClient,
         sessionmaker: async_sessionmaker[AsyncSession],
+        *,
+        highstate_funs: list[str] | None = None,
+        lookback_minutes: int = 60,
     ) -> None:
-        self._settings = settings
+        self._interval_seconds = interval_seconds
         self._salt = salt
         self._sessionmaker = sessionmaker
+        self._highstate_funs = highstate_funs or ["state.apply", "state.highstate", "state.sls"]
+        self._lookback_minutes = lookback_minutes
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
         self._connected_minions: set[str] | None = None
         self._connected_refreshed_at: datetime | None = None
+
+    @classmethod
+    def from_row(
+        cls,
+        row: AppSettings,
+        salt: SaltAPIClient,
+        sessionmaker: async_sessionmaker[AsyncSession],
+        *,
+        highstate_funs: list[str] | None = None,
+        lookback_minutes: int = 60,
+    ) -> FleetIngestScheduler:
+        return cls(
+            interval_seconds=row.fleet_poll_interval_seconds,
+            salt=salt,
+            sessionmaker=sessionmaker,
+            highstate_funs=highstate_funs,
+            lookback_minutes=lookback_minutes,
+        )
 
     @property
     def connected_minions(self) -> set[str] | None:
@@ -67,8 +90,8 @@ class FleetIngestScheduler:
     async def _loop(self) -> None:
         log.info(
             "fleet scheduler started (interval=%ss, funs=%s)",
-            self._settings.fleet_poll_interval_seconds,
-            self._settings.fleet_highstate_funs,
+            self._interval_seconds,
+            self._highstate_funs,
         )
         # Give the inventory scheduler's startup bulk write a head start so we
         # don't deadlock on the SQLite write lock during cold boot.
@@ -84,7 +107,7 @@ class FleetIngestScheduler:
             try:
                 await asyncio.wait_for(
                     self._stop.wait(),
-                    timeout=self._settings.fleet_poll_interval_seconds,
+                    timeout=self._interval_seconds,
                 )
                 break
             except TimeoutError:
@@ -105,8 +128,8 @@ class FleetIngestScheduler:
                 count = await ingest_recent_highstates(
                     session,
                     self._salt,
-                    funs=self._settings.fleet_highstate_funs,
-                    lookback_minutes=self._settings.fleet_lookback_minutes,
+                    funs=self._highstate_funs,
+                    lookback_minutes=self._lookback_minutes,
                 )
                 await session.commit()
             if count:
@@ -129,3 +152,9 @@ class FleetIngestScheduler:
             except TimeoutError:
                 self._task.cancel()
             self._task = None
+
+    async def reconfigure(self, interval_seconds: int) -> None:
+        await self.stop()
+        self._interval_seconds = interval_seconds
+        self._stop = asyncio.Event()
+        self.start()

@@ -3,57 +3,86 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from halite.config import Settings
 from halite.minions.ingest import refresh_grains, refresh_keys, refresh_presence
 from halite.salt.client import SaltAPIClient
+
+if TYPE_CHECKING:
+    from halite.settings.models import AppSettings
 
 log = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class _Intervals:
+    keys: int
+    presence: int
+    grains: int
+    initial_delay: int
+
+
 class MinionStateScheduler:
     """Three independent loops — keys / presence / grains. Each is opt-in
-    via its own ``Settings.minion_state_*_interval_seconds``. Disable a
-    loop by leaving its interval at 0 (the default).
+    via its own interval. Disable a loop by leaving its interval at 0.
 
     All three loops call master-side runner/wheel functions. None of
     them touch minions directly."""
 
     def __init__(
         self,
-        settings: Settings,
+        intervals: _Intervals,
         salt: SaltAPIClient,
         sessionmaker: async_sessionmaker[AsyncSession],
     ) -> None:
-        self._settings = settings
+        self._intervals = intervals
         self._salt = salt
         self._sessionmaker = sessionmaker
         self._stop = asyncio.Event()
         self._tasks: list[asyncio.Task[None]] = []
 
+    @classmethod
+    def from_row(
+        cls,
+        row: AppSettings,
+        salt: SaltAPIClient,
+        sessionmaker: async_sessionmaker[AsyncSession],
+    ) -> MinionStateScheduler:
+        return cls(
+            intervals=_Intervals(
+                keys=row.minion_state_keys_interval_seconds,
+                presence=row.minion_state_presence_interval_seconds,
+                grains=row.minion_state_grains_interval_seconds,
+                initial_delay=row.minion_state_initial_delay_seconds,
+            ),
+            salt=salt,
+            sessionmaker=sessionmaker,
+        )
+
     def start(self) -> None:
-        s = self._settings
+        iv = self._intervals
         started: list[str] = []
-        if s.minion_state_keys_interval_seconds > 0:
+        if iv.keys > 0:
             self._tasks.append(asyncio.create_task(
-                self._loop("keys", s.minion_state_keys_interval_seconds, self._tick_keys),
+                self._loop("keys", iv.keys, self._tick_keys),
                 name="minion-keys-scheduler",
             ))
-            started.append(f"keys={s.minion_state_keys_interval_seconds}s")
-        if s.minion_state_presence_interval_seconds > 0:
+            started.append(f"keys={iv.keys}s")
+        if iv.presence > 0:
             self._tasks.append(asyncio.create_task(
-                self._loop("presence", s.minion_state_presence_interval_seconds, self._tick_presence),
+                self._loop("presence", iv.presence, self._tick_presence),
                 name="minion-presence-scheduler",
             ))
-            started.append(f"presence={s.minion_state_presence_interval_seconds}s")
-        if s.minion_state_grains_interval_seconds > 0:
+            started.append(f"presence={iv.presence}s")
+        if iv.grains > 0:
             self._tasks.append(asyncio.create_task(
-                self._loop("grains", s.minion_state_grains_interval_seconds, self._tick_grains),
+                self._loop("grains", iv.grains, self._tick_grains),
                 name="minion-grains-scheduler",
             ))
-            started.append(f"grains={s.minion_state_grains_interval_seconds}s")
+            started.append(f"grains={iv.grains}s")
         if started:
             log.info("minion-state scheduler started: %s", " ".join(started))
 
@@ -66,6 +95,12 @@ class MinionStateScheduler:
                 t.cancel()
         self._tasks.clear()
 
+    async def reconfigure(self, intervals: _Intervals) -> None:
+        await self.stop()
+        self._intervals = intervals
+        self._stop = asyncio.Event()
+        self.start()
+
     async def _loop(
         self, name: str, interval: int, tick: Callable[[], Awaitable[None]],
     ) -> None:
@@ -73,7 +108,7 @@ class MinionStateScheduler:
         try:
             await asyncio.wait_for(
                 self._stop.wait(),
-                timeout=self._settings.minion_state_initial_delay_seconds,
+                timeout=self._intervals.initial_delay,
             )
             return
         except TimeoutError:

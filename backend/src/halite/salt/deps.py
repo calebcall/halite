@@ -35,8 +35,18 @@ def _extract_salt_message(body: object) -> str | None:
 
 
 def salt_client_or_503(request: Request) -> SaltAPIClient:
-    """Return the configured SaltAPIClient, or raise 503 if Salt-API is not configured."""
-    client = getattr(request.app.state, "salt_client", None)
+    """Return the live SaltAPIClient, or raise 503 if Salt-API is not configured.
+
+    Reads from ``app.state.runtime.salt`` (RuntimeConfig) so the reference
+    is always current after a hot-reload. Falls back to the legacy
+    ``app.state.salt_client`` attribute for backward-compat with tests that
+    set it directly.
+    """
+    runtime = getattr(request.app.state, "runtime", None)
+    if runtime is not None:
+        client = runtime.salt
+    else:
+        client = getattr(request.app.state, "salt_client", None)
     if client is None:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
