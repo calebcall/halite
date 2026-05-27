@@ -3,11 +3,13 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Request
+from sqlalchemy import select
 
 from halite.audit.writer import record as audit_record
 from halite.db import SessionDep
 from halite.deps import CurrentUser, require_perm
 from halite.salt.client import SaltAPIClient
+from halite.settings.models import AppSettings
 from halite.settings.schemas import (
     LoggingSettingsIn,
     PollerSettingsIn,
@@ -18,6 +20,7 @@ from halite.settings.schemas import (
     TestSaltConnectionOut,
 )
 from halite.settings.service import (
+    decrypt_salt_password,
     get_settings,
     get_settings_status,
     update_logging,
@@ -149,6 +152,59 @@ async def test_salt_route(
     try:
         await client.login()
     except Exception as exc:
+        return TestSaltConnectionOut(ok=False, detail=f"auth failed: {exc!s}")
+    try:
+        ids = await client.list_present_minion_ids()
+    except Exception as exc:
+        await client.aclose()
+        return TestSaltConnectionOut(
+            ok=True,
+            detail=f"logged in (manage.present failed: {exc!s})",
+        )
+    await client.aclose()
+    return TestSaltConnectionOut(
+        ok=True,
+        detail="logged in",
+        minion_count=len(ids),
+    )
+
+
+@router.post(
+    "/test-salt-saved",
+    response_model=TestSaltConnectionOut,
+    dependencies=[require_perm("edit", "settings:*")],
+)
+async def test_salt_saved_route(
+    request: Request,
+    db: SessionDep,
+    _: CurrentUser,
+) -> TestSaltConnectionOut:
+    """Test the credentials currently persisted in the DB. Used by the
+    settings page when the operator hasn't re-typed the password — we
+    can't roundtrip it through the form (security), but we can still
+    validate it server-side."""
+    row = (await db.execute(select(AppSettings))).scalar_one_or_none()
+    if row is None or not (row.salt_api_url and row.salt_api_username):
+        return TestSaltConnectionOut(
+            ok=False, detail="No saved salt-api configuration."
+        )
+    cookie_secret = request.app.state.settings.cookie_secret
+    password = decrypt_salt_password(row, cookie_secret=cookie_secret)
+    if not password:
+        return TestSaltConnectionOut(
+            ok=False, detail="No saved salt-api password."
+        )
+    client = SaltAPIClient(
+        base_url=row.salt_api_url.rstrip("/"),
+        username=row.salt_api_username,
+        password=password,
+        verify=row.salt_api_verify,
+        eauth=row.salt_api_eauth,
+    )
+    try:
+        await client.login()
+    except Exception as exc:
+        await client.aclose()
         return TestSaltConnectionOut(ok=False, detail=f"auth failed: {exc!s}")
     try:
         ids = await client.list_present_minion_ids()

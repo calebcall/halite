@@ -357,6 +357,11 @@ export const api = {
         method: 'POST',
         path: '/api/admin/settings/test-salt',
       }),
+    testSaltSaved: () =>
+      request<paths['/api/admin/settings/test-salt-saved']['post']['responses']['200']['content']['application/json']>({
+        method: 'POST',
+        path: '/api/admin/settings/test-salt-saved',
+      }),
   },
   templates: {
     list: () =>

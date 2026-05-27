@@ -29,6 +29,10 @@ export function useTestSalt() {
   return useMutation({ mutationFn: api.settings.testSalt })
 }
 
+export function useTestSaltSaved() {
+  return useMutation({ mutationFn: api.settings.testSaltSaved })
+}
+
 export function useUpdateLogging() {
   const qc = useQueryClient()
   return useMutation({

@@ -19,7 +19,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { MustChangePassword } from '@/features/auth/guards'
 import type { components } from '@/shared/api/types.gen'
-import { useSettings, useTestSalt, useUpdateLogging, useUpdatePollers, useUpdateSalt } from './use-settings'
+import { useSettings, useTestSalt, useTestSaltSaved, useUpdateLogging, useUpdatePollers, useUpdateSalt } from './use-settings'
 
 // ─── Type aliases ────────────────────────────────────────────────────────────
 
@@ -90,6 +90,7 @@ type SaltFormValues = z.infer<typeof saltSchema>
 function SaltSection({ initial }: { initial: SaltSettingsOut }) {
   const updateMut = useUpdateSalt()
   const testMut = useTestSalt()
+  const testSavedMut = useTestSaltSaved()
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [testResult, setTestResult] = useState<TestSaltConnectionOut | null>(null)
 
@@ -121,27 +122,28 @@ function SaltSection({ initial }: { initial: SaltSettingsOut }) {
   // the user to enter one if password_set is false; if it is set allow test
   // using stored creds by sending empty password only when it was already set.
   const canTest =
-    Boolean(watchedUrl) &&
-    Boolean(watchedUsername) &&
-    (Boolean(watchedPassword) || initial.password_set) &&
-    !testMut.isPending
+    (Boolean(watchedPassword)
+      ? Boolean(watchedUrl) && Boolean(watchedUsername)
+      : initial.password_set) &&
+    !testMut.isPending &&
+    !testSavedMut.isPending
 
   async function handleTest() {
     setTestResult(null)
-    // For the test endpoint, password is required. We use the typed value.
-    // If user hasn't typed one and password_set, we have no password to send
-    // — the backend handles this as a test with current stored creds.
-    // The TestSaltConnectionIn schema requires a password field, so we send
-    // the typed password or a sentinel empty string. The backend will reject
-    // an empty password on test, so we only let this run when canTest is true.
+    // If the user typed a new password, test those specific creds via the
+    // body-driven endpoint. If they left it blank and the DB has stored
+    // creds (password_set=true), test the stored creds via the saved
+    // endpoint — we can't roundtrip the password to the form for security.
     try {
-      const result = await testMut.mutateAsync({
-        eauth: watchedEauth,
-        password: watchedPassword,
-        url: watchedUrl,
-        username: watchedUsername,
-        verify: watchedVerify,
-      })
+      const result = watchedPassword
+        ? await testMut.mutateAsync({
+            eauth: watchedEauth,
+            password: watchedPassword,
+            url: watchedUrl,
+            username: watchedUsername,
+            verify: watchedVerify,
+          })
+        : await testSavedMut.mutateAsync()
       setTestResult(result)
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Connection test failed'
@@ -270,7 +272,7 @@ function SaltSection({ initial }: { initial: SaltSettingsOut }) {
               disabled={!canTest}
               onClick={handleTest}
             >
-              {testMut.isPending ? (
+              {testMut.isPending || testSavedMut.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="mr-2 h-4 w-4" />

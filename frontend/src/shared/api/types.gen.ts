@@ -656,6 +656,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/settings/test-salt-saved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Salt Saved Route
+         * @description Test the credentials currently persisted in the DB. Used by the
+         *     settings page when the operator hasn't re-typed the password — we
+         *     can't roundtrip it through the form (security), but we can still
+         *     validate it server-side.
+         */
+        post: operations["test_salt_saved_route_api_admin_settings_test_salt_saved_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/templates": {
         parameters: {
             query?: never;
@@ -2890,6 +2913,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_salt_saved_route_api_admin_settings_test_salt_saved_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestSaltConnectionOut"];
                 };
             };
         };
