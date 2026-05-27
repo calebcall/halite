@@ -66,7 +66,8 @@ def _jobs_handler(
 
 
 @pytest.mark.asyncio
-async def test_jobs_list_returns_summaries(app_db, session, fake_salt_api):
+async def test_jobs_list_live_returns_summaries(app_db, session, fake_salt_api):
+    """?live=true path hits Salt and returns the live summary list."""
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _user_with(session, [("view", "job:*")])
@@ -93,7 +94,10 @@ async def test_jobs_list_returns_summaries(app_db, session, fake_salt_api):
     client = _attach_salt_client(app, fake_salt_api)
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get("/api/jobs", cookies={settings.cookie_name: codec.sign(sess.id)})
+            r = await ac.get(
+                "/api/jobs?live=true",
+                cookies={settings.cookie_name: codec.sign(sess.id)},
+            )
     finally:
         await client.aclose()
 
@@ -109,7 +113,8 @@ async def test_jobs_list_returns_summaries(app_db, session, fake_salt_api):
 
 
 @pytest.mark.asyncio
-async def test_jobs_list_defaults_to_complete_when_active_is_empty(app_db, session, fake_salt_api):
+async def test_jobs_list_live_defaults_to_complete_when_active_is_empty(app_db, session, fake_salt_api):
+    """?live=true: job not in active set → status == 'complete'."""
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _user_with(session, [("view", "job:*")])
@@ -127,7 +132,10 @@ async def test_jobs_list_defaults_to_complete_when_active_is_empty(app_db, sessi
     client = _attach_salt_client(app, fake_salt_api)
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get("/api/jobs", cookies={settings.cookie_name: codec.sign(sess.id)})
+            r = await ac.get(
+                "/api/jobs?live=true",
+                cookies={settings.cookie_name: codec.sign(sess.id)},
+            )
     finally:
         await client.aclose()
 
@@ -227,7 +235,8 @@ async def test_job_detail_404_unknown_jid(app_db, session, fake_salt_api):
 
 
 @pytest.mark.asyncio
-async def test_jobs_list_503_when_salt_not_configured(app_db, session):
+async def test_jobs_list_live_503_when_salt_not_configured(app_db, session):
+    """?live=true: 503 when no Salt client is configured (DB default returns 200)."""
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _user_with(session, [("view", "job:*")])
@@ -239,7 +248,10 @@ async def test_jobs_list_503_when_salt_not_configured(app_db, session):
         AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac,
         app.router.lifespan_context(app),
     ):
-        r = await ac.get("/api/jobs", cookies={settings.cookie_name: codec.sign(sess.id)})
+        r = await ac.get(
+            "/api/jobs?live=true",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
     assert r.status_code == 503
 
 
