@@ -90,6 +90,7 @@ async def test_refresh_grains_populates_denormalized_fields(session):
         "minions_rejected": [],
         "minions_denied": [],
     }
+    salt.list_present_minion_ids.return_value = {"web-1"}
     salt.cache_grains.return_value = {
         "web-1": {
             "os": "Ubuntu",

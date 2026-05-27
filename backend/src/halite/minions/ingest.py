@@ -104,16 +104,30 @@ def _denorm(row: MinionSnapshot, grains: dict[str, Any]) -> None:
 
 
 async def refresh_grains(db: AsyncSession, salt: Any) -> int:
-    """Pull master-cached grains for known accepted minions and update
-    their snapshot rows. Rows missing a snapshot entry are skipped — keys
-    are the source of truth."""
-    # Source of truth for "which minions to fetch" is the snapshot table.
-    # We only care about accepted minions for grains.
+    """Pull master-cached grains for currently-connected accepted minions
+    and update their snapshot rows.
+
+    Why only the connected set: offline minions' cached grains haven't
+    changed since they last checked in, so refetching them is wasted
+    work — and on big fleets with many offline minions, the cumulative
+    cache.grains payload time-outs httpx. We ask manage.present (cheap,
+    master-side) for the live set and limit the grains fetch to those.
+    """
     rows = (await db.execute(select(MinionSnapshot))).scalars().all()
-    accepted_ids = [r.minion_id for r in rows if r.key_status == "accepted"]
+    accepted_ids = {r.minion_id for r in rows if r.key_status == "accepted"}
     if not accepted_ids:
         return 0
-    cache = await salt.cache_grains(minion_ids=accepted_ids)
+    try:
+        present = await salt.list_present_minion_ids()
+    except Exception:
+        log.exception("refresh_grains: list_present_minion_ids failed")
+        return 0
+    if not isinstance(present, set):
+        present = set(present)
+    target_ids = sorted(accepted_ids & present)
+    if not target_ids:
+        return 0
+    cache = await salt.cache_grains(minion_ids=target_ids)
     if not isinstance(cache, dict):
         return 0
     now = datetime.now(tz=UTC)
