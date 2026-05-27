@@ -292,6 +292,24 @@ class SaltAPIClient:
             return {str(k) for k in result}
         return set()
 
+    async def cache_grains(self) -> dict[str, dict[str, Any]]:
+        """Returns ``{minion_id: grains_dict}`` for every minion the master
+        has cached grains for. Uses ``runner.cache.grains`` — pure master-side
+        cache read, no minion is contacted. Sub-second on any reasonable
+        fleet.
+
+        ``cache.grains`` requires a ``tgt`` argument; ``'*'`` selects all
+        minions from the master cache without contacting any of them.
+        """
+        result = await self.runner_call("cache.grains", tgt="*")
+        if not isinstance(result, dict):
+            return {}
+        out: dict[str, dict[str, Any]] = {}
+        for mid, g in result.items():
+            if isinstance(g, dict):
+                out[str(mid)] = g
+        return out
+
     async def get_network_grains_map(
         self,
         target: str = "*",
