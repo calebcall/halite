@@ -6,8 +6,6 @@ Create Date: 2026-05-27
 """
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 
 from alembic import op
@@ -38,6 +36,10 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.CheckConstraint("id = 1", name="ck_app_settings_singleton"),
     )
+    # Seed the singleton row. We use SQL's CURRENT_TIMESTAMP rather than a
+    # Python-bound datetime because asyncpg refuses to coerce an ISO string
+    # into a timestamptz, and binding a datetime via sa.text doesn't always
+    # propagate the type. CURRENT_TIMESTAMP works on both Postgres + SQLite.
     op.execute(
         sa.text(
             "INSERT INTO app_settings (id, salt_api_verify, salt_api_eauth, "
@@ -45,9 +47,7 @@ def upgrade() -> None:
             "fleet_poll_interval_seconds, minion_state_keys_interval_seconds, "
             "minion_state_presence_interval_seconds, minion_state_grains_interval_seconds, "
             "minion_state_initial_delay_seconds, log_format, updated_at) "
-            "VALUES (1, :verify, :eauth, 0, 30, 0, 300, 60, 300, 10, 'json', :now)"
-        ).bindparams(
-            verify=True, eauth="pam", now=datetime.now(tz=UTC).isoformat(),
+            "VALUES (1, TRUE, 'pam', 0, 30, 0, 300, 60, 300, 10, 'json', CURRENT_TIMESTAMP)"
         )
     )
 
