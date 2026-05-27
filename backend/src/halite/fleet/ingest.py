@@ -80,14 +80,21 @@ async def ingest_recent_highstates(
             continue
 
         try:
-            returns = await salt.runner_call("jobs.lookup_jid", jid=jid)
+            job = await salt.runner_call("jobs.list_job", jid=jid)
         except Exception:
-            log.exception("ingest: lookup_jid failed for %s", jid)
+            log.exception("ingest: list_job failed for %s", jid)
             continue
-        if not isinstance(returns, dict):
+        if not isinstance(job, dict):
+            continue
+        returns_section = job.get("Result")
+        if not isinstance(returns_section, dict):
             continue
 
-        for minion_id, raw_result in returns.items():
+        for minion_id, entry in returns_section.items():
+            # list_job wraps each minion result: {"return": <state-dict>, "retcode": int, ...}
+            # Fall back to the entry itself for salt versions that return the
+            # state dict directly (or a plain string sentinel for blocked minions).
+            raw_result = entry["return"] if isinstance(entry, dict) and "return" in entry else entry
             existing = (
                 await db.execute(
                     select(HighstateRun.id).where(
