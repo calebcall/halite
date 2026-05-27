@@ -17,7 +17,7 @@ function withQuery(ui: React.ReactNode) {
   return <QueryClientProvider client={qc}>{ui}</QueryClientProvider>
 }
 
-function mockBody(minions: Array<{ minion_id: string; status: string; pass_count?: number; fail_count?: number; change_count?: number; total_count?: number; jid?: string; run_id?: string; completed_at?: string; duration_ms?: number }>) {
+function mockBody(minions: Array<{ minion_id: string; status: string; online?: boolean; pass_count?: number; fail_count?: number; change_count?: number; total_count?: number; jid?: string; run_id?: string; completed_at?: string; duration_ms?: number }>) {
   return {
     total_minions: minions.length,
     minions: minions.map((m) => ({
@@ -27,6 +27,7 @@ function mockBody(minions: Array<{ minion_id: string; status: string; pass_count
       fail_count: m.fail_count ?? 0,
       jid: m.jid ?? 'J1',
       minion_id: m.minion_id,
+      online: m.online ?? true,
       pass_count: m.pass_count ?? 0,
       run_id: m.run_id ?? '00000000-0000-0000-0000-000000000000',
       status: m.status,
@@ -40,15 +41,15 @@ describe('FleetHeatmap', () => {
     server.use(
       http.get('/api/fleet/health', () =>
         HttpResponse.json(mockBody([
-          { minion_id: 'web-1', status: 'pass' },
-          { minion_id: 'web-2', status: 'fail' },
+          { minion_id: 'web-1', status: 'healthy' },
+          { minion_id: 'web-2', status: 'unhealthy' },
           { minion_id: 'db-1', status: 'changed' },
         ])),
       ),
     )
     render(withQuery(<FleetHeatmap onTileClick={() => {}} />))
-    expect(await screen.findByRole('button', { name: /web-1 pass/i })).toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: /web-2 fail/i })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /web-1 healthy/i })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /web-2 unhealthy/i })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: /db-1 changed/i })).toBeInTheDocument()
   })
 
@@ -56,30 +57,44 @@ describe('FleetHeatmap', () => {
     server.use(
       http.get('/api/fleet/health', () =>
         HttpResponse.json(mockBody([
-          { minion_id: 'web-1', status: 'pass' },
-          { minion_id: 'db-1', status: 'pass' },
+          { minion_id: 'web-1', status: 'healthy' },
+          { minion_id: 'db-1', status: 'healthy' },
         ])),
       ),
     )
     render(withQuery(<FleetHeatmap onTileClick={() => {}} />))
-    await screen.findByRole('button', { name: /web-1 pass/i })
+    await screen.findByRole('button', { name: /web-1 healthy/i })
     const input = screen.getByLabelText('Filter minions')
     await userEvent.type(input, 'db')
-    expect(screen.queryByRole('button', { name: /web-1 pass/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /db-1 pass/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /web-1 healthy/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /db-1 healthy/i })).toBeInTheDocument()
   })
 
   it('fires onTileClick with the minion', async () => {
     const cb = vi.fn()
     server.use(
       http.get('/api/fleet/health', () =>
-        HttpResponse.json(mockBody([{ minion_id: 'web-1', status: 'pass' }])),
+        HttpResponse.json(mockBody([{ minion_id: 'web-1', status: 'healthy' }])),
       ),
     )
     render(withQuery(<FleetHeatmap onTileClick={cb} />))
-    const tile = await screen.findByRole('button', { name: /web-1 pass/i })
+    const tile = await screen.findByRole('button', { name: /web-1 healthy/i })
     await userEvent.click(tile)
     expect(cb).toHaveBeenCalledTimes(1)
-    expect(cb.mock.calls[0][0]).toMatchObject({ minion_id: 'web-1', status: 'pass' })
+    expect(cb.mock.calls[0][0]).toMatchObject({ minion_id: 'web-1', status: 'healthy' })
+  })
+
+  it('flags offline minions with "offline" in tooltip and aria-label', async () => {
+    server.use(
+      http.get('/api/fleet/health', () =>
+        HttpResponse.json(mockBody([
+          { minion_id: 'web-1', status: 'unhealthy', online: false },
+        ])),
+      ),
+    )
+    render(withQuery(<FleetHeatmap onTileClick={() => {}} />))
+    const tile = await screen.findByRole('button', { name: /web-1 offline/i })
+    expect(tile).toBeInTheDocument()
+    expect(tile).toHaveAttribute('title', expect.stringContaining('offline'))
   })
 })

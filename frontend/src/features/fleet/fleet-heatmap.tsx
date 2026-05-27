@@ -12,18 +12,18 @@ type Status = Minion['status']
 const STATUS_STYLE: Record<Status, string> = {
   blocked: 'bg-warning/15 hover:bg-warning/25 border-warning/40 text-warning-foreground',
   changed: 'bg-warning/20 hover:bg-warning/30 border-warning/50 text-warning-foreground',
-  fail: 'bg-destructive/15 hover:bg-destructive/25 border-destructive/50 text-destructive',
-  pass: 'bg-success/15 hover:bg-success/25 border-success/40 text-success',
+  healthy: 'bg-success/15 hover:bg-success/25 border-success/40 text-success',
   stale: 'bg-muted/40 hover:bg-muted/60 border-muted-foreground/30 text-muted-foreground',
+  unhealthy: 'bg-destructive/15 hover:bg-destructive/25 border-destructive/50 text-destructive',
   unknown: 'bg-muted/30 hover:bg-muted/50 border-border text-muted-foreground',
 }
 
 const STATUS_LABEL: Record<Status, string> = {
   blocked: 'blocked',
   changed: 'changed',
-  fail: 'fail',
-  pass: 'pass',
+  healthy: 'healthy',
   stale: 'stale',
+  unhealthy: 'unhealthy',
   unknown: 'unknown',
 }
 
@@ -72,21 +72,29 @@ export function FleetHeatmap({
         <>
           <Legend />
           <div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(2.5rem,1fr))] gap-1.5">
-            {filtered.map((m) => (
-              <button
-                key={m.minion_id}
-                aria-label={`${m.minion_id} ${STATUS_LABEL[m.status]}`}
-                className={cn(
-                  'h-9 rounded border text-xs font-medium transition-colors',
-                  STATUS_STYLE[m.status],
-                )}
-                onClick={() => onTileClick(m)}
-                title={`${m.minion_id} — ${STATUS_LABEL[m.status]} (${m.pass_count}/${m.total_count})`}
-                type="button"
-              >
-                {m.minion_id.slice(0, 4)}
-              </button>
-            ))}
+            {filtered.map((m) => {
+              const tooltip = m.online
+                ? `${m.minion_id} — ${STATUS_LABEL[m.status]} (${m.pass_count}/${m.total_count})`
+                : `${m.minion_id} — offline`
+              const ariaLabel = m.online
+                ? `${m.minion_id} ${STATUS_LABEL[m.status]}`
+                : `${m.minion_id} offline`
+              return (
+                <button
+                  key={m.minion_id}
+                  aria-label={ariaLabel}
+                  className={cn(
+                    'h-9 rounded border text-xs font-medium transition-colors',
+                    STATUS_STYLE[m.status],
+                  )}
+                  onClick={() => onTileClick(m)}
+                  title={tooltip}
+                  type="button"
+                >
+                  {m.minion_id.slice(0, 4)}
+                </button>
+              )
+            })}
             {filtered.length === 0 && (
               <p className="col-span-full py-6 text-center text-sm text-muted-foreground">
                 {data?.total_minions === 0
@@ -103,9 +111,9 @@ export function FleetHeatmap({
 
 function Legend() {
   const entries: { label: string; status: Status }[] = [
-    { label: 'Pass', status: 'pass' },
+    { label: 'Healthy', status: 'healthy' },
     { label: 'Changed', status: 'changed' },
-    { label: 'Failed', status: 'fail' },
+    { label: 'Unhealthy (offline or failed)', status: 'unhealthy' },
     { label: 'Blocked', status: 'blocked' },
     { label: 'Stale (>2d)', status: 'stale' },
   ]

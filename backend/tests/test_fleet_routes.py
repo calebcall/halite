@@ -13,6 +13,7 @@ from halite.auth.service import create_session
 from halite.config import Settings
 from halite.fleet.models import HighstateRun
 from halite.main import create_app
+from halite.salt.client import SaltAPIClient
 
 
 async def _user(session, username: str) -> User:
@@ -61,8 +62,29 @@ async def _seed_run(
     return row
 
 
+def _attach_salt_client(app, fake_salt_api) -> SaltAPIClient:
+    client = SaltAPIClient(
+        base_url="http://salt.test",
+        username="halite-service",
+        password="pw",
+        transport=fake_salt_api.transport,
+    )
+    app.state.salt_client = client
+    return client
+
+
+def _manage_present_handler(connected: dict[str, str]):
+    """Return a run_handler that responds to manage.present with the given map."""
+    def handler(payload):
+        fun = payload.get("fun", "")
+        if fun == "manage.present":
+            return {"return": [connected]}
+        return {"return": [None]}
+    return handler
+
+
 @pytest.mark.asyncio
-async def test_health_returns_one_row_per_minion(app_db, session):
+async def test_health_returns_one_row_per_minion(app_db, session, fake_salt_api):
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _user(session, "alice")
@@ -71,16 +93,25 @@ async def test_health_returns_one_row_per_minion(app_db, session):
     # minion-a: older run then newer run — expect the newer jid
     await _seed_run(session, minion_id="minion-a", jid="jid-old", age_minutes=60)
     newer = await _seed_run(session, minion_id="minion-a", jid="jid-new", age_minutes=5)
-    # minion-b: single run
-    await _seed_run(session, minion_id="minion-b", jid="jid-b", age_minutes=10)
+    # minion-b: single failing run
+    await _seed_run(session, minion_id="minion-b", jid="jid-b", age_minutes=10, fail_count=1)
     await session.commit()
 
+    fake_salt_api.run_handler = _manage_present_handler({
+        "minion-a": "10.0.0.1",
+        "minion-b": "10.0.0.2",
+    })
+
     app = create_app(settings=settings, codec=codec)
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-        r = await ac.get(
-            "/api/fleet/health",
-            cookies={settings.cookie_name: codec.sign(sess.id)},
-        )
+    client = _attach_salt_client(app, fake_salt_api)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+            r = await ac.get(
+                "/api/fleet/health",
+                cookies={settings.cookie_name: codec.sign(sess.id)},
+            )
+    finally:
+        await client.aclose()
 
     assert r.status_code == 200
     body = r.json()
@@ -90,13 +121,16 @@ async def test_health_returns_one_row_per_minion(app_db, session):
     assert set(by_minion.keys()) == {"minion-a", "minion-b"}
     # minion-a must use the newer jid
     assert by_minion["minion-a"]["jid"] == newer.jid
-    # both should have "pass" status (recent, no failures)
-    assert by_minion["minion-a"]["status"] == "pass"
-    assert by_minion["minion-b"]["status"] == "pass"
+    # minion-a is online with no failures → healthy
+    assert by_minion["minion-a"]["status"] == "healthy"
+    assert by_minion["minion-a"]["online"] is True
+    # minion-b is online but has fail_count > 0 → unhealthy
+    assert by_minion["minion-b"]["status"] == "unhealthy"
+    assert by_minion["minion-b"]["online"] is True
 
 
 @pytest.mark.asyncio
-async def test_health_marks_stale_runs(app_db, session):
+async def test_health_marks_stale_runs(app_db, session, fake_salt_api):
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _user(session, "alice")
@@ -106,21 +140,28 @@ async def test_health_marks_stale_runs(app_db, session):
     await _seed_run(session, minion_id="minion-x", jid="jid-stale", age_minutes=5 * 24 * 60)
     await session.commit()
 
+    fake_salt_api.run_handler = _manage_present_handler({"minion-x": "10.0.0.1"})
+
     app = create_app(settings=settings, codec=codec)
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-        r = await ac.get(
-            "/api/fleet/health",
-            cookies={settings.cookie_name: codec.sign(sess.id)},
-        )
+    client = _attach_salt_client(app, fake_salt_api)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+            r = await ac.get(
+                "/api/fleet/health",
+                cookies={settings.cookie_name: codec.sign(sess.id)},
+            )
+    finally:
+        await client.aclose()
 
     assert r.status_code == 200
     minions = r.json()["minions"]
     assert len(minions) == 1
     assert minions[0]["status"] == "stale"
+    assert minions[0]["online"] is True
 
 
 @pytest.mark.asyncio
-async def test_health_marks_blocked(app_db, session):
+async def test_health_marks_blocked(app_db, session, fake_salt_api):
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
     codec = CookieCodec(settings.cookie_secret)
     user = await _user(session, "alice")
@@ -129,17 +170,88 @@ async def test_health_marks_blocked(app_db, session):
     await _seed_run(session, minion_id="minion-y", jid="jid-blocked", blocked=True)
     await session.commit()
 
+    fake_salt_api.run_handler = _manage_present_handler({"minion-y": "10.0.0.1"})
+
     app = create_app(settings=settings, codec=codec)
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-        r = await ac.get(
-            "/api/fleet/health",
-            cookies={settings.cookie_name: codec.sign(sess.id)},
-        )
+    client = _attach_salt_client(app, fake_salt_api)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+            r = await ac.get(
+                "/api/fleet/health",
+                cookies={settings.cookie_name: codec.sign(sess.id)},
+            )
+    finally:
+        await client.aclose()
 
     assert r.status_code == 200
     minions = r.json()["minions"]
     assert len(minions) == 1
     assert minions[0]["status"] == "blocked"
+    assert minions[0]["online"] is True
+
+
+@pytest.mark.asyncio
+async def test_health_marks_offline_as_unhealthy(app_db, session, fake_salt_api):
+    """A minion with a passing run that goes offline must appear as unhealthy."""
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user(session, "alice")
+    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+
+    await _seed_run(session, minion_id="web-1", jid="jid-pass", pass_count=10, fail_count=0)
+    await session.commit()
+
+    # Salt reports NO connected minions — web-1 is offline.
+    fake_salt_api.run_handler = _manage_present_handler({})
+
+    app = create_app(settings=settings, codec=codec)
+    client = _attach_salt_client(app, fake_salt_api)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+            r = await ac.get(
+                "/api/fleet/health",
+                cookies={settings.cookie_name: codec.sign(sess.id)},
+            )
+    finally:
+        await client.aclose()
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total_minions"] == 1
+    assert body["minions"][0]["minion_id"] == "web-1"
+    assert body["minions"][0]["status"] == "unhealthy"
+    assert body["minions"][0]["online"] is False
+
+
+@pytest.mark.asyncio
+async def test_health_includes_online_minion_without_runs(app_db, session, fake_salt_api):
+    """A minion that's online but has no ingested runs appears as unknown."""
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user(session, "alice")
+    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    # No runs seeded at all.
+    await session.commit()
+
+    fake_salt_api.run_handler = _manage_present_handler({"web-1": "10.0.0.1"})
+
+    app = create_app(settings=settings, codec=codec)
+    client = _attach_salt_client(app, fake_salt_api)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+            r = await ac.get(
+                "/api/fleet/health",
+                cookies={settings.cookie_name: codec.sign(sess.id)},
+            )
+    finally:
+        await client.aclose()
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total_minions"] == 1
+    assert body["minions"][0]["minion_id"] == "web-1"
+    assert body["minions"][0]["status"] == "unknown"
+    assert body["minions"][0]["online"] is True
 
 
 @pytest.mark.asyncio

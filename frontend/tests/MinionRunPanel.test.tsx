@@ -30,9 +30,10 @@ const minionFixture = {
   fail_count: 1,
   jid: 'J1',
   minion_id: 'web-1',
+  online: true,
   pass_count: 0,
   run_id: '11111111-1111-1111-1111-111111111111',
-  status: 'fail' as const,
+  status: 'unhealthy' as const,
   total_count: 1,
 }
 

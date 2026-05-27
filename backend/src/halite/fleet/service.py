@@ -19,7 +19,13 @@ from halite.fleet.schemas import (
 _STALE_AFTER = timedelta(days=2)
 
 
-def _status_for(run: HighstateRun, now: datetime) -> HealthStatus:
+def _status_for(
+    run: HighstateRun | None, *, online: bool, now: datetime
+) -> HealthStatus:
+    if not online:
+        return "unhealthy"
+    if run is None:
+        return "unknown"
     if run.blocked:
         return "blocked"
     # SQLite drops timezone info; treat naive datetimes as UTC.
@@ -29,10 +35,10 @@ def _status_for(run: HighstateRun, now: datetime) -> HealthStatus:
     if (now - completed) > _STALE_AFTER:
         return "stale"
     if run.fail_count > 0:
-        return "fail"
+        return "unhealthy"
     if run.change_count > 0:
         return "changed"
-    return "pass"
+    return "healthy"
 
 
 async def latest_per_minion(db: AsyncSession) -> list[HighstateRun]:
@@ -59,24 +65,53 @@ async def latest_per_minion(db: AsyncSession) -> list[HighstateRun]:
     return list(rows.scalars().all())
 
 
-async def fleet_health(db: AsyncSession) -> list[MinionHealthOut]:
+async def fleet_health(
+    db: AsyncSession, *, connected: set[str]
+) -> list[MinionHealthOut]:
+    """Build the heatmap rows. `connected` is the set of minion_ids that
+    are currently reachable on the master (from manage.present). The
+    output is the UNION of (minions with at least one ingested run) and
+    (currently-connected minions) — so an offline minion that has never
+    ingested still appears, flagged as unhealthy."""
     now = datetime.now(tz=UTC)
     runs = await latest_per_minion(db)
-    return [
-        MinionHealthOut(
-            minion_id=r.minion_id,
-            run_id=r.id,
-            jid=r.jid,
-            completed_at=r.completed_at,
-            status=_status_for(r, now),
-            pass_count=r.pass_count,
-            fail_count=r.fail_count,
-            change_count=r.change_count,
-            total_count=r.total_count,
-            duration_ms=r.duration_ms,
-        )
-        for r in runs
-    ]
+    by_minion: dict[str, HighstateRun] = {r.minion_id: r for r in runs}
+
+    minion_ids = set(by_minion) | connected
+    out: list[MinionHealthOut] = []
+    for mid in sorted(minion_ids):
+        run = by_minion.get(mid)
+        online = mid in connected
+        status = _status_for(run, online=online, now=now)
+        if run is None:
+            out.append(MinionHealthOut(
+                minion_id=mid,
+                online=online,
+                run_id=None,
+                jid=None,
+                completed_at=None,
+                status=status,
+                pass_count=0,
+                fail_count=0,
+                change_count=0,
+                total_count=0,
+                duration_ms=0,
+            ))
+        else:
+            out.append(MinionHealthOut(
+                minion_id=mid,
+                online=online,
+                run_id=run.id,
+                jid=run.jid,
+                completed_at=run.completed_at,
+                status=status,
+                pass_count=run.pass_count,
+                fail_count=run.fail_count,
+                change_count=run.change_count,
+                total_count=run.total_count,
+                duration_ms=run.duration_ms,
+            ))
+    return out
 
 
 async def compliance_series(

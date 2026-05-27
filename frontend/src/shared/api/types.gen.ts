@@ -983,6 +983,8 @@ export interface components {
         MinionHealthOut: {
             /** Minion Id */
             minion_id: string;
+            /** Online */
+            online: boolean;
             /** Run Id */
             run_id: string | null;
             /** Jid */
@@ -993,7 +995,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "pass" | "changed" | "fail" | "blocked" | "stale" | "unknown";
+            status: "healthy" | "changed" | "unhealthy" | "blocked" | "stale" | "unknown";
             /** Pass Count */
             pass_count: number;
             /** Fail Count */

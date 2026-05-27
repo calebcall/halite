@@ -6,13 +6,14 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-HealthStatus = Literal["pass", "changed", "fail", "blocked", "stale", "unknown"]
+HealthStatus = Literal["healthy", "changed", "unhealthy", "blocked", "stale", "unknown"]
 
 
 class MinionHealthOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     minion_id: str
+    online: bool
     run_id: uuid.UUID | None
     jid: str | None
     completed_at: datetime | None
