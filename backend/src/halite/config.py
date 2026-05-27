@@ -30,6 +30,12 @@ class Settings(BaseSettings):
 
     audit_audit_reads: bool = False
 
+    # Fleet background scheduler.
+    fleet_highstate_funs: list[str] = ["state.apply", "state.highstate", "state.sls"]
+    fleet_lookback_minutes: int = 60
+    # 0 disables the timer; data can still be ingested on demand.
+    fleet_poll_interval_seconds: int = 300
+
     # Inventory background scheduler.
     # 0 disables the timer; manual refreshes via the UI still work either way.
     inventory_refresh_minutes: int = 0

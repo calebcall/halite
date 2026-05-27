@@ -72,9 +72,25 @@ def create_app(
                 name="inventory-scheduler",
             )
 
+        # Fleet highstate ingestion scheduler — only when salt-api is configured
+        # AND the operator opted in via FLEET_POLL_INTERVAL_SECONDS > 0.
+        fleet_scheduler = None
+        if salt_client is not None and settings.fleet_poll_interval_seconds > 0:
+            from halite.fleet.scheduler import FleetIngestScheduler
+            assert db_module._sessionmaker is not None
+            fleet_scheduler = FleetIngestScheduler(
+                settings=settings,
+                salt=salt_client,
+                sessionmaker=db_module._sessionmaker,
+            )
+            fleet_scheduler.start()
+        app.state.fleet_scheduler = fleet_scheduler
+
         try:
             yield
         finally:
+            if fleet_scheduler is not None:
+                await fleet_scheduler.stop()
             if inventory_task is not None:
                 inventory_task.cancel()
                 try:
