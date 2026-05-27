@@ -1,8 +1,9 @@
 // frontend/src/features/minions/minion-detail-page.tsx
-import { ArrowLeft, Loader2, Server, Terminal } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Clock, Loader2, Server, Terminal } from 'lucide-react'
 import { Link, useParams } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,6 +20,17 @@ import { MustChangePassword } from '@/features/auth/guards'
 import { useHasPerm } from '@/features/auth/use-has-perm'
 import { StatusBadge } from './minions-list-page'
 import { useMinion } from './use-minions'
+
+function formatRelativeTime(d: Date): string {
+  const diff = Date.now() - d.getTime()
+  const sec = Math.round(diff / 1000)
+  if (sec < 60) return 'just now'
+  const min = Math.round(sec / 60)
+  if (min < 60) return `${min}m ago`
+  const hr = Math.round(min / 60)
+  if (hr < 24) return `${hr}h ago`
+  return `${Math.round(hr / 24)}d ago`
+}
 
 export function MinionDetailPage() {
   return (
@@ -84,6 +96,26 @@ function MinionDetailPageInner() {
           </Button>
         )}
       </header>
+
+      {data?.last_refreshed_at && (
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 text-xs',
+            data.is_stale
+              ? 'text-warning'
+              : 'text-muted-foreground',
+          )}
+          title={new Date(data.last_refreshed_at).toLocaleString()}
+        >
+          {data.is_stale ? (
+            <AlertTriangle className="size-3" />
+          ) : (
+            <Clock className="size-3" />
+          )}
+          Updated {formatRelativeTime(new Date(data.last_refreshed_at))}
+          {data.is_stale && ' — data is stale'}
+        </span>
+      )}
 
       {isPending && (
         <div className="flex items-center justify-center py-12 text-muted-foreground">

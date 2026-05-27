@@ -978,6 +978,13 @@ export interface components {
             ip?: string | null;
             /** Grains */
             grains?: Record<string, never> | null;
+            /** Last Refreshed At */
+            last_refreshed_at?: string | null;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
         };
         /** MinionHealthOut */
         MinionHealthOut: {
@@ -1013,6 +1020,13 @@ export interface components {
             total: number;
             /** Minions */
             minions: components["schemas"]["MinionSummary"][];
+            /** Last Refreshed At */
+            last_refreshed_at?: string | null;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
         };
         /** MinionSummary */
         MinionSummary: {
@@ -1025,6 +1039,14 @@ export interface components {
              * @enum {string}
              */
             status: "online" | "offline" | "pending" | "rejected" | "denied";
+            /** Os */
+            os?: string | null;
+            /** Os Family */
+            os_family?: string | null;
+            /** Osrelease */
+            osrelease?: string | null;
+            /** Saltversion */
+            saltversion?: string | null;
         };
         /**
          * NameFilter

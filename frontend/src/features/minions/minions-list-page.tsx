@@ -1,5 +1,5 @@
 // frontend/src/features/minions/minions-list-page.tsx
-import { Loader2, MoreHorizontal, Server, Terminal } from 'lucide-react'
+import { AlertTriangle, Clock, Loader2, MoreHorizontal, Server, Terminal } from 'lucide-react'
 import { Link, useNavigate } from '@tanstack/react-router'
 
 import { Badge } from '@/components/ui/badge'
@@ -18,11 +18,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 import { ApiError, errorDetail } from '@/shared/api/client'
 import { MustChangePassword } from '@/features/auth/guards'
 import { useHasPerm } from '@/features/auth/use-has-perm'
 import type { MinionStatus } from './api'
 import { useMinionsList } from './use-minions'
+
+function formatRelativeTime(d: Date): string {
+  const diff = Date.now() - d.getTime()
+  const sec = Math.round(diff / 1000)
+  if (sec < 60) return 'just now'
+  const min = Math.round(sec / 60)
+  if (min < 60) return `${min}m ago`
+  const hr = Math.round(min / 60)
+  if (hr < 24) return `${hr}h ago`
+  return `${Math.round(hr / 24)}d ago`
+}
 
 export function MinionsListPage() {
   return (
@@ -72,6 +84,25 @@ function MinionsListPageInner() {
         <p className="text-sm text-muted-foreground">
           All known minions across every state. Refreshes every 30 seconds.
         </p>
+        {data?.last_refreshed_at && (
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 text-xs',
+              data.is_stale
+                ? 'text-warning'
+                : 'text-muted-foreground',
+            )}
+            title={new Date(data.last_refreshed_at).toLocaleString()}
+          >
+            {data.is_stale ? (
+              <AlertTriangle className="size-3" />
+            ) : (
+              <Clock className="size-3" />
+            )}
+            Updated {formatRelativeTime(new Date(data.last_refreshed_at))}
+            {data.is_stale && ' — data is stale'}
+          </span>
+        )}
       </div>
 
       <div className="rounded-md border">
@@ -80,6 +111,8 @@ function MinionsListPageInner() {
             <TableRow>
               <TableHead>Minion ID</TableHead>
               <TableHead>IP</TableHead>
+              <TableHead>OS</TableHead>
+              <TableHead>Salt Version</TableHead>
               <TableHead className="w-32 text-right">Status</TableHead>
               <TableHead className="w-12" />
             </TableRow>
@@ -87,14 +120,14 @@ function MinionsListPageInner() {
           <TableBody>
             {isPending && (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                   <Loader2 className="mx-auto h-4 w-4 animate-spin" />
                 </TableCell>
               </TableRow>
             )}
             {!isPending && data && data.minions.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                   No minions known to the master.
                 </TableCell>
               </TableRow>
@@ -113,6 +146,15 @@ function MinionsListPageInner() {
                 </TableCell>
                 <TableCell className="font-mono text-xs">
                   {m.ip || <span className="text-muted-foreground">—</span>}
+                </TableCell>
+                <TableCell className="text-xs">
+                  {m.os
+                    ? `${m.os} ${m.osrelease ?? ''}`.trim()
+                    : <span className="text-muted-foreground">—</span>
+                  }
+                </TableCell>
+                <TableCell className="font-mono text-xs">
+                  {m.saltversion || <span className="text-muted-foreground">—</span>}
                 </TableCell>
                 <TableCell className="text-right">
                   <StatusBadge status={m.status} />
