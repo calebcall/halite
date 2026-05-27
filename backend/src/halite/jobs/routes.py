@@ -12,6 +12,8 @@ from halite.jobs.index_service import (
 )
 from halite.jobs.schemas import JobActivityOut, JobDetail, JobsListOut
 from halite.jobs.service import get_job_detail, list_recent_jobs
+from halite.jobs.timeline_schemas import TimelineOut
+from halite.jobs.timeline_service import get_timeline
 from halite.salt.client import SaltAPIError, SaltAPIUnavailable
 from halite.salt.deps import salt_client_or_503, wrap_salt_errors
 
@@ -65,6 +67,37 @@ async def jobs_activity_route(
         hours=hours,
         active_jids=runtime.active_jids,
         last_polled_at=runtime.active_jids_refreshed_at,
+    )
+
+
+@router.get(
+    "/timeline",
+    response_model=TimelineOut,
+    dependencies=[require_perm("view", "job:*")],
+)
+async def jobs_timeline_route(
+    request: Request,
+    db: SessionDep,
+    window: str = Query(default="24h"),
+    group_by: str = Query(default="function"),
+    include_system: bool = Query(default=False),
+    function_filter: str | None = Query(default=None, max_length=128),
+    user: str | None = Query(default=None, max_length=255),
+) -> TimelineOut:
+    if window not in {"1h", "4h", "24h", "7d"}:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid window")
+    if group_by not in {"function", "user"}:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid group_by")
+    runtime = request.app.state.runtime
+    return await get_timeline(
+        db,
+        window=window,  # type: ignore[arg-type]
+        group_by=group_by,  # type: ignore[arg-type]
+        include_system=include_system,
+        function_filter=function_filter,
+        user_filter=user,
+        active_jids=runtime.active_jids,
+        active_jids_refreshed_at=runtime.active_jids_refreshed_at,
     )
 
 
