@@ -83,6 +83,21 @@ def _manage_present_handler(connected: dict[str, str]):
     return handler
 
 
+class _StubScheduler:
+    """Minimal scheduler stub that exposes a pre-set connectivity set."""
+
+    def __init__(self, connected: set[str]) -> None:
+        self._connected = connected
+
+    @property
+    def connected_minions(self) -> set[str]:
+        return self._connected
+
+    @property
+    def connected_refreshed_at(self):
+        return None
+
+
 @pytest.mark.asyncio
 async def test_health_returns_one_row_per_minion(app_db, session, fake_salt_api):
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
@@ -201,19 +216,14 @@ async def test_health_marks_offline_as_unhealthy(app_db, session, fake_salt_api)
     await _seed_run(session, minion_id="web-1", jid="jid-pass", pass_count=10, fail_count=0)
     await session.commit()
 
-    # Salt reports NO connected minions — web-1 is offline.
-    fake_salt_api.run_handler = _manage_present_handler({})
-
+    # Scheduler reports NO connected minions — web-1 is offline.
     app = create_app(settings=settings, codec=codec)
-    client = _attach_salt_client(app, fake_salt_api)
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get(
-                "/api/fleet/health",
-                cookies={settings.cookie_name: codec.sign(sess.id)},
-            )
-    finally:
-        await client.aclose()
+    app.state.fleet_scheduler = _StubScheduler(set())
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get(
+            "/api/fleet/health",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
 
     assert r.status_code == 200
     body = r.json()
@@ -233,18 +243,14 @@ async def test_health_includes_online_minion_without_runs(app_db, session, fake_
     # No runs seeded at all.
     await session.commit()
 
-    fake_salt_api.run_handler = _manage_present_handler({"web-1": "10.0.0.1"})
-
+    # Scheduler reports web-1 as connected even though it has no runs.
     app = create_app(settings=settings, codec=codec)
-    client = _attach_salt_client(app, fake_salt_api)
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
-            r = await ac.get(
-                "/api/fleet/health",
-                cookies={settings.cookie_name: codec.sign(sess.id)},
-            )
-    finally:
-        await client.aclose()
+    app.state.fleet_scheduler = _StubScheduler({"web-1"})
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get(
+            "/api/fleet/health",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
 
     assert r.status_code == 200
     body = r.json()

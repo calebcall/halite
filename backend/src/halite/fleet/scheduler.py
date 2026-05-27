@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from halite.fleet.ingest import ingest_recent_highstates
@@ -52,6 +53,16 @@ class FleetIngestScheduler:
         self._sessionmaker = sessionmaker
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
+        self._connected_minions: set[str] | None = None
+        self._connected_refreshed_at: datetime | None = None
+
+    @property
+    def connected_minions(self) -> set[str] | None:
+        return self._connected_minions
+
+    @property
+    def connected_refreshed_at(self) -> datetime | None:
+        return self._connected_refreshed_at
 
     async def _loop(self) -> None:
         log.info(
@@ -79,6 +90,15 @@ class FleetIngestScheduler:
             except TimeoutError:
                 await self._tick()
 
+    async def _refresh_connectivity(self) -> None:
+        try:
+            conn_map = await self._salt.list_connected_minions()
+            self._connected_minions = set(conn_map.keys())
+            self._connected_refreshed_at = datetime.now(tz=UTC)
+            log.info("fleet connectivity refreshed: %d minions online", len(self._connected_minions))
+        except Exception:
+            log.exception("fleet connectivity refresh failed; keeping last-known set")
+
     async def _tick(self) -> None:
         try:
             async with self._sessionmaker() as session:
@@ -95,6 +115,7 @@ class FleetIngestScheduler:
                 log.debug("fleet scheduler tick: 0 new runs")
         except Exception:
             log.exception("fleet scheduler tick failed")
+        await self._refresh_connectivity()
 
     def start(self) -> None:
         if self._task is None:

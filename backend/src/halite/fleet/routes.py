@@ -20,7 +20,6 @@ from halite.fleet.service import (
     latest_per_minion,
     top_failures,
 )
-from halite.salt.deps import salt_client_or_503
 
 log = logging.getLogger(__name__)
 
@@ -29,17 +28,19 @@ router = APIRouter(prefix="/api/fleet", tags=["fleet"])
 
 @router.get("/health", response_model=FleetHealthOut)
 async def fleet_health_route(
-    db: SessionDep, request: Request, _: CurrentUser
+    request: Request, db: SessionDep, _: CurrentUser
 ) -> FleetHealthOut:
-    client = salt_client_or_503(request)
-    try:
-        connected_map = await client.list_connected_minions()
-        connected = set(connected_map.keys())
-    except Exception:
-        log.exception("fleet_health: failed to fetch connectivity; treating known minions as online")
-        # Fall back: trust whatever's in highstate_runs as the minion list,
-        # assume they're online (we can't tell). The truly-offline ones
-        # will look healthy during the outage — acceptable degrade.
+    scheduler = getattr(request.app.state, "fleet_scheduler", None)
+    cached_connected = (
+        scheduler.connected_minions if scheduler is not None else None
+    )
+    if cached_connected is not None:
+        connected = cached_connected
+    else:
+        # Cold-start fallback: scheduler hasn't ticked yet. Use the set
+        # of minions we have runs for; they'll all appear "online" until
+        # the first connectivity refresh. Better than blocking on a
+        # slow live salt call.
         runs = await latest_per_minion(db)
         connected = {r.minion_id for r in runs}
     minions = await fleet_health(db, connected=connected)
