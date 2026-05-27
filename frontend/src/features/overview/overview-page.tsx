@@ -12,9 +12,14 @@ import {
   Users,
 } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
+import { ComplianceSparkline } from '@/features/fleet/compliance-sparkline'
+import { FleetHeatmap } from '@/features/fleet/fleet-heatmap'
+import { MinionRunPanel } from '@/features/fleet/minion-run-panel'
+import { TopFailuresChart } from '@/features/fleet/top-failures-chart'
 import { ApiError } from '@/shared/api/client'
+import type { components } from '@/shared/api/types.gen'
 import { useCurrentUser } from '@/features/auth/use-current-user'
 import { useHasPerm } from '@/features/auth/use-has-perm'
 import { useJobActivity } from '@/features/jobs/use-jobs'
@@ -26,6 +31,8 @@ import { JobActivityArea } from './job-activity-area'
 import { KeyStatusBar } from './key-status-bar'
 import { MinionStatusDonut } from './minion-status-donut'
 import { StatCard } from './stat-card'
+
+type Minion = components['schemas']['MinionHealthOut']
 
 type Tile = {
   to: string
@@ -96,6 +103,14 @@ export function OverviewPage() {
   const canViewKeys = useHasPerm('view', 'key:*')
   const canViewJobs = useHasPerm('view', 'job:*')
 
+  const [selectedMinion, setSelectedMinion] = useState<Minion | null>(null)
+  const [panelOpen, setPanelOpen] = useState(false)
+
+  const handleTileClick = (m: Minion) => {
+    setSelectedMinion(m)
+    setPanelOpen(true)
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <header>
@@ -109,6 +124,14 @@ export function OverviewPage() {
           A Salt operations console. Live metrics refresh every 30 seconds.
         </p>
       </header>
+
+      <section aria-label="Fleet health" className="flex flex-col gap-4">
+        <FleetHeatmap onTileClick={handleTileClick} />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <ComplianceSparkline />
+          <TopFailuresChart />
+        </div>
+      </section>
 
       <KpiRow
         canViewMinions={canViewMinions}
@@ -151,6 +174,12 @@ export function OverviewPage() {
           ))}
         </div>
       </section>
+
+      <MinionRunPanel
+        minion={selectedMinion}
+        open={panelOpen}
+        onOpenChange={setPanelOpen}
+      />
     </div>
   )
 }
