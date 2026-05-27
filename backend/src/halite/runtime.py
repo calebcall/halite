@@ -12,6 +12,7 @@ schedulers start. Everything degrades gracefully to empty responses.
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -19,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from halite.config import Settings
 from halite.fleet.scheduler import FleetIngestScheduler
 from halite.inventory.scheduler import InventoryScheduler
+from halite.jobs.scheduler import JobsIndexScheduler
 from halite.minions.scheduler import MinionStateScheduler
 from halite.salt.client import SaltAPIClient
 from halite.settings.models import AppSettings
@@ -44,6 +46,9 @@ class RuntimeConfig:
         self.minion_scheduler: MinionStateScheduler | None = None
         self.fleet_scheduler: FleetIngestScheduler | None = None
         self.inventory_scheduler: InventoryScheduler | None = None
+        self.jobs_scheduler: JobsIndexScheduler | None = None
+        self.active_jids: set[str] | None = None
+        self.active_jids_refreshed_at: datetime | None = None
 
     async def boot(self, db: AsyncSession) -> None:
         """Wire up salt client and schedulers from the current DB row."""
@@ -60,6 +65,10 @@ class RuntimeConfig:
     async def shutdown(self) -> None:
         """Stop all schedulers and close the salt client."""
         await self._teardown()
+
+    def _on_active_jids_refresh(self, jids: set[str], at: datetime) -> None:
+        self.active_jids = jids
+        self.active_jids_refreshed_at = at
 
     async def _load_row(self, db: AsyncSession) -> AppSettings:
         return (await db.execute(select(AppSettings))).scalar_one()
@@ -83,6 +92,14 @@ class RuntimeConfig:
             except Exception:
                 log.exception("inventory scheduler teardown failed")
             self.inventory_scheduler = None
+        if self.jobs_scheduler is not None:
+            try:
+                await self.jobs_scheduler.stop()
+            except Exception:
+                log.exception("jobs scheduler teardown failed")
+            self.jobs_scheduler = None
+        self.active_jids = None
+        self.active_jids_refreshed_at = None
         if self.salt is not None:
             try:
                 await self.salt.aclose()
@@ -136,3 +153,12 @@ class RuntimeConfig:
                 row=row, salt=self.salt, sessionmaker=self._sessionmaker
             )
             self.inventory_scheduler.start()
+
+        if row.jobs_poll_interval_seconds > 0:
+            self.jobs_scheduler = JobsIndexScheduler.from_row(
+                row,
+                salt=self.salt,
+                sessionmaker=self._sessionmaker,
+                on_active_refresh=self._on_active_jids_refresh,
+            )
+            self.jobs_scheduler.start()
