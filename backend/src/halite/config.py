@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     # Seconds between process start and the first scheduled refresh.
     inventory_refresh_initial_delay_s: int = 30
 
+    # Minion-state background scheduler (keys / presence / grains).
+    # Each loop is independently opt-in; 0 disables that loop.
+    minion_state_grains_interval_seconds: int = 0
+    minion_state_initial_delay_seconds: int = 10
+    minion_state_keys_interval_seconds: int = 0
+    minion_state_presence_interval_seconds: int = 0
+
     # Static SPA — path to the built frontend dist. None disables SPA serving.
     static_dir: str | None = Field(default=None, validation_alias="HALITE_STATIC_DIR")
 

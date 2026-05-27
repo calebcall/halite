@@ -86,9 +86,29 @@ def create_app(
             fleet_scheduler.start()
         app.state.fleet_scheduler = fleet_scheduler
 
+        # Minion-state scheduler (keys / presence / grains) — each loop is
+        # independently opt-in via its own interval setting. All default 0.
+        from halite.minions.scheduler import MinionStateScheduler
+        minion_state_scheduler: MinionStateScheduler | None = None
+        if salt_client is not None and (
+            settings.minion_state_keys_interval_seconds > 0
+            or settings.minion_state_presence_interval_seconds > 0
+            or settings.minion_state_grains_interval_seconds > 0
+        ):
+            assert db_module._sessionmaker is not None
+            minion_state_scheduler = MinionStateScheduler(
+                settings=settings,
+                salt=salt_client,
+                sessionmaker=db_module._sessionmaker,
+            )
+            minion_state_scheduler.start()
+        app.state.minion_state_scheduler = minion_state_scheduler
+
         try:
             yield
         finally:
+            if minion_state_scheduler is not None:
+                await minion_state_scheduler.stop()
             if fleet_scheduler is not None:
                 await fleet_scheduler.stop()
             if inventory_task is not None:
