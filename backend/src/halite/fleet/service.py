@@ -22,7 +22,11 @@ _STALE_AFTER = timedelta(days=2)
 def _status_for(run: HighstateRun, now: datetime) -> HealthStatus:
     if run.blocked:
         return "blocked"
-    if (now - run.completed_at) > _STALE_AFTER:
+    # SQLite drops timezone info; treat naive datetimes as UTC.
+    completed = run.completed_at
+    if completed.tzinfo is None:
+        completed = completed.replace(tzinfo=UTC)
+    if (now - completed) > _STALE_AFTER:
         return "stale"
     if run.fail_count > 0:
         return "fail"

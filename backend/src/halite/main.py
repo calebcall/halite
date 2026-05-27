@@ -110,6 +110,7 @@ def create_app(
 
     from halite.audit.routes import router as audit_router
     from halite.auth.routes import router as auth_router
+    from halite.fleet.routes import router as fleet_router
     from halite.inventory.routes import router as inventory_router
     from halite.jobs.routes import router as jobs_router
     from halite.keys.routes import router as keys_router
@@ -122,6 +123,7 @@ def create_app(
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(audit_router)
+    app.include_router(fleet_router)
     app.include_router(inventory_router)
     app.include_router(jobs_router)
     app.include_router(keys_router)
