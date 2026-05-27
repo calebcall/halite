@@ -137,7 +137,13 @@ class SaltAPIClient:
         assert self._token is not None
         return self._token
 
-    async def _request(self, payload: dict[str, Any]) -> dict[str, Any]:
+    async def _request(
+        self,
+        payload: dict[str, Any],
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> dict[str, Any]:
         """POST a lowstate to salt-api, with retries on 5xx and one retry on
         401 after re-login.
 
@@ -149,19 +155,26 @@ class SaltAPIClient:
         (which has sessions disabled) results in
         "Authentication failure of type 'token' occurred" because salt-api's
         token cache has no record of the session id.
+
+        ``timeout`` overrides the client-default per request — useful for
+        best-effort calls that the caller wants to fail fast. ``max_retries``
+        overrides the global retry count for the same reason.
         """
         token = await self._ensure_token()
+        retries = max_retries if max_retries is not None else _MAX_RETRIES
+        post_kwargs: dict[str, Any] = {
+            "json": [payload],
+            "headers": {"X-Auth-Token": token},
+        }
+        if timeout is not None:
+            post_kwargs["timeout"] = timeout
 
         last_network_exc: Exception | None = None
         last_5xx_status: int | None = None
         last_5xx_body: Any = None
-        for attempt in range(_MAX_RETRIES):
+        for attempt in range(retries):
             try:
-                resp = await self._client.post(
-                    "/",
-                    json=[payload],
-                    headers={"X-Auth-Token": token},
-                )
+                resp = await self._client.post("/", **post_kwargs)
             except httpx.HTTPError as exc:
                 last_network_exc = exc
                 logger.warning("salt-api network error (attempt %d): %r", attempt + 1, exc)
@@ -171,11 +184,8 @@ class SaltAPIClient:
             if resp.status_code == 401:
                 # Token may be stale — refresh and retry once.
                 token = await self._ensure_token(force=True)
-                resp = await self._client.post(
-                    "/",
-                    json=[payload],
-                    headers={"X-Auth-Token": token},
-                )
+                post_kwargs["headers"] = {"X-Auth-Token": token}
+                resp = await self._client.post("/", **post_kwargs)
                 if resp.status_code == 401:
                     raise SaltAPIError(
                         401, _safe_json(resp), "salt-api auth rejected after refresh"
@@ -214,7 +224,7 @@ class SaltAPIClient:
         if last_5xx_status is not None:
             raise SaltAPIError(last_5xx_status, last_5xx_body)
         raise SaltAPIUnavailable(
-            f"salt-api unreachable after {_MAX_RETRIES} attempts: {last_network_exc!r}"
+            f"salt-api unreachable after {retries} attempts: {last_network_exc!r}"
         )
 
     # ---------- helpers ----------
@@ -224,8 +234,19 @@ class SaltAPIClient:
         # wheel return shape: {"return": [{"data": {"return": <X>, ...}}]}
         return body["return"][0]["data"]["return"]
 
-    async def runner_call(self, fun: str, **kwargs: Any) -> Any:
-        body = await self._request({"client": "runner", "fun": fun, **kwargs})
+    async def runner_call(
+        self,
+        fun: str,
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        body = await self._request(
+            {"client": "runner", "fun": fun, **kwargs},
+            timeout=timeout,
+            max_retries=max_retries,
+        )
         # runner return shape: {"return": [<X>]}
         return body["return"][0]
 
@@ -488,10 +509,16 @@ class SaltAPIClient:
     async def list_active_jobs(self) -> dict[str, dict[str, Any]]:
         """Return the dict of currently-running jobs (jid → details).
 
-        Calls runner.jobs.active. We typically only care about the keys
-        (set of active jids); callers cast as needed.
+        Calls runner.jobs.active with a short timeout + single attempt
+        because this runner iterates every minion that has a pending
+        job and waits for replies — on fleets with many offline minions
+        the salt-side wait can exceed httpx's default 30s timeout, and
+        we'd rather fail fast and treat "active set unknown" as empty
+        than make the entire Jobs page hang.
         """
-        result = await self.runner_call("jobs.active")
+        result = await self.runner_call(
+            "jobs.active", timeout=5.0, max_retries=1
+        )
         if not isinstance(result, dict):
             return {}
         return result
