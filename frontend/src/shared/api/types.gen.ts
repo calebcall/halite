@@ -551,6 +551,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/settings/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status Route */
+        get: operations["status_route_api_admin_settings_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Route */
+        get: operations["get_route_api_admin_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/settings/salt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Salt Route */
+        put: operations["put_salt_route_api_admin_settings_salt_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/settings/pollers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Pollers Route */
+        put: operations["put_pollers_route_api_admin_settings_pollers_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/settings/logging": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Logging Route */
+        put: operations["put_logging_route_api_admin_settings_logging_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/settings/test-salt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Salt Route
+         * @description Throwaway client. Validates creds without persisting.
+         */
+        post: operations["test_salt_route_api_admin_settings_test_salt_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/templates": {
         parameters: {
             query?: never;
@@ -958,6 +1063,19 @@ export interface components {
             /** Keys */
             keys: components["schemas"]["KeyEntry"][];
         };
+        /** LoggingSettingsIn */
+        LoggingSettingsIn: {
+            /** Log Format */
+            log_format?: ("json" | "text") | null;
+        };
+        /** LoggingSettingsOut */
+        LoggingSettingsOut: {
+            /**
+             * Log Format
+             * @enum {string}
+             */
+            log_format: "json" | "text";
+        };
         /** LoginPayload */
         LoginPayload: {
             /** Username */
@@ -1188,6 +1306,40 @@ export interface components {
             /** Resource Glob */
             resource_glob: string;
         };
+        /** PollerSettingsIn */
+        PollerSettingsIn: {
+            /** Inventory Refresh Minutes */
+            inventory_refresh_minutes?: number | null;
+            /** Inventory Refresh Initial Delay S */
+            inventory_refresh_initial_delay_s?: number | null;
+            /** Fleet Poll Interval Seconds */
+            fleet_poll_interval_seconds?: number | null;
+            /** Minion State Keys Interval Seconds */
+            minion_state_keys_interval_seconds?: number | null;
+            /** Minion State Presence Interval Seconds */
+            minion_state_presence_interval_seconds?: number | null;
+            /** Minion State Grains Interval Seconds */
+            minion_state_grains_interval_seconds?: number | null;
+            /** Minion State Initial Delay Seconds */
+            minion_state_initial_delay_seconds?: number | null;
+        };
+        /** PollerSettingsOut */
+        PollerSettingsOut: {
+            /** Inventory Refresh Minutes */
+            inventory_refresh_minutes: number;
+            /** Inventory Refresh Initial Delay S */
+            inventory_refresh_initial_delay_s: number;
+            /** Fleet Poll Interval Seconds */
+            fleet_poll_interval_seconds: number;
+            /** Minion State Keys Interval Seconds */
+            minion_state_keys_interval_seconds: number;
+            /** Minion State Presence Interval Seconds */
+            minion_state_presence_interval_seconds: number;
+            /** Minion State Grains Interval Seconds */
+            minion_state_grains_interval_seconds: number;
+            /** Minion State Initial Delay Seconds */
+            minion_state_initial_delay_seconds: number;
+        };
         /**
          * RefreshIn
          * @description Body for ``POST /api/inventory/refresh``.
@@ -1349,10 +1501,103 @@ export interface components {
              */
             cached_at: string;
         };
+        /**
+         * SaltSettingsIn
+         * @description PUT body for the salt section. All fields optional — only the
+         *     ones present are applied. At least one must be present.
+         */
+        SaltSettingsIn: {
+            /** Url */
+            url?: string | null;
+            /** Username */
+            username?: string | null;
+            /** Password */
+            password?: string | null;
+            /** Verify */
+            verify?: boolean | null;
+            /** Eauth */
+            eauth?: ("pam" | "sharedsecret" | "ldap" | "file" | "auto") | null;
+        };
+        /**
+         * SaltSettingsOut
+         * @description Salt API connection settings. Password is never returned — only
+         *     a boolean ``password_set`` so the UI can render "(set)" without
+         *     exposing the value.
+         */
+        SaltSettingsOut: {
+            /** Url */
+            url: string | null;
+            /** Username */
+            username: string | null;
+            /** Password Set */
+            password_set: boolean;
+            /** Verify */
+            verify: boolean;
+            /**
+             * Eauth
+             * @enum {string}
+             */
+            eauth: "pam" | "sharedsecret" | "ldap" | "file" | "auto";
+        };
+        /** SettingsOut */
+        SettingsOut: {
+            salt: components["schemas"]["SaltSettingsOut"];
+            pollers: components["schemas"]["PollerSettingsOut"];
+            logging: components["schemas"]["LoggingSettingsOut"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * SettingsStatusOut
+         * @description Used by the setup-wizard guard.
+         */
+        SettingsStatusOut: {
+            /** Configured */
+            configured: boolean;
+            /** Missing */
+            missing: string[];
+        };
         /** TemplateShareUpdate */
         TemplateShareUpdate: {
             /** Is Shared */
             is_shared: boolean;
+        };
+        /**
+         * TestSaltConnectionIn
+         * @description POST body for the test-connection endpoint. All fields required.
+         */
+        TestSaltConnectionIn: {
+            /**
+             * Url
+             * Format: uri
+             */
+            url: string;
+            /** Username */
+            username: string;
+            /**
+             * Password
+             * Format: password
+             */
+            password: string;
+            /** Verify */
+            verify: boolean;
+            /**
+             * Eauth
+             * @enum {string}
+             */
+            eauth: "pam" | "sharedsecret" | "ldap" | "file" | "auto";
+        };
+        /** TestSaltConnectionOut */
+        TestSaltConnectionOut: {
+            /** Ok */
+            ok: boolean;
+            /** Detail */
+            detail: string;
+            /** Minion Count */
+            minion_count?: number | null;
         };
         /** TopFailureOut */
         TopFailureOut: {
@@ -2473,6 +2718,178 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SaltFunctionsOut"];
+                };
+            };
+        };
+    };
+    status_route_api_admin_settings_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsStatusOut"];
+                };
+            };
+        };
+    };
+    get_route_api_admin_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+        };
+    };
+    put_salt_route_api_admin_settings_salt_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaltSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_pollers_route_api_admin_settings_pollers_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PollerSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_logging_route_api_admin_settings_logging_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoggingSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_salt_route_api_admin_settings_test_salt_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestSaltConnectionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestSaltConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

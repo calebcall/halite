@@ -18,7 +18,7 @@ export class ApiError extends Error {
   }
 }
 
-type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+type Method = 'DELETE' | 'GET' | 'PATCH' | 'POST' | 'PUT'
 
 interface RequestOpts {
   method: Method
@@ -320,6 +320,42 @@ export const api = {
       request<paths['/api/salt/functions']['get']['responses']['200']['content']['application/json']>({
         method: 'GET',
         path: '/api/salt/functions',
+      }),
+  },
+  settings: {
+    get: () =>
+      request<paths['/api/admin/settings']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/admin/settings',
+      }),
+    putLogging: (body: paths['/api/admin/settings/logging']['put']['requestBody']['content']['application/json']) =>
+      request<paths['/api/admin/settings/logging']['put']['responses']['200']['content']['application/json']>({
+        body,
+        method: 'PUT',
+        path: '/api/admin/settings/logging',
+      }),
+    putPollers: (body: paths['/api/admin/settings/pollers']['put']['requestBody']['content']['application/json']) =>
+      request<paths['/api/admin/settings/pollers']['put']['responses']['200']['content']['application/json']>({
+        body,
+        method: 'PUT',
+        path: '/api/admin/settings/pollers',
+      }),
+    putSalt: (body: paths['/api/admin/settings/salt']['put']['requestBody']['content']['application/json']) =>
+      request<paths['/api/admin/settings/salt']['put']['responses']['200']['content']['application/json']>({
+        body,
+        method: 'PUT',
+        path: '/api/admin/settings/salt',
+      }),
+    status: () =>
+      request<paths['/api/admin/settings/status']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/admin/settings/status',
+      }),
+    testSalt: (body: paths['/api/admin/settings/test-salt']['post']['requestBody']['content']['application/json']) =>
+      request<paths['/api/admin/settings/test-salt']['post']['responses']['200']['content']['application/json']>({
+        body,
+        method: 'POST',
+        path: '/api/admin/settings/test-salt',
       }),
   },
   templates: {
