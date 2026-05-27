@@ -1,6 +1,7 @@
 # backend/src/halite/jobs/schemas.py
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -25,6 +26,8 @@ class JobsListOut(BaseModel):
     # how many records exist past `limit`.
     total: int
     jobs: list[JobSummary]
+    last_polled_at: datetime | None = None
+    active_known: bool = False
 
 
 class JobMinionResult(BaseModel):
@@ -65,3 +68,5 @@ class JobActivityOut(BaseModel):
     # Jobs currently executing, regardless of when they started (some may
     # predate the window).
     running: int
+    last_polled_at: datetime | None = None
+    active_known: bool = False
