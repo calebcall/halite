@@ -1,6 +1,7 @@
 # backend/src/halite/minions/schemas.py
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from typing import Any, Literal
 
@@ -33,3 +34,43 @@ class MinionDetail(BaseModel):
     grains: dict[str, Any] | None = None
     last_refreshed_at: datetime | None = None
     is_stale: bool = False
+
+
+RunStatus = Literal["healthy", "changed", "unhealthy", "blocked"]
+
+
+class MinionRunSummary(BaseModel):
+    """One row in the per-minion recent-runs table."""
+
+    id: uuid.UUID
+    jid: str
+    fun: str
+    completed_at: datetime
+    pass_count: int
+    fail_count: int
+    change_count: int
+    total_count: int
+    duration_ms: int
+    blocked: bool
+    status: RunStatus
+
+
+class MinionRunsOut(BaseModel):
+    minion_id: str
+    total: int
+    runs: list[MinionRunSummary]
+
+
+class MinionComplianceBucket(BaseModel):
+    completed_at: datetime
+    jid: str
+    pass_count: int
+    fail_count: int
+    change_count: int
+    total_count: int
+    status: RunStatus
+
+
+class MinionComplianceOut(BaseModel):
+    minion_id: str
+    buckets: list[MinionComplianceBucket]
