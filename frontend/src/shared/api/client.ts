@@ -313,10 +313,22 @@ export const api = {
         method: 'GET',
         path: '/api/minions',
       }),
+    compliance: (minionId: string, params: { limit?: number } = {}) =>
+      request<paths['/api/minions/{minion_id}/compliance']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: `/api/minions/${encodeURIComponent(minionId)}/compliance`,
+        query: params,
+      }),
     get: (minionId: string) =>
       request<paths['/api/minions/{minion_id}']['get']['responses']['200']['content']['application/json']>({
         method: 'GET',
         path: `/api/minions/${encodeURIComponent(minionId)}`,
+      }),
+    runs: (minionId: string, params: { limit?: number } = {}) =>
+      request<paths['/api/minions/{minion_id}/runs']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: `/api/minions/${encodeURIComponent(minionId)}/runs`,
+        query: params,
       }),
   },
   run: {

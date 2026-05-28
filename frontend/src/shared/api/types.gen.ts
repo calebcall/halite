@@ -457,6 +457,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/minions/{minion_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Minion Runs Route */
+        get: operations["list_minion_runs_route_api_minions__minion_id__runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/minions/{minion_id}/compliance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Minion Compliance Route */
+        get: operations["list_minion_compliance_route_api_minions__minion_id__compliance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/roles": {
         parameters: {
             query?: never;
@@ -1137,6 +1171,36 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** MinionComplianceBucket */
+        MinionComplianceBucket: {
+            /**
+             * Completed At
+             * Format: date-time
+             */
+            completed_at: string;
+            /** Jid */
+            jid: string;
+            /** Pass Count */
+            pass_count: number;
+            /** Fail Count */
+            fail_count: number;
+            /** Change Count */
+            change_count: number;
+            /** Total Count */
+            total_count: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "healthy" | "changed" | "unhealthy" | "blocked";
+        };
+        /** MinionComplianceOut */
+        MinionComplianceOut: {
+            /** Minion Id */
+            minion_id: string;
+            /** Buckets */
+            buckets: components["schemas"]["MinionComplianceBucket"][];
+        };
         /** MinionDetail */
         MinionDetail: {
             /** Id */
@@ -1199,6 +1263,52 @@ export interface components {
              * @default false
              */
             is_stale: boolean;
+        };
+        /**
+         * MinionRunSummary
+         * @description One row in the per-minion recent-runs table.
+         */
+        MinionRunSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Jid */
+            jid: string;
+            /** Fun */
+            fun: string;
+            /**
+             * Completed At
+             * Format: date-time
+             */
+            completed_at: string;
+            /** Pass Count */
+            pass_count: number;
+            /** Fail Count */
+            fail_count: number;
+            /** Change Count */
+            change_count: number;
+            /** Total Count */
+            total_count: number;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Blocked */
+            blocked: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "healthy" | "changed" | "unhealthy" | "blocked";
+        };
+        /** MinionRunsOut */
+        MinionRunsOut: {
+            /** Minion Id */
+            minion_id: string;
+            /** Total */
+            total: number;
+            /** Runs */
+            runs: components["schemas"]["MinionRunSummary"][];
         };
         /** MinionSummary */
         MinionSummary: {
@@ -2618,6 +2728,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MinionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_minion_runs_route_api_minions__minion_id__runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                minion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MinionRunsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_minion_compliance_route_api_minions__minion_id__compliance_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                minion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MinionComplianceOut"];
                 };
             };
             /** @description Validation Error */
