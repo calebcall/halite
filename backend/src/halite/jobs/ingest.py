@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -14,6 +14,14 @@ log = logging.getLogger(__name__)
 
 # Salt JIDs are timestamp-derived: YYYYMMDDHHMMSSffffff (microsecond precision).
 _JID_RE = re.compile(r"^\d{20}$")
+
+# Default window for jobs.list_jobs. Without a start_time, big masters return
+# the entire cache (potentially MBs) and the salt-api connection drops mid-
+# stream. 4 hours is wide enough to catch up after a brief poller outage but
+# narrow enough to keep payload sizes well under salt-api's streaming limits.
+_DEFAULT_LOOKBACK_HOURS = 4
+# Salt's start_time arg accepts this format (used by salt internally).
+_SALT_TIME_FMT = "%Y, %b %d %H:%M:%S.%f"
 
 
 def _jid_to_utc(jid: str) -> datetime | None:
@@ -37,11 +45,33 @@ def _opt_str(v: Any) -> str | None:
     return s if s else None
 
 
-async def refresh_jobs_index(db: AsyncSession, salt: Any) -> int:
-    """Fetch ``runner.jobs.list_jobs`` and upsert each row into
-    ``jobs_index``. Returns the number of rows written this call (insert
-    or update)."""
-    raw = await salt.runner_call("jobs.list_jobs")
+async def refresh_jobs_index(
+    db: AsyncSession,
+    salt: Any,
+    *,
+    lookback_hours: int = _DEFAULT_LOOKBACK_HOURS,
+) -> int:
+    """Fetch ``runner.jobs.list_jobs`` with a ``start_time`` window and
+    upsert each row into ``jobs_index``. Returns the number of rows
+    written this call.
+
+    We pass ``start_time`` because masters with large job caches drop
+    the connection partway through streaming an unfiltered response (we
+    observed a master cut us off at 2.7 MB of a 16.7 MB payload). 4
+    hours of jobs is roughly 1.5–2 MB on a busy fleet — well within
+    salt-api's streaming budget. The 90s timeout absorbs slow masters;
+    a single attempt is fine because the next scheduler tick (300s
+    default) will retry naturally.
+    """
+    start_time = (
+        datetime.now(tz=UTC) - timedelta(hours=lookback_hours)
+    ).strftime(_SALT_TIME_FMT)
+    raw = await salt.runner_call(
+        "jobs.list_jobs",
+        timeout=90.0,
+        max_retries=1,
+        start_time=start_time,
+    )
     if not isinstance(raw, dict):
         return 0
     now = datetime.now(tz=UTC)

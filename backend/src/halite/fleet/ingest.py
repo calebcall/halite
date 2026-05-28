@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from halite.fleet.models import HighstateRun
 from halite.fleet.parser import summarize_lowstate
+from halite.jobs.index_model import JobIndexEntry
 
 log = logging.getLogger(__name__)
 
@@ -58,31 +59,59 @@ async def ingest_recent_highstates(
     funs: list[str],
     lookback_minutes: int = 60,
 ) -> int:
-    """Pull recent highstate jobs from salt and persist parsed summaries.
+    """Read recent state.* jids from ``jobs_index`` and persist their
+    per-minion results into ``highstate_runs``.
 
-    Returns the number of rows written this run. Idempotent on (minion_id, jid).
+    We DELIBERATELY do not call ``runner.jobs.list_jobs`` here — on
+    masters with large job caches that response drops mid-stream and the
+    fleet scheduler ends up failing every tick (we observed this against
+    a master with thousands of cached jobs, dropping at 2.7 MB of a 16.7
+    MB payload). The jobs-index poller already does the heavy lifting of
+    discovering jids using a server-side ``start_time`` filter, and we
+    inherit that work for free.
+
+    Idempotent on (minion_id, jid). Skips jids already fully ingested.
+    Returns the number of rows written this run.
     """
     cutoff = datetime.now(tz=UTC) - timedelta(minutes=lookback_minutes)
-    jobs = await salt.runner_call("jobs.list_jobs", search_function=funs)
-    if not isinstance(jobs, dict):
-        log.warning("ingest: list_jobs returned non-dict %r", type(jobs).__name__)
+    # Source of truth: jobs_index rows for state.* functions in the window.
+    candidates = (
+        await db.execute(
+            select(JobIndexEntry).where(
+                JobIndexEntry.started_at >= cutoff,
+                JobIndexEntry.function.in_(funs),
+            )
+        )
+    ).scalars().all()
+    if not candidates:
         return 0
 
+    # Pre-fetch jids that already have any highstate_runs row so we skip
+    # them. A jid present means it's been processed (at least partially);
+    # don't refetch.
+    already_ingested = {
+        r for r in (
+            await db.execute(
+                select(HighstateRun.jid).where(
+                    HighstateRun.jid.in_([c.jid for c in candidates])
+                )
+            )
+        ).scalars().all()
+    }
+
     written = 0
-    for jid, meta in jobs.items():
-        if not isinstance(meta, dict):
+    for entry in candidates:
+        if entry.jid in already_ingested:
             continue
-        fun = meta.get("Function")
-        if fun not in funs:
-            continue
-        started = _parse_salt_time(meta.get("StartTime"))
-        if started < cutoff:
-            continue
+        fun = entry.function
+        started = entry.started_at
+        if started.tzinfo is None:
+            started = started.replace(tzinfo=UTC)
 
         try:
-            job = await salt.runner_call("jobs.list_job", jid=jid)
+            job = await salt.runner_call("jobs.list_job", jid=entry.jid)
         except Exception:
-            log.exception("ingest: list_job failed for %s", jid)
+            log.exception("ingest: list_job failed for %s", entry.jid)
             continue
         if not isinstance(job, dict):
             continue
@@ -90,11 +119,16 @@ async def ingest_recent_highstates(
         if not isinstance(returns_section, dict):
             continue
 
-        for minion_id, entry in returns_section.items():
+        jid = entry.jid
+        for minion_id, entry_value in returns_section.items():
             # list_job wraps each minion result: {"return": <state-dict>, "retcode": int, ...}
             # Fall back to the entry itself for salt versions that return the
             # state dict directly (or a plain string sentinel for blocked minions).
-            raw_result = entry["return"] if isinstance(entry, dict) and "return" in entry else entry
+            raw_result = (
+                entry_value["return"]
+                if isinstance(entry_value, dict) and "return" in entry_value
+                else entry_value
+            )
             existing = (
                 await db.execute(
                     select(HighstateRun.id).where(
