@@ -1,24 +1,16 @@
 // frontend/src/features/minions/minion-detail-page.tsx
-import { AlertTriangle, ArrowLeft, Clock, Loader2, Server, Terminal } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Clock, Loader2 } from 'lucide-react'
 import { Link, useParams } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
 
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { ApiError, errorDetail } from '@/shared/api/client'
 import { MustChangePassword } from '@/features/auth/guards'
-import { useHasPerm } from '@/features/auth/use-has-perm'
-import { StatusBadge } from './minions-list-page'
+
+import { MinionGrainExplorer } from './minion-grain-explorer'
+import { MinionQuickActions } from './minion-quick-actions'
+import { MinionRunsTable } from './minion-runs-table'
+import { MinionStatusCards } from './minion-status-cards'
+import { MinionStatusHeader } from './minion-status-header'
 import { useMinion } from './use-minions'
 
 function formatRelativeTime(d: Date): string {
@@ -43,8 +35,6 @@ export function MinionDetailPage() {
 function MinionDetailPageInner() {
   const { minionId } = useParams({ from: '/app/minions/$minionId' })
   const { data, isPending, error } = useMinion(minionId)
-  const [grainSearch, setGrainSearch] = useState('')
-  const canRun = useHasPerm('execute', 'salt:*')
   const detail = errorDetail(error)
 
   if (error instanceof ApiError && error.status === 404) {
@@ -81,42 +71,6 @@ function MinionDetailPageInner() {
         Back to minions
       </Link>
 
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Server className="h-6 w-6 text-muted-foreground" />
-          <h2 className="font-mono text-2xl font-semibold tracking-tight">{minionId}</h2>
-          {data && <StatusBadge status={data.status} />}
-        </div>
-        {canRun && (
-          <Button asChild variant="outline" size="sm">
-            <Link to="/run" search={{ target: minionId, target_type: 'glob' }}>
-              <Terminal className="mr-2 h-4 w-4" />
-              Run command
-            </Link>
-          </Button>
-        )}
-      </header>
-
-      {data?.last_refreshed_at && (
-        <span
-          className={cn(
-            'inline-flex items-center gap-1.5 text-xs',
-            data.is_stale
-              ? 'text-warning'
-              : 'text-muted-foreground',
-          )}
-          title={new Date(data.last_refreshed_at).toLocaleString()}
-        >
-          {data.is_stale ? (
-            <AlertTriangle className="size-3" />
-          ) : (
-            <Clock className="size-3" />
-          )}
-          Updated {formatRelativeTime(new Date(data.last_refreshed_at))}
-          {data.is_stale && ' — data is stale'}
-        </span>
-      )}
-
       {isPending && (
         <div className="flex items-center justify-center py-12 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
@@ -125,22 +79,32 @@ function MinionDetailPageInner() {
 
       {data && (
         <>
-          <dl className="grid grid-cols-2 gap-2 rounded-md border p-4 text-sm">
-            <dt className="text-muted-foreground">IP address</dt>
-            <dd className="font-mono">{data.ip ?? '—'}</dd>
-            <dt className="text-muted-foreground">Status</dt>
-            <dd>{data.status}</dd>
-          </dl>
+          <MinionStatusHeader minion={data} />
 
-          {data.status !== 'online' && (
-            <div className="rounded-md border border-muted bg-muted/30 p-4 text-sm text-muted-foreground">
-              Grains are only available for minions in the <em>online</em> state.
-            </div>
+          {data.last_refreshed_at && (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 text-xs',
+                data.is_stale ? 'text-warning' : 'text-muted-foreground',
+              )}
+              title={new Date(data.last_refreshed_at).toLocaleString()}
+            >
+              {data.is_stale ? (
+                <AlertTriangle className="size-3" />
+              ) : (
+                <Clock className="size-3" />
+              )}
+              Updated {formatRelativeTime(new Date(data.last_refreshed_at))}
+              {data.is_stale && ' — data is stale'}
+            </span>
           )}
 
-          {data.status === 'online' && (
-            <GrainsTable grains={data.grains ?? {}} search={grainSearch} onSearchChange={setGrainSearch} />
-          )}
+          <MinionQuickActions minionId={data.id} />
+          <MinionStatusCards minionId={data.id} />
+          <MinionRunsTable minionId={data.id} />
+          <MinionGrainExplorer
+            grains={(data.grains as Record<string, unknown> | null) ?? null}
+          />
         </>
       )}
     </div>
@@ -163,69 +127,4 @@ function NotFoundPanel({ minionId }: { minionId: string }) {
       </div>
     </div>
   )
-}
-
-function GrainsTable({
-  grains,
-  search,
-  onSearchChange,
-}: {
-  grains: Record<string, unknown>
-  search: string
-  onSearchChange: (v: string) => void
-}) {
-  const rows = useMemo(() => {
-    const entries = Object.entries(grains).sort(([a], [b]) => a.localeCompare(b))
-    const needle = search.trim().toLowerCase()
-    if (!needle) return entries
-    return entries.filter(([k]) => k.toLowerCase().includes(needle))
-  }, [grains, search])
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="space-y-1">
-        <Label htmlFor="grain-search" className="text-xs">Filter grains by key</Label>
-        <Input
-          id="grain-search"
-          placeholder="os, ip, kernel…"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          autoComplete="off"
-        />
-      </div>
-
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-1/3">Key</TableHead>
-              <TableHead>Value</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={2} className="h-16 text-center text-muted-foreground">
-                  {search ? 'No grains match the filter.' : 'No grains reported.'}
-                </TableCell>
-              </TableRow>
-            )}
-            {rows.map(([key, value]) => (
-              <TableRow key={key}>
-                <TableCell className="font-mono text-xs">{key}</TableCell>
-                <TableCell className="font-mono text-xs">{formatValue(value)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  )
-}
-
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return '—'
-  if (typeof value === 'string') return value
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
-  return JSON.stringify(value)
 }
