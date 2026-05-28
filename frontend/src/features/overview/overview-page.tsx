@@ -278,7 +278,12 @@ function KpiRow({
         <span
           className={cn(
             'inline-flex items-center gap-1.5 text-xs',
-            jobs.data.active_known
+            // Treat data presence as proof of life. Only warn when we
+            // truly have nothing (no last_polled_at AND no jobs in the
+            // 24h window). active_known alone undercounts because the
+            // active-jids cache half of a tick can fail even when the
+            // jobs_index half wrote rows successfully.
+            jobs.data.total > 0 || jobs.data.last_polled_at
               ? 'text-muted-foreground'
               : 'text-warning',
           )}
@@ -286,10 +291,12 @@ function KpiRow({
             ? new Date(jobs.data.last_polled_at).toLocaleString()
             : undefined}
         >
-          {jobs.data.last_polled_at ? (
+          {jobs.data.total > 0 || jobs.data.last_polled_at ? (
             <>
               <Clock className="size-3" />
-              Updated {formatRelativeTime(new Date(jobs.data.last_polled_at))}
+              {jobs.data.last_polled_at && (
+                <>Updated {formatRelativeTime(new Date(jobs.data.last_polled_at))}</>
+              )}
             </>
           ) : (
             <>

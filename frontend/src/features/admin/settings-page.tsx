@@ -333,94 +333,161 @@ function SaltSection({ initial }: { initial: SaltSettingsOut }) {
 
 // ─── Pollers section ──────────────────────────────────────────────────────────
 
+function PollerGroup({
+  title,
+  description,
+  enabled,
+  onEnabledChange,
+  children,
+}: {
+  title: string
+  description: string
+  enabled: boolean
+  onEnabledChange: (v: boolean) => void
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-md border border-border p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-0.5">
+          <h3 className="text-sm font-medium">{title}</h3>
+          <p className="text-xs text-muted-foreground">{description}</p>
+        </div>
+        <Switch checked={enabled} onCheckedChange={onEnabledChange} aria-label={`${title} enabled`} />
+      </div>
+      {enabled && (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">{children}</div>
+      )}
+    </section>
+  )
+}
+
+
+function PollerField({
+  id,
+  label,
+  help,
+  disabled,
+  register,
+  error,
+}: {
+  id: keyof PollersFormValues
+  label: string
+  help: string
+  disabled: boolean
+  register: ReturnType<typeof useForm<PollersFormValues>>['register']
+  error: string | undefined
+}) {
+  return (
+    <div className="space-y-1">
+      <Label htmlFor={`poller-${id}`} className="text-xs">{label}</Label>
+      <Input
+        id={`poller-${id}`}
+        type="number"
+        min={1}
+        step={1}
+        disabled={disabled}
+        className="h-8"
+        {...register(id)}
+      />
+      <p className="text-xs text-muted-foreground">{help}</p>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  )
+}
+
+
 const pollersSchema = z.object({
-  fleet_poll_interval_seconds: z.coerce.number().int().min(0),
+  fleet_poll_interval_seconds: z.coerce.number().int().min(1),
   inventory_refresh_initial_delay_s: z.coerce.number().int().min(0),
-  inventory_refresh_minutes: z.coerce.number().int().min(0),
-  jobs_poll_interval_seconds: z.coerce.number().int().min(0),
-  minion_state_grains_interval_seconds: z.coerce.number().int().min(0),
+  inventory_refresh_minutes: z.coerce.number().int().min(1),
+  jobs_poll_interval_seconds: z.coerce.number().int().min(1),
+  minion_state_grains_interval_seconds: z.coerce.number().int().min(1),
   minion_state_initial_delay_seconds: z.coerce.number().int().min(0),
-  minion_state_keys_interval_seconds: z.coerce.number().int().min(0),
-  minion_state_presence_interval_seconds: z.coerce.number().int().min(0),
+  minion_state_keys_interval_seconds: z.coerce.number().int().min(1),
+  minion_state_presence_interval_seconds: z.coerce.number().int().min(1),
 })
 
 type PollersFormValues = z.infer<typeof pollersSchema>
 
-type PollerField = {
-  help: string
-  id: keyof PollersFormValues
-  label: string
-}
+// Defaults applied when a poller group is enabled but its interval has
+// never been set (or was zeroed by a previous disable). Match what the
+// backend's AppSettings model treats as sensible defaults.
+const POLLER_DEFAULTS = {
+  fleet_poll_interval_seconds: 600,
+  inventory_refresh_initial_delay_s: 30,
+  inventory_refresh_minutes: 30,
+  jobs_poll_interval_seconds: 300,
+  minion_state_grains_interval_seconds: 300,
+  minion_state_initial_delay_seconds: 10,
+  minion_state_keys_interval_seconds: 300,
+  minion_state_presence_interval_seconds: 60,
+} as const
 
-const POLLER_FIELDS: PollerField[] = [
-  {
-    help: '0 disables. Touches every minion — leave off unless you need package inventory.',
-    id: 'inventory_refresh_minutes',
-    label: 'Inventory refresh (minutes)',
-  },
-  {
-    help: 'Wait this long after startup before the first inventory run.',
-    id: 'inventory_refresh_initial_delay_s',
-    label: 'Inventory initial delay (seconds)',
-  },
-  {
-    help: '0 disables. Heavy — sequential list_job calls per recent jid. Use a high value or disable.',
-    id: 'fleet_poll_interval_seconds',
-    label: 'Fleet highstate poll (seconds)',
-  },
-  {
-    help: '0 disables. When > 0, polls runner.jobs.list_jobs + runner.jobs.active on this cadence so the overview metrics read from DB instead of hammering the master. Recommended: 300.',
-    id: 'jobs_poll_interval_seconds',
-    label: 'Jobs index poll (seconds)',
-  },
-  {
-    help: '0 disables. Recommended: 300.',
-    id: 'minion_state_keys_interval_seconds',
-    label: 'Minion keys refresh (seconds)',
-  },
-  {
-    help: '0 disables. Recommended: 60.',
-    id: 'minion_state_presence_interval_seconds',
-    label: 'Minion presence refresh (seconds)',
-  },
-  {
-    help: '0 disables. Recommended: 300.',
-    id: 'minion_state_grains_interval_seconds',
-    label: 'Minion grains refresh (seconds)',
-  },
-  {
-    help: 'Wait this long after startup before starting minion state pollers.',
-    id: 'minion_state_initial_delay_seconds',
-    label: 'Minion initial delay (seconds)',
-  },
-]
 
 function PollersSection({ initial }: { initial: PollerSettingsOut }) {
   const updateMut = useUpdatePollers()
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
+  // Each group's toggle. Default to ON when any of its intervals is nonzero.
+  const [enabled, setEnabled] = useState({
+    fleet: initial.fleet_poll_interval_seconds > 0,
+    inventory: initial.inventory_refresh_minutes > 0,
+    jobs: initial.jobs_poll_interval_seconds > 0,
+    minionState:
+      initial.minion_state_keys_interval_seconds > 0 ||
+      initial.minion_state_presence_interval_seconds > 0 ||
+      initial.minion_state_grains_interval_seconds > 0,
+  })
+
+  // The form holds the DESIRED interval values. When a group is toggled off
+  // we DON'T zero the form field — we just send 0 to the backend at submit
+  // time. That way toggling off → on doesn't lose the user's last interval.
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<PollersFormValues>({
     defaultValues: {
-      fleet_poll_interval_seconds: initial.fleet_poll_interval_seconds,
-      inventory_refresh_initial_delay_s: initial.inventory_refresh_initial_delay_s,
-      inventory_refresh_minutes: initial.inventory_refresh_minutes,
-      jobs_poll_interval_seconds: initial.jobs_poll_interval_seconds,
-      minion_state_grains_interval_seconds: initial.minion_state_grains_interval_seconds,
-      minion_state_initial_delay_seconds: initial.minion_state_initial_delay_seconds,
-      minion_state_keys_interval_seconds: initial.minion_state_keys_interval_seconds,
-      minion_state_presence_interval_seconds: initial.minion_state_presence_interval_seconds,
+      fleet_poll_interval_seconds:
+        initial.fleet_poll_interval_seconds || POLLER_DEFAULTS.fleet_poll_interval_seconds,
+      inventory_refresh_initial_delay_s:
+        initial.inventory_refresh_initial_delay_s || POLLER_DEFAULTS.inventory_refresh_initial_delay_s,
+      inventory_refresh_minutes:
+        initial.inventory_refresh_minutes || POLLER_DEFAULTS.inventory_refresh_minutes,
+      jobs_poll_interval_seconds:
+        initial.jobs_poll_interval_seconds || POLLER_DEFAULTS.jobs_poll_interval_seconds,
+      minion_state_grains_interval_seconds:
+        initial.minion_state_grains_interval_seconds || POLLER_DEFAULTS.minion_state_grains_interval_seconds,
+      minion_state_initial_delay_seconds:
+        initial.minion_state_initial_delay_seconds || POLLER_DEFAULTS.minion_state_initial_delay_seconds,
+      minion_state_keys_interval_seconds:
+        initial.minion_state_keys_interval_seconds || POLLER_DEFAULTS.minion_state_keys_interval_seconds,
+      minion_state_presence_interval_seconds:
+        initial.minion_state_presence_interval_seconds || POLLER_DEFAULTS.minion_state_presence_interval_seconds,
     },
     resolver: zodResolver(pollersSchema),
   })
 
   async function onSubmit(values: PollersFormValues) {
     setSaveMsg(null)
+    // Mask out disabled groups before sending. The interval inputs stay
+    // intact in the form so toggling back on restores the user's value.
+    const payload: PollersFormValues = {
+      fleet_poll_interval_seconds: enabled.fleet ? values.fleet_poll_interval_seconds : 0,
+      inventory_refresh_initial_delay_s: values.inventory_refresh_initial_delay_s,
+      inventory_refresh_minutes: enabled.inventory ? values.inventory_refresh_minutes : 0,
+      jobs_poll_interval_seconds: enabled.jobs ? values.jobs_poll_interval_seconds : 0,
+      minion_state_grains_interval_seconds:
+        enabled.minionState ? values.minion_state_grains_interval_seconds : 0,
+      minion_state_initial_delay_seconds: values.minion_state_initial_delay_seconds,
+      minion_state_keys_interval_seconds:
+        enabled.minionState ? values.minion_state_keys_interval_seconds : 0,
+      minion_state_presence_interval_seconds:
+        enabled.minionState ? values.minion_state_presence_interval_seconds : 0,
+    }
     try {
-      await updateMut.mutateAsync(values)
+      await updateMut.mutateAsync(payload)
       setSaveMsg({ ok: true, text: 'Poller settings saved.' })
     } catch (e) {
       setSaveMsg({ ok: false, text: e instanceof Error ? e.message : 'Save failed.' })
@@ -432,30 +499,108 @@ function PollersSection({ initial }: { initial: PollerSettingsOut }) {
       <CardHeader>
         <CardTitle>Pollers</CardTitle>
         <CardDescription>
-          Background tasks that keep minion state in sync. All intervals are in
-          seconds or minutes. Set to 0 to disable.
+          Background tasks that keep minion state, jobs, and highstate runs in
+          sync. Toggle each group on/off; intervals are remembered when you
+          toggle off so you don't have to re-enter them.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-4" noValidate onSubmit={handleSubmit(onSubmit)}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {POLLER_FIELDS.map((field) => (
-              <div key={field.id} className="space-y-1.5">
-                <Label htmlFor={`poller-${field.id}`}>{field.label}</Label>
-                <Input
-                  id={`poller-${field.id}`}
-                  type="number"
-                  min={0}
-                  step={1}
-                  {...register(field.id)}
-                />
-                <p className="text-xs text-muted-foreground">{field.help}</p>
-                {errors[field.id] && (
-                  <p className="text-sm text-destructive">{errors[field.id]?.message}</p>
-                )}
-              </div>
-            ))}
-          </div>
+          <PollerGroup
+            title="Minion state"
+            description="Keeps the minion list current (key status, online/offline, grains)."
+            enabled={enabled.minionState}
+            onEnabledChange={(v) => setEnabled((e) => ({ ...e, minionState: v }))}
+          >
+            <PollerField
+              id="minion_state_keys_interval_seconds"
+              label="Keys refresh (seconds)"
+              help="How often to reconcile against wheel.key.list_all. Recommended: 300."
+              disabled={!enabled.minionState}
+              register={register}
+              error={errors.minion_state_keys_interval_seconds?.message}
+            />
+            <PollerField
+              id="minion_state_presence_interval_seconds"
+              label="Presence refresh (seconds)"
+              help="manage.present check — drives online/offline. Recommended: 60."
+              disabled={!enabled.minionState}
+              register={register}
+              error={errors.minion_state_presence_interval_seconds?.message}
+            />
+            <PollerField
+              id="minion_state_grains_interval_seconds"
+              label="Grains refresh (seconds)"
+              help="cache.grains fetch (master-side, no minion contact). Recommended: 300."
+              disabled={!enabled.minionState}
+              register={register}
+              error={errors.minion_state_grains_interval_seconds?.message}
+            />
+            <PollerField
+              id="minion_state_initial_delay_seconds"
+              label="Initial delay (seconds)"
+              help="Wait this long after app startup before the first tick."
+              disabled={!enabled.minionState}
+              register={register}
+              error={errors.minion_state_initial_delay_seconds?.message}
+            />
+          </PollerGroup>
+
+          <PollerGroup
+            title="Jobs index"
+            description="Populates the overview metrics + timeline by polling runner.jobs.list_jobs."
+            enabled={enabled.jobs}
+            onEnabledChange={(v) => setEnabled((e) => ({ ...e, jobs: v }))}
+          >
+            <PollerField
+              id="jobs_poll_interval_seconds"
+              label="Poll interval (seconds)"
+              help="Recommended: 300. Overview reads from DB so polling more often gains little."
+              disabled={!enabled.jobs}
+              register={register}
+              error={errors.jobs_poll_interval_seconds?.message}
+            />
+          </PollerGroup>
+
+          <PollerGroup
+            title="Fleet highstate ingest"
+            description="Persists highstate results per minion+jid. Heavy — fires one runner.jobs.list_job call per recent jid."
+            enabled={enabled.fleet}
+            onEnabledChange={(v) => setEnabled((e) => ({ ...e, fleet: v }))}
+          >
+            <PollerField
+              id="fleet_poll_interval_seconds"
+              label="Poll interval (seconds)"
+              help="Recommended: 600 or higher. Disable if your master can't handle the load."
+              disabled={!enabled.fleet}
+              register={register}
+              error={errors.fleet_poll_interval_seconds?.message}
+            />
+          </PollerGroup>
+
+          <PollerGroup
+            title="Inventory (packages)"
+            description="Runs pkg.list_pkgs across the fleet. Touches every minion — leave off unless you need it."
+            enabled={enabled.inventory}
+            onEnabledChange={(v) => setEnabled((e) => ({ ...e, inventory: v }))}
+          >
+            <PollerField
+              id="inventory_refresh_minutes"
+              label="Refresh interval (minutes)"
+              help="Recommended: 30 or more."
+              disabled={!enabled.inventory}
+              register={register}
+              error={errors.inventory_refresh_minutes?.message}
+            />
+            <PollerField
+              id="inventory_refresh_initial_delay_s"
+              label="Initial delay (seconds)"
+              help="Wait this long after app startup before the first run."
+              disabled={!enabled.inventory}
+              register={register}
+              error={errors.inventory_refresh_initial_delay_s?.message}
+            />
+          </PollerGroup>
 
           <div className="flex flex-wrap items-center gap-3 border-t pt-4">
             <Button type="submit" disabled={isSubmitting}>
