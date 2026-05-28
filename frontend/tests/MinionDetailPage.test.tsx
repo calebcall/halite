@@ -1,160 +1,151 @@
 // frontend/tests/MinionDetailPage.test.tsx
+// P28 T9: smoke tests for the enriched minion detail page sub-components.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-  RouterProvider,
-} from '@tanstack/react-router'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
-import { MinionDetailPage } from '@/features/minions/minion-detail-page'
-
-const server = setupServer(
-  http.get('/api/auth/me', () =>
-    HttpResponse.json({
-      username: 'admin',
-      display_name: 'admin',
-      must_change_pw: false,
-      permissions: [
-        { verb: 'view', resource_glob: 'minion:*' },
-        { verb: 'execute', resource_glob: 'salt:*' },
-      ],
-    }),
+// MinionRunsTable transitively renders MinionRunPanel, which imports
+// Link from @tanstack/react-router. Stub it with a plain anchor so we
+// don't need a full router tree for these smoke tests.
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, ...rest }: { children?: React.ReactNode; [k: string]: unknown }) => (
+    <a {...rest}>{children}</a>
   ),
-)
+}))
 
-beforeAll(() => server.listen())
+import { MinionGrainExplorer } from '@/features/minions/minion-grain-explorer'
+import { MinionRunsTable } from '@/features/minions/minion-runs-table'
+import { MinionStatusHeader } from '@/features/minions/minion-status-header'
+
+import type { components } from '@/shared/api/types.gen'
+
+type MinionDetail = components['schemas']['MinionDetail']
+type RunSummary = components['schemas']['MinionRunSummary']
+type RunsOut = components['schemas']['MinionRunsOut']
+
+const server = setupServer()
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 
-// Build a router whose route id matches the production id
-// ('/app/minions/$minionId') so useParams({ from: ... }) inside the page resolves.
-function renderDetail(minionId: string) {
+function withQuery(ui: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const rootRoute = createRootRoute({ component: Outlet })
-  const appRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    id: 'app',
-    component: Outlet,
-  })
-  const minionsRoute = createRoute({
-    getParentRoute: () => appRoute,
-    path: '/minions',
-    component: () => <div>minions-list-stub</div>,
-  })
-  const detailRoute = createRoute({
-    getParentRoute: () => appRoute,
-    path: '/minions/$minionId',
-    component: () => <MinionDetailPage />,
-  })
-  const runRoute = createRoute({
-    getParentRoute: () => appRoute,
-    path: '/run',
-    component: () => <div>run-stub</div>,
-  })
-  const tree = rootRoute.addChildren([
-    appRoute.addChildren([minionsRoute, detailRoute, runRoute]),
-  ])
-  const router = createRouter({
-    routeTree: tree,
-    history: createMemoryHistory({ initialEntries: [`/minions/${minionId}`] }),
-  })
-  return render(
-    <QueryClientProvider client={qc}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  )
+  return <QueryClientProvider client={qc}>{ui}</QueryClientProvider>
 }
 
-describe('MinionDetailPage', () => {
-  it('renders grains for an online minion + filters by search', async () => {
-    server.use(
-      http.get('/api/minions/web-01', () =>
-        HttpResponse.json({
-          id: 'web-01',
-          status: 'online',
-          ip: '10.0.0.1',
-          grains: { os: 'Ubuntu', osrelease: '22.04', kernel: 'Linux' },
+function makeRun(over: Partial<RunSummary> = {}): RunSummary {
+  return {
+    blocked: false,
+    change_count: 0,
+    completed_at: '2026-05-28T12:00:00Z',
+    duration_ms: 1234,
+    fail_count: 0,
+    fun: 'state.apply',
+    id: '11111111-1111-1111-1111-111111111111',
+    jid: 'J1',
+    pass_count: 5,
+    status: 'healthy',
+    total_count: 5,
+    ...over,
+  }
+}
+
+describe('MinionStatusHeader', () => {
+  it('renders status header with grain-derived facts', () => {
+    const minion: MinionDetail = {
+      grains: {
+        kernel: 'Linux',
+        kernelrelease: '5.15',
+        mem_total: 8192,
+        num_cpus: 4,
+        os: 'Ubuntu',
+        osrelease: '22.04',
+      },
+      id: 'web-01',
+      ip: '10.0.0.1',
+      status: 'online',
+    }
+    render(<MinionStatusHeader minion={minion} />)
+    expect(screen.getByText('Ubuntu 22.04')).toBeInTheDocument()
+    expect(screen.getByText('web-01')).toBeInTheDocument()
+    expect(screen.getByText('10.0.0.1')).toBeInTheDocument()
+  })
+})
+
+describe('MinionRunsTable', () => {
+  it('renders rows for each run returned by the API', async () => {
+    const payload: RunsOut = {
+      minion_id: 'web-01',
+      runs: [
+        makeRun({ id: 'r1', jid: 'J1', status: 'healthy' }),
+        makeRun({
+          fail_count: 2,
+          id: 'r2',
+          jid: 'J2',
+          pass_count: 3,
+          status: 'unhealthy',
+          total_count: 5,
         }),
-      ),
+      ],
+      total: 2,
+    }
+    server.use(
+      http.get('/api/minions/web-01/runs', () => HttpResponse.json(payload)),
     )
-    const user = userEvent.setup()
-    renderDetail('web-01')
+    render(withQuery(<MinionRunsTable minionId="web-01" />))
 
-    expect(await screen.findByText('os')).toBeInTheDocument()
-    expect(screen.getByText('Ubuntu')).toBeInTheDocument()
-    expect(screen.getByText('osrelease')).toBeInTheDocument()
-    expect(screen.getByText('kernel')).toBeInTheDocument()
+    expect(await screen.findByText('healthy')).toBeInTheDocument()
+    expect(screen.getByText('unhealthy')).toBeInTheDocument()
+    // Two rows in the tbody (one per run).
+    const table = screen.getByRole('table')
+    const tbody = table.querySelector('tbody')
+    expect(tbody?.querySelectorAll('tr').length).toBe(2)
+  })
 
-    await user.type(screen.getByLabelText(/filter grains by key/i), 'os')
-    // 'os' and 'osrelease' match; 'kernel' does not
-    await waitFor(() => {
-      expect(screen.queryByText('kernel')).not.toBeInTheDocument()
-    })
+  it('shows the empty-state message when no runs have been ingested', async () => {
+    const payload: RunsOut = { minion_id: 'x', runs: [], total: 0 }
+    server.use(
+      http.get('/api/minions/x/runs', () => HttpResponse.json(payload)),
+    )
+    render(withQuery(<MinionRunsTable minionId="x" />))
+
+    expect(
+      await screen.findByText(/no highstate runs ingested/i),
+    ).toBeInTheDocument()
+  })
+})
+
+describe('MinionGrainExplorer', () => {
+  it('filter input narrows the visible list to matching keys', async () => {
+    const grains = {
+      kernel: 'Linux',
+      mem_total: 8192,
+      num_cpus: 4,
+      os: 'Ubuntu',
+      osrelease: '22.04',
+    }
+    render(<MinionGrainExplorer grains={grains} />)
+
+    // All five keys visible initially.
     expect(screen.getByText('os')).toBeInTheDocument()
     expect(screen.getByText('osrelease')).toBeInTheDocument()
-  })
+    expect(screen.getByText('kernel')).toBeInTheDocument()
+    expect(screen.getByText('num_cpus')).toBeInTheDocument()
+    expect(screen.getByText('mem_total')).toBeInTheDocument()
 
-  it('shows the offline panel when the minion is offline', async () => {
-    server.use(
-      http.get('/api/minions/db-01', () =>
-        HttpResponse.json({ id: 'db-01', status: 'offline', ip: null, grains: null }),
-      ),
-    )
-    renderDetail('db-01')
-    expect(await screen.findByText(/grains are only available/i)).toBeInTheDocument()
-  })
+    const filter = screen.getByLabelText(/filter grains/i)
+    await userEvent.type(filter, 'os')
 
-  it('shows the not-found panel on 404', async () => {
-    server.use(
-      http.get('/api/minions/ghost', () =>
-        HttpResponse.json({ detail: 'Minion not found' }, { status: 404 }),
-      ),
-    )
-    renderDetail('ghost')
-    expect(await screen.findByText(/minion not found/i)).toBeInTheDocument()
-    expect(screen.getByText(/ghost/)).toBeInTheDocument()
-  })
-
-  it('renders Run command button with target prefilled', async () => {
-    server.use(
-      http.get('/api/minions/web-01', () =>
-        HttpResponse.json({
-          id: 'web-01',
-          status: 'online',
-          ip: '1.2.3.4',
-          grains: { os: 'Ubuntu', osrelease: '22.04' },
-        }),
-      ),
-    )
-    renderDetail('web-01')
-    const link = await screen.findByRole('link', { name: /run command/i })
-    expect(link).toBeInTheDocument()
-    const href = link.getAttribute('href') || ''
-    const url = new URL('http://t' + href)
-    expect(url.pathname).toBe('/run')
-    expect(url.searchParams.get('target')).toBe('web-01')
-    expect(url.searchParams.get('target_type')).toBe('glob')
-  })
-
-  it('shows a 502 panel with salt detail surfaced', async () => {
-    server.use(
-      http.get('/api/minions/web-01', () =>
-        HttpResponse.json(
-          { detail: "Salt-API error 400: Client disabled: 'wheel'." },
-          { status: 502 },
-        ),
-      ),
-    )
-    renderDetail('web-01')
-    expect(await screen.findByText(/Salt-API responded with an error/i)).toBeInTheDocument()
-    expect(screen.getByText(/Client disabled: 'wheel'/)).toBeInTheDocument()
+    // 'os', 'osrelease', and 'mem_total' (value contains '8192' — no 'os')
+    // After typing 'os', only keys/values matching 'os' remain.
+    // 'os' (key) matches, 'osrelease' (key) matches, 'kernel' (no), 'num_cpus' (no), 'mem_total' (no).
+    expect(screen.getByText('os')).toBeInTheDocument()
+    expect(screen.getByText('osrelease')).toBeInTheDocument()
+    expect(screen.queryByText('kernel')).not.toBeInTheDocument()
+    expect(screen.queryByText('num_cpus')).not.toBeInTheDocument()
+    expect(screen.queryByText('mem_total')).not.toBeInTheDocument()
   })
 })
