@@ -213,7 +213,7 @@ _RPM_TOKEN_RE = re.compile(r"(\d+|[A-Za-z]+|~)")
 def _rpm_compare_segment(a: str, b: str) -> int:
     ta = _RPM_TOKEN_RE.findall(a)
     tb = _RPM_TOKEN_RE.findall(b)
-    for x, y in zip(ta, tb):
+    for x, y in zip(ta, tb, strict=False):
         if x == y:
             continue
         if x == "~":
@@ -256,7 +256,7 @@ def _generic_compare(a: str, b: str) -> int:
     """
     sa = re.split(r"[.\-_+]", a)
     sb = re.split(r"[.\-_+]", b)
-    for x, y in zip(sa, sb):
+    for x, y in zip(sa, sb, strict=False):
         if x.isdigit() and y.isdigit():
             ix, iy = int(x), int(y)
             if ix != iy:

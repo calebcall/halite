@@ -4,7 +4,6 @@ import uuid
 from datetime import datetime
 
 import sqlalchemy as sa
-
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column

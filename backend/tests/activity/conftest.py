@@ -9,13 +9,17 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-
-from halite.db import Base
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 # Import models so Base.metadata knows about activity_events and jobs_index.
 import halite.activity.models  # noqa: F401
 import halite.jobs.index_model  # noqa: F401
+from halite.db import Base
 
 
 async def _make_engine() -> AsyncEngine:

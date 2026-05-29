@@ -1,7 +1,5 @@
 import asyncio
 
-import pytest
-
 from halite.activity.hub import EventHub
 
 

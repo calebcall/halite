@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
+
 from alembic import op
 
 revision = "20260529_0011"

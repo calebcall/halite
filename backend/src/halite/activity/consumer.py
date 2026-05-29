@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -33,7 +34,7 @@ class EventStreamConsumer:
         self._task: asyncio.Task[None] | None = None
 
     @classmethod
-    def from_row(cls, row, *, salt, sessionmaker, hub) -> "EventStreamConsumer":
+    def from_row(cls, row, *, salt, sessionmaker, hub) -> EventStreamConsumer:
         return cls(
             salt=salt,
             sessionmaker=sessionmaker,
@@ -64,10 +65,8 @@ class EventStreamConsumer:
                 backoff = _BACKOFF_START
             except Exception:
                 log.exception("activity consumer stream error; backing off %.0fs", backoff)
-                try:
+                with contextlib.suppress(TimeoutError):
                     await asyncio.wait_for(self._stop.wait(), timeout=backoff)
-                except TimeoutError:
-                    pass
                 backoff = min(backoff * 2, _BACKOFF_MAX)
 
     async def _consume_once(self) -> None:
