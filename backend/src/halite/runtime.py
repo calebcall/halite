@@ -17,6 +17,8 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from halite.activity.consumer import EventStreamConsumer
+from halite.activity.hub import EventHub
 from halite.config import Settings
 from halite.fleet.scheduler import FleetIngestScheduler
 from halite.inventory.scheduler import InventoryScheduler
@@ -49,6 +51,8 @@ class RuntimeConfig:
         self.jobs_scheduler: JobsIndexScheduler | None = None
         self.active_jids: set[str] | None = None
         self.active_jids_refreshed_at: datetime | None = None
+        self.event_hub: EventHub | None = None
+        self.event_consumer: EventStreamConsumer | None = None
 
     async def boot(self, db: AsyncSession) -> None:
         """Wire up salt client and schedulers from the current DB row."""
@@ -100,6 +104,13 @@ class RuntimeConfig:
             self.jobs_scheduler = None
         self.active_jids = None
         self.active_jids_refreshed_at = None
+        if self.event_consumer is not None:
+            try:
+                await self.event_consumer.stop()
+            except Exception:
+                log.exception("event consumer teardown failed")
+            self.event_consumer = None
+        self.event_hub = None
         if self.salt is not None:
             try:
                 await self.salt.aclose()
@@ -162,3 +173,10 @@ class RuntimeConfig:
                 on_active_refresh=self._on_active_jids_refresh,
             )
             self.jobs_scheduler.start()
+
+        if row.event_stream_enabled:
+            self.event_hub = EventHub()
+            self.event_consumer = EventStreamConsumer.from_row(
+                row, salt=self.salt, sessionmaker=self._sessionmaker, hub=self.event_hub
+            )
+            self.event_consumer.start()
