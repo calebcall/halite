@@ -61,4 +61,15 @@ describe('useActivityStream', () => {
       ),
     )
   })
+
+  it('invalidates the activity root on every event', async () => {
+    const { spy, wrapper } = wrap()
+    renderHook(() => useActivityStream(), { wrapper })
+    MockEventSource.instances[0].emit({ category: 'job', event_type: 'job.ret', jid: '20260529' })
+    await waitFor(() =>
+      expect(spy).toHaveBeenCalledWith(
+        expect.objectContaining({ queryKey: ['activity'] }),
+      ),
+    )
+  })
 })

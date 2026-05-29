@@ -35,6 +35,7 @@ export function useActivityStream(onEvent?: (e: ActivityStreamEvent) => void) {
       for (const queryKey of INVALIDATION[ev.category] ?? []) {
         void qc.invalidateQueries({ queryKey })
       }
+      void qc.invalidateQueries({ queryKey: ['activity'] })
       onEvent?.(ev)
     }
     return () => es.close()
