@@ -6,3 +6,5 @@ dist/
 .env.local
 .env.*.local
 coverage/
+# Written by a pre-build step (e.g. Komodo Pre Build) to stamp the footer.
+BUILD_HASH.txt

@@ -1,16 +1,30 @@
 /// <reference types="vitest/config" />
+import fs from 'node:fs'
 import path from 'node:path'
 
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
+// Resolve the build hash that the sidebar footer surfaces as the deployed
+// version. Two sources, in priority order:
+//   1. BUILD_HASH env var — set by CI (github.sha) or `docker compose build`.
+//   2. A BUILD_HASH.txt file next to this config — written by a pre-build step
+//      in environments that can't pass a build arg but can run a command. With
+//      Komodo, set Pre Build to: git rev-parse --short HEAD > frontend/BUILD_HASH.txt
+// Empty in local dev, which the footer renders as "Dev".
+function resolveBuildHash(): string {
+  if (process.env.BUILD_HASH) return process.env.BUILD_HASH.trim()
+  try {
+    return fs.readFileSync(path.resolve(__dirname, 'BUILD_HASH.txt'), 'utf8').trim()
+  } catch {
+    return ''
+  }
+}
+
 export default defineConfig({
   plugins: [react()],
-  // Build hash injected at build time (see Dockerfile's BUILD_HASH arg) so the
-  // sidebar footer can surface the deployed version. Empty in local dev, which
-  // the footer renders as "Dev".
   define: {
-    __BUILD_HASH__: JSON.stringify(process.env.BUILD_HASH ?? ''),
+    __BUILD_HASH__: JSON.stringify(resolveBuildHash()),
   },
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
