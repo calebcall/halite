@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+import asyncio
+import json
+
+from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi.responses import StreamingResponse
 
 from halite.activity.api_schemas import ActivityEventOut, ActivityListOut
 from halite.activity.service import list_events
@@ -10,6 +14,7 @@ from halite.rbac.engine import check as rbac_check
 router = APIRouter(prefix="/api/activity", tags=["activity"])
 
 _CATEGORIES = ("job", "key", "minion")
+_KEEPALIVE_S = 20.0
 
 
 def _allowed_categories(user) -> set[str]:
@@ -41,3 +46,44 @@ async def list_activity_route(
         total=total,
         events=[ActivityEventOut.model_validate(r, from_attributes=True) for r in rows],
     )
+
+
+def _sse(event: dict) -> str:
+    payload = {
+        k: event.get(k)
+        for k in ("category", "event_type", "minion_id", "jid", "fun", "success", "summary")
+    }
+    return f"data: {json.dumps(payload)}\n\n"
+
+
+@router.get("/stream")
+async def stream_activity_route(request: Request, user: CurrentUser):
+    runtime = getattr(request.app.state, "runtime", None)
+    hub = getattr(runtime, "event_hub", None) if runtime else None
+    if hub is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Event stream not enabled")
+    allowed = _allowed_categories(user)
+    if not allowed:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Forbidden")
+
+    queue = hub.subscribe()
+
+    async def gen():
+        try:
+            for ev in hub.recent():
+                if ev.get("category") in allowed:
+                    yield _sse(ev)
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    ev = await asyncio.wait_for(queue.get(), timeout=_KEEPALIVE_S)
+                except TimeoutError:
+                    yield ": keepalive\n\n"
+                    continue
+                if ev.get("category") in allowed:
+                    yield _sse(ev)
+        finally:
+            hub.unsubscribe(queue)
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
