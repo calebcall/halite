@@ -387,6 +387,21 @@ export const api = {
         path: '/api/admin/settings/test-salt-saved',
       }),
   },
+  activity: {
+    list: (query: {
+      category?: string | null
+      minion_id?: string | null
+      event_type?: string | null
+      search?: string | null
+      limit?: number
+      offset?: number
+    } = {}) =>
+      request<paths['/api/activity']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/activity',
+        query: query as Record<string, string | number | boolean | undefined>,
+      }),
+  },
   templates: {
     list: () =>
       request<paths['/api/templates']['get']['responses']['200']['content']['application/json']>({
