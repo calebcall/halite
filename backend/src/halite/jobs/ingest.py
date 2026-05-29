@@ -109,6 +109,40 @@ async def refresh_jobs_index(
     return written
 
 
+async def upsert_one_job(
+    db: AsyncSession, jid: str, new_event_data: dict[str, Any]
+) -> None:
+    """Upsert a single job into jobs_index from a ``salt/job/<jid>/new`` event.
+
+    ``new_event_data`` is the event payload: {fun, arg, tgt, tgt_type, user,
+    minions, ...}. Mirrors the JobIndexEntry mapping used in
+    refresh_jobs_index but reads the event's lowercase keys.  ``arguments``
+    is stored as the raw value (list or dict), matching the shape written by
+    refresh_jobs_index.
+    """
+    started = _jid_to_utc(jid)
+    if started is None:
+        return
+    now = datetime.now(tz=UTC)
+    existing = await db.get(JobIndexEntry, jid)
+    if existing is not None:
+        existing.seen_at = now
+        return
+    arg = new_event_data.get("arg")
+    db.add(
+        JobIndexEntry(
+            jid=jid,
+            function=str(new_event_data.get("fun") or "unknown"),
+            target=_opt_str(new_event_data.get("tgt")),
+            target_type=_opt_str(new_event_data.get("tgt_type")),
+            user=_opt_str(new_event_data.get("user")),
+            started_at=started,
+            seen_at=now,
+            arguments=arg if isinstance(arg, list | dict) else None,
+        )
+    )
+
+
 async def refresh_active_jids(salt: Any) -> set[str]:
     """Return the set of currently-active jids via ``runner.jobs.active``
     (which already has a short timeout per the salt client). Returns an

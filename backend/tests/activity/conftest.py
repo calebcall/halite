@@ -13,8 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from halite.db import Base
 
-# Import the model so Base.metadata knows about activity_events.
+# Import models so Base.metadata knows about activity_events and jobs_index.
 import halite.activity.models  # noqa: F401
+import halite.jobs.index_model  # noqa: F401
 
 
 @pytest_asyncio.fixture()
