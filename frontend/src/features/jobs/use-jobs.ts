@@ -13,7 +13,7 @@ export function useJobsList(limit?: number) {
   return useQuery<JobsListOut>({
     queryFn: () => jobsApi.list(limit !== undefined ? { limit } : undefined),
     queryKey: jobsQueryKeys.list(limit),
-    refetchInterval: 30_000,
+    refetchInterval: 5 * 60 * 1000,
   })
 }
 

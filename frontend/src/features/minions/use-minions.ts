@@ -7,7 +7,7 @@ export function useMinionsList() {
   return useQuery<MinionListOut>({
     queryKey: minionsQueryKeys.list,
     queryFn: () => minionsApi.list(),
-    refetchInterval: 30_000,
+    refetchInterval: 5 * 60 * 1000,
   })
 }
 

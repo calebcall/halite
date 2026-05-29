@@ -23,6 +23,7 @@ const INVALIDATION: Record<ActivityStreamEvent['category'], string[][]> = {
 export function useActivityStream(onEvent?: (e: ActivityStreamEvent) => void) {
   const qc = useQueryClient()
   useEffect(() => {
+    if (typeof EventSource === 'undefined') return
     const es = new EventSource('/api/activity/stream', { withCredentials: true })
     es.onmessage = (msg) => {
       let ev: ActivityStreamEvent

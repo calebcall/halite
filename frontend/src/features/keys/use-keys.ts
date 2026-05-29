@@ -8,7 +8,7 @@ export function useKeysList() {
   return useQuery<KeysListOut>({
     queryKey: keysQueryKeys.list,
     queryFn: () => keysApi.list(),
-    refetchInterval: 30_000,
+    refetchInterval: 5 * 60 * 1000,
   })
 }
 

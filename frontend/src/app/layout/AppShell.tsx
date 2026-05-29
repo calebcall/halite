@@ -1,9 +1,11 @@
 import { Outlet } from '@tanstack/react-router'
 
+import { useActivityStream } from '@/features/activity/use-activity-stream'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 
 export function AppShell() {
+  useActivityStream()
   return (
     <div className="flex min-h-dvh bg-background text-foreground">
       <Sidebar />
