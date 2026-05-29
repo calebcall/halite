@@ -29,6 +29,9 @@ import { useJobActivity } from '@/features/jobs/use-jobs'
 import { useKeysList } from '@/features/keys/use-keys'
 import { useMinionsList } from '@/features/minions/use-minions'
 
+import { RecentActivityCard } from '@/features/activity/recent-activity-card'
+import { useHasAnyPerm } from '@/features/auth/use-has-perm'
+
 import { ChartCard, ChartEmpty, ChartSkeleton } from './chart-card'
 import { JobActivityArea } from './job-activity-area'
 import { KeyStatusBar } from './key-status-bar'
@@ -116,6 +119,11 @@ export function OverviewPage() {
   const canViewMinions = useHasPerm('view', 'minion:*')
   const canViewKeys = useHasPerm('view', 'key:*')
   const canViewJobs = useHasPerm('view', 'job:*')
+  const canViewActivity = useHasAnyPerm([
+    { verb: 'view', resource: 'job:*' },
+    { verb: 'view', resource: 'key:*' },
+    { verb: 'view', resource: 'minion:*' },
+  ])
 
   const [selectedMinion, setSelectedMinion] = useState<Minion | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
@@ -176,6 +184,8 @@ export function OverviewPage() {
         >
           <KeyBarPanel enabled={canViewKeys} />
         </ChartCard>
+
+        {canViewActivity && <RecentActivityCard className="lg:col-span-3" />}
       </div>
 
       <section>
