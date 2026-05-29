@@ -6,6 +6,12 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [react()],
+  // Build hash injected at build time (see Dockerfile's BUILD_HASH arg) so the
+  // sidebar footer can surface the deployed version. Empty in local dev, which
+  // the footer renders as "Dev".
+  define: {
+    __BUILD_HASH__: JSON.stringify(process.env.BUILD_HASH ?? ''),
+  },
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },

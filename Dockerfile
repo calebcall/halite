@@ -4,6 +4,11 @@ WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ ./
+# Stamp the build with the deployed commit so the sidebar footer can show it.
+# Pass via `docker build --build-arg BUILD_HASH=$(git rev-parse HEAD)`; unset
+# builds fall back to "Dev" in the UI.
+ARG BUILD_HASH=""
+ENV BUILD_HASH=${BUILD_HASH}
 RUN npm run build
 
 # ---- python runtime ----

@@ -110,6 +110,7 @@ export function Sidebar() {
     <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
       <SidebarHeader />
       <SidebarNav />
+      <SidebarFooter />
     </aside>
   )
 }
@@ -150,6 +151,7 @@ export function MobileSidebar() {
         </SheetDescription>
         <SidebarHeader />
         <SidebarNav />
+        <SidebarFooter />
       </SheetContent>
     </Sheet>
   )
@@ -166,6 +168,38 @@ function SidebarHeader() {
         <span className="text-[10px] uppercase tracking-[0.15em] text-sidebar-muted">
           Salt Console
         </span>
+      </div>
+    </div>
+  )
+}
+
+function SidebarFooter() {
+  // __BUILD_HASH__ is injected at build time (vite.config.ts). Empty in local
+  // dev → show "Dev"; otherwise the short git hash for tracking the deployed
+  // version. Full hash kept in the title for copy/paste.
+  const build = __BUILD_HASH__
+  const version = build ? build.slice(0, 7) : 'Dev'
+  return (
+    <div className="border-t border-sidebar-border px-4 py-3 text-sidebar-muted">
+      <div className="mx-auto w-fit">
+        {/* Icon centered against the top two lines only. */}
+        <div className="flex items-center gap-2">
+          <BrandMark className="h-7 w-7 shrink-0" />
+          <div className="flex flex-col text-left leading-tight">
+            <p className="text-[11px] font-medium text-sidebar-foreground">
+              <span className="text-primary">halite</span> by Nodexeus
+            </p>
+            <p className="text-[10px]">All rights reserved</p>
+          </div>
+        </div>
+        {/* pl-9 = icon width (w-7 = 1.75rem) + gap-2 (0.5rem) so it lines up
+            with the text above, not the icon. */}
+        <p
+          className="mt-1 pl-9 font-mono text-[10px]"
+          title={build || 'Local development build'}
+        >
+          {version}
+        </p>
       </div>
     </div>
   )
