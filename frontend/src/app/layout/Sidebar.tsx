@@ -25,7 +25,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
-import { useHasPerm } from '@/features/auth/use-has-perm'
+import { useHasPerm, useHasAnyPerm } from '@/features/auth/use-has-perm'
 import { BrandMark } from './BrandMark'
 
 type NavItem = {
@@ -34,6 +34,8 @@ type NavItem = {
   icon: typeof Server
   /** If undefined, item is always shown. If set, item only shows when the user has the permission. */
   requires?: { verb: string; resource: string }
+  /** If set, item shows when the user has ANY of the listed permissions. */
+  requiresAny?: { verb: string; resource: string }[]
   /** If true, the item is always shown but rendered as disabled (feature not yet built). */
   comingSoon?: boolean
 }
@@ -75,6 +77,16 @@ const navSections: NavSection[] = [
     items: [
       { to: '/jobs', label: 'Jobs', icon: Activity, requires: { verb: 'view', resource: 'job:*' } },
       { to: '/jobs/timeline', label: 'Timeline', icon: LineChart, requires: { verb: 'view', resource: 'job:*' } },
+      {
+        to: '/activity',
+        label: 'Activity',
+        icon: Activity,
+        requiresAny: [
+          { verb: 'view', resource: 'job:*' },
+          { verb: 'view', resource: 'key:*' },
+          { verb: 'view', resource: 'minion:*' },
+        ],
+      },
       { to: '/run', label: 'Run', icon: Terminal, requires: { verb: 'execute', resource: 'salt:*' } },
       {
         to: '/inventory',
@@ -231,11 +243,14 @@ function NavSection({ section }: { section: NavSection }) {
 }
 
 function NavLink({ item }: { item: NavItem }) {
-  // Hooks must be called unconditionally — pass a no-op spec when not required.
-  const allowed = useHasPerm(
+  // Both hooks must be called unconditionally (rules of hooks — fixed call count).
+  // When not needed, we pass safe no-op arguments so the hook still runs.
+  const allowedSingle = useHasPerm(
     item.requires?.verb ?? '*',
     item.requires?.resource ?? '*',
   )
+  const allowedAny = useHasAnyPerm(item.requiresAny ?? [])
+  const allowed = item.requiresAny ? allowedAny : allowedSingle
   const Icon = item.icon
   // Touch-friendly: 40px tall on mobile (more than the desktop 36px), still
   // visually compact. min-h locks the row so labels never crowd touch area.
@@ -252,7 +267,7 @@ function NavLink({ item }: { item: NavItem }) {
       </span>
     )
   }
-  if (item.requires && !allowed) return null
+  if ((item.requires || item.requiresAny) && !allowed) return null
   return (
     <Link
       to={item.to}
