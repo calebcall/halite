@@ -16,6 +16,11 @@ services:
   app:
     build:
       context: .
+      args:
+        # Stamps the sidebar footer with the deployed commit. Set BUILD_HASH in
+        # the build environment (e.g. `BUILD_HASH=$(git rev-parse HEAD) docker
+        # compose build`); unset falls back to "Dev" in the UI.
+        BUILD_HASH: ${BUILD_HASH:-}
     environment:
       DATABASE_URL: postgresql+asyncpg://halite:halite@db:5432/halite
       COOKIE_SECRET: ${COOKIE_SECRET:?Run scripts/gen-bootstrap-secret.sh and set COOKIE_SECRET}

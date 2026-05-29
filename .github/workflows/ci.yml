@@ -72,7 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build image
-        run: docker build -t halite:ci .
+        run: docker build --build-arg BUILD_HASH="${{ github.sha }}" -t halite:ci .
       - name: Smoke test
         run: |
           docker run -d --name halite-ci \
