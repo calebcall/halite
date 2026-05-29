@@ -30,6 +30,8 @@ class PollerSettingsOut(BaseModel):
     minion_state_presence_interval_seconds: int
     minion_state_grains_interval_seconds: int
     minion_state_initial_delay_seconds: int
+    event_stream_enabled: bool
+    event_stream_retention_days: int
 
 
 class LoggingSettingsOut(BaseModel):
@@ -83,6 +85,8 @@ class PollerSettingsIn(BaseModel):
     minion_state_presence_interval_seconds: int | None = Field(default=None, ge=0, le=86400)
     minion_state_grains_interval_seconds: int | None = Field(default=None, ge=0, le=86400)
     minion_state_initial_delay_seconds: int | None = Field(default=None, ge=0, le=3600)
+    event_stream_enabled: bool | None = Field(default=None)
+    event_stream_retention_days: int | None = Field(default=None, ge=1, le=365)
 
 
 class LoggingSettingsIn(BaseModel):
