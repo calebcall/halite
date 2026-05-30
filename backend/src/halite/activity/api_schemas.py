@@ -15,6 +15,9 @@ class ActivityEventOut(BaseModel):
     fun: str | None
     success: bool | None
     changed: bool | None
+    initiator: str | None
+    target: str | None
+    duration_ms: int | None
     summary: str
 
 

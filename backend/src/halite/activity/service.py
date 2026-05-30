@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import and_, delete, func, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from halite.activity.models import ActivityEvent
@@ -19,6 +19,9 @@ async def persist_event(db: AsyncSession, ev: NormalizedEvent) -> ActivityEvent:
         fun=ev["fun"],
         success=ev["success"],
         changed=ev["changed"],
+        initiator=ev["initiator"],
+        target=ev["target"],
+        duration_ms=ev["duration_ms"],
         summary=ev["summary"],
         raw=ev["raw"],
     )
@@ -50,7 +53,16 @@ async def list_events(
     if event_type:
         base = base.where(ActivityEvent.event_type == event_type)
     if search:
-        base = base.where(ActivityEvent.summary.ilike(f"%{search}%"))
+        like = f"%{search}%"
+        base = base.where(
+            or_(
+                ActivityEvent.summary.ilike(like),
+                ActivityEvent.minion_id.ilike(like),
+                ActivityEvent.fun.ilike(like),
+                ActivityEvent.initiator.ilike(like),
+                ActivityEvent.target.ilike(like),
+            )
+        )
     if hide_routine:
         # Exclude routine successes: job.ret rows that succeeded and made no
         # changes (changed false-or-null). Failures, changes, and all non-job.ret

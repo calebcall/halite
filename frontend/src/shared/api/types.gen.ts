@@ -916,6 +916,12 @@ export interface components {
             success: boolean | null;
             /** Changed */
             changed: boolean | null;
+            /** Initiator */
+            initiator: string | null;
+            /** Target */
+            target: string | null;
+            /** Duration Ms */
+            duration_ms: number | null;
             /** Summary */
             summary: string;
         };

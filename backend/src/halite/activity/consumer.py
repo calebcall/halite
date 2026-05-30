@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from halite.activity.hub import EventHub
 from halite.activity.normalize import normalize_event
 from halite.activity.service import persist_event, prune_events
+from halite.jobs.index_model import JobIndexEntry
 from halite.jobs.ingest import upsert_one_job
 
 log = logging.getLogger(__name__)
@@ -77,6 +78,19 @@ class EventStreamConsumer:
             if ev is None:
                 continue
             async with self._sessionmaker() as session:
+                # job.ret events rarely carry user/tgt; backfill initiator/target
+                # from the jobs_index row (populated by the poller and by the
+                # job.new ingest below). Best-effort: leave null if the row isn't
+                # there yet (e.g. minion-scheduled jobs we never saw dispatched).
+                if (
+                    ev["event_type"] == "job.ret"
+                    and ev["jid"]
+                    and (ev["initiator"] is None or ev["target"] is None)
+                ):
+                    row = await session.get(JobIndexEntry, ev["jid"])
+                    if row is not None:
+                        ev["initiator"] = ev["initiator"] or row.user
+                        ev["target"] = ev["target"] or row.target
                 await persist_event(session, ev)
                 if ev["event_type"] == "job.new" and ev["jid"]:
                     try:

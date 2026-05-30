@@ -280,6 +280,76 @@ async def test_hide_routine_false_shows_all(app_db, app_session):
     assert r.json()["total"] == 4
 
 
+async def _seed_job_new(session: AsyncSession) -> None:
+    session.add(
+        ActivityEvent(
+            ts=datetime.now(tz=UTC),
+            category="job",
+            event_type="job.new",
+            minion_id=None,
+            jid="20260527000000000099",
+            fun="state.apply",
+            success=None,
+            changed=None,
+            initiator="alice",
+            target="web*",
+            duration_ms=None,
+            summary="state.apply dispatched (2 minions)",
+        )
+    )
+    await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_job_new_surfaces_initiator_target(app_db, app_session):
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(app_session, [("*", "*")])
+    sess = await create_session(
+        app_session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60
+    )
+    await app_session.commit()
+    await _seed_job_new(app_session)
+
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get(
+            "/api/activity",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["total"] == 1
+    ev = body["events"][0]
+    assert ev["initiator"] == "alice"
+    assert ev["target"] == "web*"
+    assert ev["duration_ms"] is None
+
+
+@pytest.mark.asyncio
+async def test_search_matches_initiator(app_db, app_session):
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(app_session, [("*", "*")])
+    sess = await create_session(
+        app_session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60
+    )
+    await app_session.commit()
+    await _seed_job_new(app_session)  # initiator "alice"
+    await _seed_events(app_session)   # no "alice" initiator
+
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get(
+            "/api/activity?search=alice",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["total"] == 1
+    assert body["events"][0]["initiator"] == "alice"
+
+
 @pytest.mark.asyncio
 async def test_since_minutes_bounds_by_time(app_db, app_session):
     """since_minutes only returns rows newer than the cutoff."""

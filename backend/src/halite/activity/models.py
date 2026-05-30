@@ -38,6 +38,9 @@ class ActivityEvent(Base):
     fun: Mapped[str | None] = mapped_column(String(128), nullable=True)
     success: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     changed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    initiator: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    target: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     summary: Mapped[str] = mapped_column(String(512), nullable=False)
     raw: Mapped[dict[str, Any] | None] = mapped_column(
         JSON().with_variant(JSONB(), "postgresql"), nullable=True

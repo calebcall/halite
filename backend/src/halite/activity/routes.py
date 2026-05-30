@@ -55,7 +55,10 @@ async def list_activity_route(
 def _sse(event: dict) -> str:
     payload = {
         k: event.get(k)
-        for k in ("category", "event_type", "minion_id", "jid", "fun", "success", "changed", "summary")
+        for k in (
+            "category", "event_type", "minion_id", "jid", "fun", "success", "changed",
+            "initiator", "target", "duration_ms", "summary",
+        )
     }
     return f"data: {json.dumps(payload)}\n\n"
 
