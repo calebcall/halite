@@ -86,4 +86,17 @@ async def stream_activity_route(request: Request, user: CurrentUser):
         finally:
             hub.unsubscribe(queue)
 
-    return StreamingResponse(gen(), media_type="text/event-stream")
+    # SSE anti-buffering headers. Without these, reverse proxies (nginx and
+    # friends) buffer the streamed response and the browser receives nothing
+    # until the connection closes — the feed then only updates on page refresh
+    # via the REST query. `X-Accel-Buffering: no` disables nginx proxy
+    # buffering; `Cache-Control: no-cache` stops intermediaries from caching.
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
