@@ -29,6 +29,17 @@ export function timeAgo(iso: string): string {
   return `${Math.round(hr / 24)}d ago`
 }
 
+/**
+ * Formats a job duration in milliseconds for display.
+ * Returns null when no duration is known. Sub-second values render as
+ * `"NNNms"`; anything else rounds to one decimal of seconds (`"N.Ns"`).
+ */
+export function formatDuration(ms: number | null): string | null {
+  if (ms === null) return null
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(1)}s`
+}
+
 type BadgeVariant = NonNullable<BadgeProps['variant']>
 
 interface ActivityVisual {
@@ -65,9 +76,9 @@ export function activityVisual(e: ActivityEventOut): ActivityVisual {
       }
       return {
         icon: CheckCircle2,
-        iconClass: 'text-muted-foreground',
+        iconClass: 'text-success',
         badge: 'OK',
-        badgeVariant: 'info',
+        badgeVariant: 'success',
       }
     case 'job.new':
       return {
@@ -127,6 +138,14 @@ function secondaryLabel(e: ActivityEventOut): string {
   return e.event_type
 }
 
+/**
+ * Primary subject for a row: the minion it concerns, else the target it
+ * dispatched against, else an em dash. Never the misleading literal "fleet".
+ */
+function subject(e: ActivityEventOut): string {
+  return e.minion_id ?? e.target ?? '—'
+}
+
 interface ActivityRowProps {
   event: ActivityEventOut
   /** Compact variant for the overview widget. */
@@ -136,18 +155,25 @@ interface ActivityRowProps {
 export function ActivityRow({ event, compact = false }: ActivityRowProps) {
   const visual = activityVisual(event)
   const Icon = visual.icon
+  const duration = formatDuration(event.duration_ms)
 
   if (compact) {
+    // Surface the initiator (if any) in the row tooltip rather than crowding
+    // the single line; the widget is small.
+    const compactTitle = event.initiator ? `by ${event.initiator}` : undefined
     return (
-      <li className="flex items-center gap-2.5 py-1.5 text-sm">
+      <li className="flex items-center gap-2.5 py-1.5 text-sm" title={compactTitle}>
         <Icon className={cn('size-4 shrink-0', visual.iconClass)} />
         <span className="min-w-0 flex-1 truncate">
-          <span className="font-medium text-foreground">
-            {event.minion_id ?? 'fleet'}
-          </span>
+          <span className="font-medium text-foreground">{subject(event)}</span>
           <span className="ml-1.5 text-xs text-muted-foreground">
             {secondaryLabel(event)}
           </span>
+          {duration && (
+            <span className="ml-1.5 text-[11px] tabular-nums text-muted-foreground">
+              {duration}
+            </span>
+          )}
         </span>
         <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
           {timeAgo(event.ts)}
@@ -155,6 +181,15 @@ export function ActivityRow({ event, compact = false }: ActivityRowProps) {
       </li>
     )
   }
+
+  const subj = subject(event)
+  // Only show "→ target" when the subject is the minion and the target adds
+  // information (it isn't already the subject). Avoids repeating ourselves.
+  const showTarget =
+    event.minion_id != null &&
+    event.target != null &&
+    event.target !== subj
+  const hasSecondary = event.initiator != null || showTarget || duration != null
 
   return (
     <li className="flex items-center gap-3 border-b border-border/50 px-4 py-3 last:border-b-0 hover:bg-accent/40">
@@ -168,16 +203,24 @@ export function ActivityRow({ event, compact = false }: ActivityRowProps) {
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center gap-2">
-          <span className="truncate font-semibold text-foreground">
-            {event.minion_id ?? 'fleet'}
-          </span>
+          <span className="truncate font-semibold text-foreground">{subj}</span>
           <span className="truncate font-mono text-xs text-muted-foreground">
             {secondaryLabel(event)}
           </span>
         </div>
-        <span className="truncate text-xs text-muted-foreground">
-          {event.summary}
-        </span>
+        {hasSecondary && (
+          <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+            {event.initiator != null && (
+              <span className="truncate">by {event.initiator}</span>
+            )}
+            {showTarget && (
+              <span className="truncate">→ {event.target}</span>
+            )}
+            {duration != null && (
+              <span className="shrink-0 tabular-nums">{duration}</span>
+            )}
+          </div>
+        )}
       </div>
       <Badge variant={visual.badgeVariant} className="shrink-0">
         {visual.badge}

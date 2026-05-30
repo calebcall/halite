@@ -26,6 +26,9 @@ const failedEvent = {
   fun: 'state.highstate',
   success: false,
   changed: false,
+  initiator: null,
+  target: null,
+  duration_ms: 4200,
   summary: 'state.highstate failed on web-01',
 }
 
@@ -39,6 +42,9 @@ const changedEvent = {
   fun: 'state.highstate',
   success: true,
   changed: true,
+  initiator: null,
+  target: null,
+  duration_ms: null,
   summary: 'state.highstate applied changes on db-02',
 }
 
@@ -52,7 +58,27 @@ const okEvent = {
   fun: 'state.highstate',
   success: true,
   changed: false,
+  initiator: null,
+  target: null,
+  duration_ms: null,
   summary: 'state.highstate returned on web-03',
+}
+
+// A job.new dispatch: no minion_id, but a target glob and an initiator.
+const dispatchEvent = {
+  id: 4,
+  ts: '2026-05-29T12:03:00Z',
+  category: 'job',
+  event_type: 'job.new',
+  minion_id: null,
+  jid: '20260529120300000000',
+  fun: 'test.ping',
+  success: null,
+  changed: null,
+  initiator: 'admin',
+  target: 'web/*',
+  duration_ms: null,
+  summary: 'test.ping dispatched to web/*',
 }
 
 const server = setupServer(
@@ -69,8 +95,8 @@ const server = setupServer(
     lastHideRoutine = url.searchParams.get('hide_routine')
     const hideRoutine = lastHideRoutine === 'true'
     const events = hideRoutine
-      ? [failedEvent, changedEvent]
-      : [failedEvent, changedEvent, okEvent]
+      ? [failedEvent, changedEvent, dispatchEvent]
+      : [failedEvent, changedEvent, dispatchEvent, okEvent]
     return HttpResponse.json({ total: events.length, events })
   }),
 )
@@ -94,7 +120,7 @@ function renderPage() {
 describe('ActivityPage', () => {
   it('defaults to hide_routine=true and renders Failed and Changes rows', async () => {
     renderPage()
-    expect(await screen.findByText('state.highstate failed on web-01')).toBeInTheDocument()
+    expect(await screen.findByText('web-01')).toBeInTheDocument()
     expect(screen.getByText('Failed')).toBeInTheDocument()
     expect(screen.getByText('Changes')).toBeInTheDocument()
     // routine OK row should not be present by default
@@ -102,13 +128,30 @@ describe('ActivityPage', () => {
     expect(lastHideRoutine).toBe('true')
   })
 
+  it('shows the target as the subject for a job.new dispatch and the initiator', async () => {
+    renderPage()
+    // job.new has no minion_id — the subject should be the target glob,
+    // never the literal "fleet".
+    expect(await screen.findByText('web/*')).toBeInTheDocument()
+    expect(screen.queryByText('fleet')).not.toBeInTheDocument()
+    expect(screen.getByText('by admin')).toBeInTheDocument()
+    expect(screen.getByText('Dispatched')).toBeInTheDocument()
+  })
+
+  it('renders the formatted duration for a job.ret with duration_ms', async () => {
+    renderPage()
+    // failedEvent has duration_ms 4200 → "4.2s"
+    expect(await screen.findByText('4.2s')).toBeInTheDocument()
+  })
+
   it('toggling "Show routine successes" sends hide_routine=false and shows OK rows', async () => {
     const user = userEvent.setup()
     renderPage()
-    await screen.findByText('state.highstate failed on web-01')
+    await screen.findByText('web-01')
 
     await user.click(screen.getByRole('switch', { name: /show routine successes/i }))
 
+    // The routine success row renders with the "OK" success badge.
     expect(await screen.findByText('OK')).toBeInTheDocument()
     expect(lastHideRoutine).toBe('false')
   })

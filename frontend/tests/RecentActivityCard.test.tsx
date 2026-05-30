@@ -40,6 +40,9 @@ const recentEvent = {
   fun: 'state.highstate',
   success: false,
   changed: false,
+  initiator: 'scheduler',
+  target: null,
+  duration_ms: 4200,
   summary: 'state.highstate failed on web-01',
 }
 
