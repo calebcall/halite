@@ -1,0 +1,5322 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Halite",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "summary": "Healthz",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Healthz Healthz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "summary": "Readyz",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Readyz Readyz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login Route",
+        "operationId": "login_route_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout Route",
+        "operationId": "logout_route_api_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Me Route",
+        "operationId": "me_route_api_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/change-password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Change Password Route",
+        "operationId": "change_password_route_api_auth_change_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audit": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "List Audit",
+        "operationId": "list_audit_api_audit_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "name": "decision",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Decision"
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fleet/health": {
+      "get": {
+        "tags": [
+          "fleet"
+        ],
+        "summary": "Fleet Health Route",
+        "operationId": "fleet_health_route_api_fleet_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FleetHealthOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fleet/compliance": {
+      "get": {
+        "tags": [
+          "fleet"
+        ],
+        "summary": "Compliance Route",
+        "operationId": "compliance_route_api_fleet_compliance_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplianceSeriesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fleet/top-failures": {
+      "get": {
+        "tags": [
+          "fleet"
+        ],
+        "summary": "Top Failures Route",
+        "operationId": "top_failures_route_api_fleet_top_failures_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopFailuresOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fleet/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "fleet"
+        ],
+        "summary": "Run Detail Route",
+        "operationId": "run_detail_route_api_fleet_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inventory/packages": {
+      "get": {
+        "tags": [
+          "inventory"
+        ],
+        "summary": "List Packages Route",
+        "description": "Fleet-wide aggregate: one row per package name. Default landing view.",
+        "operationId": "list_packages_route_api_inventory_packages_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageAggregateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inventory/packages/{name}/versions": {
+      "get": {
+        "tags": [
+          "inventory"
+        ],
+        "summary": "List Versions Route",
+        "description": "All distinct versions of one named package, with per-version minion counts.",
+        "operationId": "list_versions_route_api_inventory_packages__name__versions_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionAggregateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inventory/packages/search": {
+      "post": {
+        "tags": [
+          "inventory"
+        ],
+        "summary": "Search Packages Route",
+        "description": "Row-level package search. Used by level 3 (minions with one specific\nname+version) and as a power-user query endpoint (version comparison,\nmulti-field filter).",
+        "operationId": "search_packages_route_api_inventory_packages_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageQueryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageQueryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inventory/refresh": {
+      "post": {
+        "tags": [
+          "inventory"
+        ],
+        "summary": "Refresh Route",
+        "operationId": "refresh_route_api_inventory_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "List Jobs Route",
+        "operationId": "list_jobs_route_api_jobs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "live",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Live"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobsListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/activity": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Jobs Activity Route",
+        "operationId": "jobs_activity_route_api_jobs_activity_get",
+        "parameters": [
+          {
+            "name": "hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 168,
+              "minimum": 1,
+              "default": 24,
+              "title": "Hours"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobActivityOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/timeline": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Jobs Timeline Route",
+        "operationId": "jobs_timeline_route_api_jobs_timeline_get",
+        "parameters": [
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "24h",
+              "title": "Window"
+            }
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "function",
+              "title": "Group By"
+            }
+          },
+          {
+            "name": "include_system",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include System"
+            }
+          },
+          {
+            "name": "function_filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Function Filter"
+            }
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{jid}": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Get Job Route",
+        "operationId": "get_job_route_api_jobs__jid__get",
+        "parameters": [
+          {
+            "name": "jid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Jid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{jid}/kill": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Kill Job Route",
+        "operationId": "kill_job_route_api_jobs__jid__kill_post",
+        "parameters": [
+          {
+            "name": "jid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Jid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/keys": {
+      "get": {
+        "tags": [
+          "keys"
+        ],
+        "summary": "List Keys Route",
+        "operationId": "list_keys_route_api_keys_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeysListOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/keys/{key_id}/accept": {
+      "post": {
+        "tags": [
+          "keys"
+        ],
+        "summary": "Accept Key Route",
+        "operationId": "accept_key_route_api_keys__key_id__accept_post",
+        "parameters": [
+          {
+            "name": "key_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/keys/{key_id}/reject": {
+      "post": {
+        "tags": [
+          "keys"
+        ],
+        "summary": "Reject Key Route",
+        "operationId": "reject_key_route_api_keys__key_id__reject_post",
+        "parameters": [
+          {
+            "name": "key_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/keys/{key_id}": {
+      "delete": {
+        "tags": [
+          "keys"
+        ],
+        "summary": "Delete Key Route",
+        "operationId": "delete_key_route_api_keys__key_id__delete",
+        "parameters": [
+          {
+            "name": "key_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/minions": {
+      "get": {
+        "tags": [
+          "minions"
+        ],
+        "summary": "List Minions Route",
+        "operationId": "list_minions_route_api_minions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MinionListOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/minions/{minion_id}": {
+      "get": {
+        "tags": [
+          "minions"
+        ],
+        "summary": "Get Minion Route",
+        "operationId": "get_minion_route_api_minions__minion_id__get",
+        "parameters": [
+          {
+            "name": "minion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Minion Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MinionDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/minions/{minion_id}/runs": {
+      "get": {
+        "tags": [
+          "minions"
+        ],
+        "summary": "List Minion Runs Route",
+        "operationId": "list_minion_runs_route_api_minions__minion_id__runs_get",
+        "parameters": [
+          {
+            "name": "minion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Minion Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MinionRunsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/minions/{minion_id}/compliance": {
+      "get": {
+        "tags": [
+          "minions"
+        ],
+        "summary": "List Minion Compliance Route",
+        "operationId": "list_minion_compliance_route_api_minions__minion_id__compliance_get",
+        "parameters": [
+          {
+            "name": "minion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Minion Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MinionComplianceOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roles": {
+      "get": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "List Roles Route",
+        "operationId": "list_roles_route_api_roles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleListOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Create Role Route",
+        "operationId": "create_role_route_api_roles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleCreatePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roles/{role_id}": {
+      "get": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Get Role Route",
+        "operationId": "get_role_route_api_roles__role_id__get",
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Role Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Update Role Route",
+        "operationId": "update_role_route_api_roles__role_id__patch",
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Role Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleUpdatePayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Delete Role Route",
+        "operationId": "delete_role_route_api_roles__role_id__delete",
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Role Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roles/{role_id}/permissions": {
+      "post": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Add Permission Route",
+        "operationId": "add_permission_route_api_roles__role_id__permissions_post",
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Role Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermissionPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roles/{role_id}/permissions/{permission_id}": {
+      "delete": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Remove Permission Route",
+        "operationId": "remove_permission_route_api_roles__role_id__permissions__permission_id__delete",
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Role Id"
+            }
+          },
+          {
+            "name": "permission_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Permission Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/run": {
+      "post": {
+        "tags": [
+          "run"
+        ],
+        "summary": "Run Command Route",
+        "operationId": "run_command_route_api_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunCommandIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunCommandOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/salt/functions": {
+      "get": {
+        "tags": [
+          "salt-docs"
+        ],
+        "summary": "List Functions Route",
+        "description": "List the names of execution functions the salt master knows about.\n\nRequires authentication (any logged-in user). Cached for 1 hour to\navoid hammering salt-api on every page render.",
+        "operationId": "list_functions_route_api_salt_functions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaltFunctionsOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settings/status": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Status Route",
+        "operationId": "status_route_api_admin_settings_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsStatusOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settings": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Get Route",
+        "operationId": "get_route_api_admin_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settings/salt": {
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Put Salt Route",
+        "operationId": "put_salt_route_api_admin_settings_salt_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaltSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settings/pollers": {
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Put Pollers Route",
+        "operationId": "put_pollers_route_api_admin_settings_pollers_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PollerSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settings/logging": {
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Put Logging Route",
+        "operationId": "put_logging_route_api_admin_settings_logging_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoggingSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settings/test-salt": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Test Salt Route",
+        "description": "Throwaway client. Validates creds without persisting.",
+        "operationId": "test_salt_route_api_admin_settings_test_salt_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestSaltConnectionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSaltConnectionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settings/test-salt-saved": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Test Salt Saved Route",
+        "description": "Test the credentials currently persisted in the DB. Used by the\nsettings page when the operator hasn't re-typed the password \u2014 we\ncan't roundtrip it through the form (security), but we can still\nvalidate it server-side.",
+        "operationId": "test_salt_saved_route_api_admin_settings_test_salt_saved_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSaltConnectionOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/templates": {
+      "get": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "List Templates Route",
+        "operationId": "list_templates_route_api_templates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandTemplateListOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "Create Template Route",
+        "operationId": "create_template_route_api_templates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandTemplateCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandTemplateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/templates/{template_id}": {
+      "delete": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "Delete Template Route",
+        "operationId": "delete_template_route_api_templates__template_id__delete",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "Update Template Route",
+        "operationId": "update_template_route_api_templates__template_id__patch",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateShareUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandTemplateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "List Users Route",
+        "operationId": "list_users_route_api_users_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create User Route",
+        "operationId": "create_user_route_api_users_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreatePayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{user_id}": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get User Route",
+        "operationId": "get_user_route_api_users__user_id__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update User Route",
+        "operationId": "update_user_route_api_users__user_id__patch",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdatePayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Delete User Route",
+        "operationId": "delete_user_route_api_users__user_id__delete",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{user_id}/password": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Reset Password Route",
+        "operationId": "reset_password_route_api_users__user_id__password_post",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{user_id}/roles": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "List User Roles Route",
+        "operationId": "list_user_roles_route_api_users__user_id__roles_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "title": "Response List User Roles Route Api Users  User Id  Roles Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Add User Role Route",
+        "operationId": "add_user_role_route_api_users__user_id__roles_post",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleAssignmentPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{user_id}/roles/{role_id}": {
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Remove User Role Route",
+        "operationId": "remove_user_role_route_api_users__user_id__roles__role_id__delete",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Role Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuditEntryOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "resource": {
+            "type": "string",
+            "title": "Resource"
+          },
+          "args_json": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Args Json"
+          },
+          "salt_jid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salt Jid"
+          },
+          "decision": {
+            "type": "string",
+            "title": "Decision"
+          },
+          "result_code": {
+            "type": "integer",
+            "title": "Result Code"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "title": "Duration Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "at",
+          "user_id",
+          "action",
+          "resource",
+          "args_json",
+          "salt_jid",
+          "decision",
+          "result_code",
+          "duration_ms"
+        ],
+        "title": "AuditEntryOut"
+      },
+      "AuditListOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntryOut"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "entries"
+        ],
+        "title": "AuditListOut"
+      },
+      "ChangePasswordPayload": {
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "title": "Current Password"
+          },
+          "new_password": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 8,
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "ChangePasswordPayload"
+      },
+      "CommandTemplateCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Description",
+            "default": ""
+          },
+          "target": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Target"
+          },
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "glob",
+              "list",
+              "pcre",
+              "grain",
+              "nodegroup",
+              "compound"
+            ],
+            "title": "Target Type",
+            "default": "glob"
+          },
+          "fun": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Fun"
+          },
+          "args": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Args",
+            "default": []
+          },
+          "kwargs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Kwargs"
+          },
+          "is_shared": {
+            "type": "boolean",
+            "title": "Is Shared",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "target",
+          "fun"
+        ],
+        "title": "CommandTemplateCreate"
+      },
+      "CommandTemplateListOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "templates": {
+            "items": {
+              "$ref": "#/components/schemas/CommandTemplateOut"
+            },
+            "type": "array",
+            "title": "Templates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "templates"
+        ],
+        "title": "CommandTemplateListOut"
+      },
+      "CommandTemplateOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Description",
+            "default": ""
+          },
+          "target": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Target"
+          },
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "glob",
+              "list",
+              "pcre",
+              "grain",
+              "nodegroup",
+              "compound"
+            ],
+            "title": "Target Type",
+            "default": "glob"
+          },
+          "fun": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Fun"
+          },
+          "args": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Args",
+            "default": []
+          },
+          "kwargs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Kwargs"
+          },
+          "is_shared": {
+            "type": "boolean",
+            "title": "Is Shared",
+            "default": false
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "owner_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Owner User Id"
+          },
+          "owner_username": {
+            "type": "string",
+            "title": "Owner Username"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "target",
+          "fun",
+          "id",
+          "owner_user_id",
+          "owner_username",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CommandTemplateOut"
+      },
+      "ComplianceBucketOut": {
+        "properties": {
+          "bucketed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Bucketed At"
+          },
+          "pass_count": {
+            "type": "integer",
+            "title": "Pass Count"
+          },
+          "fail_count": {
+            "type": "integer",
+            "title": "Fail Count"
+          },
+          "change_count": {
+            "type": "integer",
+            "title": "Change Count"
+          },
+          "blocked_count": {
+            "type": "integer",
+            "title": "Blocked Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bucketed_at",
+          "pass_count",
+          "fail_count",
+          "change_count",
+          "blocked_count"
+        ],
+        "title": "ComplianceBucketOut"
+      },
+      "ComplianceSeriesOut": {
+        "properties": {
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/ComplianceBucketOut"
+            },
+            "type": "array",
+            "title": "Buckets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "buckets"
+        ],
+        "title": "ComplianceSeriesOut"
+      },
+      "FleetHealthOut": {
+        "properties": {
+          "total_minions": {
+            "type": "integer",
+            "title": "Total Minions"
+          },
+          "minions": {
+            "items": {
+              "$ref": "#/components/schemas/MinionHealthOut"
+            },
+            "type": "array",
+            "title": "Minions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_minions",
+          "minions"
+        ],
+        "title": "FleetHealthOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "JobActivityBucket": {
+        "properties": {
+          "hour_start": {
+            "type": "string",
+            "title": "Hour Start"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hour_start",
+          "count"
+        ],
+        "title": "JobActivityBucket"
+      },
+      "JobActivityOut": {
+        "properties": {
+          "hours": {
+            "type": "integer",
+            "title": "Hours"
+          },
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/JobActivityBucket"
+            },
+            "type": "array",
+            "title": "Buckets"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "running": {
+            "type": "integer",
+            "title": "Running"
+          },
+          "last_polled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Polled At"
+          },
+          "active_known": {
+            "type": "boolean",
+            "title": "Active Known",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "hours",
+          "buckets",
+          "total",
+          "running"
+        ],
+        "title": "JobActivityOut"
+      },
+      "JobDetail": {
+        "properties": {
+          "jid": {
+            "type": "string",
+            "title": "Jid"
+          },
+          "function": {
+            "type": "string",
+            "title": "Function"
+          },
+          "arguments": {
+            "items": {},
+            "type": "array",
+            "title": "Arguments",
+            "default": []
+          },
+          "kwargs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Kwargs"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "target_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Type"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "minions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Minions",
+            "default": []
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/JobMinionResult"
+            },
+            "type": "array",
+            "title": "Results",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "jid",
+          "function",
+          "target"
+        ],
+        "title": "JobDetail"
+      },
+      "JobMinionResult": {
+        "properties": {
+          "minion": {
+            "type": "string",
+            "title": "Minion"
+          },
+          "success": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Success"
+          },
+          "retcode": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retcode"
+          },
+          "return_value": {
+            "title": "Return Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "minion"
+        ],
+        "title": "JobMinionResult"
+      },
+      "JobSummary": {
+        "properties": {
+          "jid": {
+            "type": "string",
+            "title": "Jid"
+          },
+          "function": {
+            "type": "string",
+            "title": "Function"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "target_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Type"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "complete"
+            ],
+            "title": "Status",
+            "default": "complete"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jid",
+          "function",
+          "target"
+        ],
+        "title": "JobSummary"
+      },
+      "JobsListOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobSummary"
+            },
+            "type": "array",
+            "title": "Jobs"
+          },
+          "last_polled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Polled At"
+          },
+          "active_known": {
+            "type": "boolean",
+            "title": "Active Known",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "jobs"
+        ],
+        "title": "JobsListOut"
+      },
+      "KeyEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "pending",
+              "rejected",
+              "denied"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "KeyEntry"
+      },
+      "KeysListOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/KeyEntry"
+            },
+            "type": "array",
+            "title": "Keys"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "keys"
+        ],
+        "title": "KeysListOut"
+      },
+      "LoggingSettingsIn": {
+        "properties": {
+          "log_format": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "json",
+                  "text"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Log Format"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LoggingSettingsIn"
+      },
+      "LoggingSettingsOut": {
+        "properties": {
+          "log_format": {
+            "type": "string",
+            "enum": [
+              "json",
+              "text"
+            ],
+            "title": "Log Format"
+          }
+        },
+        "type": "object",
+        "required": [
+          "log_format"
+        ],
+        "title": "LoggingSettingsOut"
+      },
+      "LoginPayload": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginPayload"
+      },
+      "MinionComplianceBucket": {
+        "properties": {
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Completed At"
+          },
+          "jid": {
+            "type": "string",
+            "title": "Jid"
+          },
+          "pass_count": {
+            "type": "integer",
+            "title": "Pass Count"
+          },
+          "fail_count": {
+            "type": "integer",
+            "title": "Fail Count"
+          },
+          "change_count": {
+            "type": "integer",
+            "title": "Change Count"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "changed",
+              "unhealthy",
+              "blocked"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "completed_at",
+          "jid",
+          "pass_count",
+          "fail_count",
+          "change_count",
+          "total_count",
+          "status"
+        ],
+        "title": "MinionComplianceBucket"
+      },
+      "MinionComplianceOut": {
+        "properties": {
+          "minion_id": {
+            "type": "string",
+            "title": "Minion Id"
+          },
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/MinionComplianceBucket"
+            },
+            "type": "array",
+            "title": "Buckets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "minion_id",
+          "buckets"
+        ],
+        "title": "MinionComplianceOut"
+      },
+      "MinionDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "online",
+              "offline",
+              "pending",
+              "rejected",
+              "denied"
+            ],
+            "title": "Status"
+          },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip"
+          },
+          "grains": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grains"
+          },
+          "last_refreshed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Refreshed At"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "MinionDetail"
+      },
+      "MinionHealthOut": {
+        "properties": {
+          "minion_id": {
+            "type": "string",
+            "title": "Minion Id"
+          },
+          "online": {
+            "type": "boolean",
+            "title": "Online"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "jid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jid"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "changed",
+              "unhealthy",
+              "blocked",
+              "stale",
+              "unknown"
+            ],
+            "title": "Status"
+          },
+          "pass_count": {
+            "type": "integer",
+            "title": "Pass Count"
+          },
+          "fail_count": {
+            "type": "integer",
+            "title": "Fail Count"
+          },
+          "change_count": {
+            "type": "integer",
+            "title": "Change Count"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "title": "Duration Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "minion_id",
+          "online",
+          "run_id",
+          "jid",
+          "completed_at",
+          "status",
+          "pass_count",
+          "fail_count",
+          "change_count",
+          "total_count",
+          "duration_ms"
+        ],
+        "title": "MinionHealthOut"
+      },
+      "MinionListOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "minions": {
+            "items": {
+              "$ref": "#/components/schemas/MinionSummary"
+            },
+            "type": "array",
+            "title": "Minions"
+          },
+          "last_refreshed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Refreshed At"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "minions"
+        ],
+        "title": "MinionListOut"
+      },
+      "MinionRunSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "jid": {
+            "type": "string",
+            "title": "Jid"
+          },
+          "fun": {
+            "type": "string",
+            "title": "Fun"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Completed At"
+          },
+          "pass_count": {
+            "type": "integer",
+            "title": "Pass Count"
+          },
+          "fail_count": {
+            "type": "integer",
+            "title": "Fail Count"
+          },
+          "change_count": {
+            "type": "integer",
+            "title": "Change Count"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "title": "Duration Ms"
+          },
+          "blocked": {
+            "type": "boolean",
+            "title": "Blocked"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "changed",
+              "unhealthy",
+              "blocked"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "jid",
+          "fun",
+          "completed_at",
+          "pass_count",
+          "fail_count",
+          "change_count",
+          "total_count",
+          "duration_ms",
+          "blocked",
+          "status"
+        ],
+        "title": "MinionRunSummary",
+        "description": "One row in the per-minion recent-runs table."
+      },
+      "MinionRunsOut": {
+        "properties": {
+          "minion_id": {
+            "type": "string",
+            "title": "Minion Id"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/MinionRunSummary"
+            },
+            "type": "array",
+            "title": "Runs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "minion_id",
+          "total",
+          "runs"
+        ],
+        "title": "MinionRunsOut"
+      },
+      "MinionSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "online",
+              "offline",
+              "pending",
+              "rejected",
+              "denied"
+            ],
+            "title": "Status"
+          },
+          "os": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Os"
+          },
+          "os_family": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Os Family"
+          },
+          "osrelease": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Osrelease"
+          },
+          "saltversion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saltversion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "MinionSummary"
+      },
+      "NameFilter": {
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "eq",
+              "prefix",
+              "contains"
+            ],
+            "title": "Op",
+            "default": "eq"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "NameFilter",
+        "description": "A name-side filter. ``op=\"eq\"`` becomes ``name = ?``;\n``op=\"prefix\"`` becomes ``name LIKE ? || '%'`` (cheap, hits the index);\n``op=\"contains\"`` becomes ``name LIKE '%' || ? || '%'`` (slower, full scan\nof the (name)-indexed range but acceptable at our fleet size)."
+      },
+      "PackageAggregate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "minion_count": {
+            "type": "integer",
+            "title": "Minion Count"
+          },
+          "version_count": {
+            "type": "integer",
+            "title": "Version Count"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "minion_count",
+          "version_count",
+          "last_seen"
+        ],
+        "title": "PackageAggregate",
+        "description": "One row in the fleet-wide package list."
+      },
+      "PackageAggregateOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PackageAggregate"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "PackageAggregateOut"
+      },
+      "PackageQueryHit": {
+        "properties": {
+          "minion_id": {
+            "type": "string",
+            "title": "Minion Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "arch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Arch"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "collected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Collected At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "minion_id",
+          "name",
+          "version",
+          "collected_at"
+        ],
+        "title": "PackageQueryHit",
+        "description": "One row in the response to a package query."
+      },
+      "PackageQueryIn": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameFilter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionFilter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "apt",
+                  "rpm",
+                  "pacman"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "minion_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minion Id"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 5000.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 500
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "PackageQueryIn",
+        "description": "Filter for ``GET /api/inventory/packages``.\n\nAt least one of ``name`` or ``minion_id`` MUST be supplied \u2014 we don't\nwant to accidentally let the UI fetch the entire fleet's package list\nin one request. (A future \"browse all\" endpoint can lift this rule.)"
+      },
+      "PackageQueryOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "hits": {
+            "items": {
+              "$ref": "#/components/schemas/PackageQueryHit"
+            },
+            "type": "array",
+            "title": "Hits"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "hits"
+        ],
+        "title": "PackageQueryOut",
+        "description": "Wrapper that lets us tack pagination metadata on later without breaking\nthe wire format."
+      },
+      "PasswordResetPayload": {
+        "properties": {
+          "new_password": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 8,
+            "title": "New Password"
+          },
+          "must_change_pw": {
+            "type": "boolean",
+            "title": "Must Change Pw",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "new_password"
+        ],
+        "title": "PasswordResetPayload"
+      },
+      "PermissionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "verb": {
+            "type": "string",
+            "title": "Verb"
+          },
+          "resource_glob": {
+            "type": "string",
+            "title": "Resource Glob"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "verb",
+          "resource_glob"
+        ],
+        "title": "PermissionOut"
+      },
+      "PermissionPair": {
+        "properties": {
+          "verb": {
+            "type": "string",
+            "title": "Verb"
+          },
+          "resource_glob": {
+            "type": "string",
+            "title": "Resource Glob"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verb",
+          "resource_glob"
+        ],
+        "title": "PermissionPair"
+      },
+      "PermissionPayload": {
+        "properties": {
+          "verb": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Verb"
+          },
+          "resource_glob": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Resource Glob"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verb",
+          "resource_glob"
+        ],
+        "title": "PermissionPayload"
+      },
+      "PollerSettingsIn": {
+        "properties": {
+          "inventory_refresh_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1440.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inventory Refresh Minutes"
+          },
+          "inventory_refresh_initial_delay_s": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3600.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inventory Refresh Initial Delay S"
+          },
+          "fleet_poll_interval_seconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 86400.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fleet Poll Interval Seconds"
+          },
+          "jobs_poll_interval_seconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 86400.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jobs Poll Interval Seconds"
+          },
+          "minion_state_keys_interval_seconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 86400.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minion State Keys Interval Seconds"
+          },
+          "minion_state_presence_interval_seconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 86400.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minion State Presence Interval Seconds"
+          },
+          "minion_state_grains_interval_seconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 86400.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minion State Grains Interval Seconds"
+          },
+          "minion_state_initial_delay_seconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3600.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minion State Initial Delay Seconds"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PollerSettingsIn"
+      },
+      "PollerSettingsOut": {
+        "properties": {
+          "inventory_refresh_minutes": {
+            "type": "integer",
+            "title": "Inventory Refresh Minutes"
+          },
+          "inventory_refresh_initial_delay_s": {
+            "type": "integer",
+            "title": "Inventory Refresh Initial Delay S"
+          },
+          "fleet_poll_interval_seconds": {
+            "type": "integer",
+            "title": "Fleet Poll Interval Seconds"
+          },
+          "jobs_poll_interval_seconds": {
+            "type": "integer",
+            "title": "Jobs Poll Interval Seconds"
+          },
+          "minion_state_keys_interval_seconds": {
+            "type": "integer",
+            "title": "Minion State Keys Interval Seconds"
+          },
+          "minion_state_presence_interval_seconds": {
+            "type": "integer",
+            "title": "Minion State Presence Interval Seconds"
+          },
+          "minion_state_grains_interval_seconds": {
+            "type": "integer",
+            "title": "Minion State Grains Interval Seconds"
+          },
+          "minion_state_initial_delay_seconds": {
+            "type": "integer",
+            "title": "Minion State Initial Delay Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "inventory_refresh_minutes",
+          "inventory_refresh_initial_delay_s",
+          "fleet_poll_interval_seconds",
+          "jobs_poll_interval_seconds",
+          "minion_state_keys_interval_seconds",
+          "minion_state_presence_interval_seconds",
+          "minion_state_grains_interval_seconds",
+          "minion_state_initial_delay_seconds"
+        ],
+        "title": "PollerSettingsOut"
+      },
+      "RefreshIn": {
+        "properties": {
+          "target": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Target",
+            "default": "*"
+          },
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "glob",
+              "list",
+              "pcre",
+              "grain",
+              "nodegroup",
+              "compound"
+            ],
+            "title": "Target Type",
+            "default": "glob"
+          }
+        },
+        "type": "object",
+        "title": "RefreshIn",
+        "description": "Body for ``POST /api/inventory/refresh``.\n\n``target='*'`` + ``target_type='glob'`` means \"every connected minion\".\nPin the target down if you want to refresh just one host."
+      },
+      "RefreshOut": {
+        "properties": {
+          "minions_refreshed": {
+            "type": "integer",
+            "title": "Minions Refreshed"
+          },
+          "package_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Package Counts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "minions_refreshed",
+          "package_counts"
+        ],
+        "title": "RefreshOut"
+      },
+      "RoleAssignmentPayload": {
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role_id"
+        ],
+        "title": "RoleAssignmentPayload"
+      },
+      "RoleCreatePayload": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Description",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "RoleCreatePayload"
+      },
+      "RoleDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "is_builtin": {
+            "type": "boolean",
+            "title": "Is Builtin"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/PermissionOut"
+            },
+            "type": "array",
+            "title": "Permissions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "is_builtin",
+          "description",
+          "permissions"
+        ],
+        "title": "RoleDetail"
+      },
+      "RoleListOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleSummary"
+            },
+            "type": "array",
+            "title": "Roles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "roles"
+        ],
+        "title": "RoleListOut"
+      },
+      "RoleSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "is_builtin": {
+            "type": "boolean",
+            "title": "Is Builtin"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "is_builtin",
+          "description"
+        ],
+        "title": "RoleSummary"
+      },
+      "RoleUpdatePayload": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "title": "RoleUpdatePayload"
+      },
+      "RunCommandIn": {
+        "properties": {
+          "target": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Target"
+          },
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "glob",
+              "list",
+              "pcre",
+              "grain",
+              "nodegroup",
+              "compound"
+            ],
+            "title": "Target Type",
+            "default": "glob"
+          },
+          "fun": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Fun"
+          },
+          "args": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Args",
+            "default": []
+          },
+          "kwargs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Kwargs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target",
+          "fun"
+        ],
+        "title": "RunCommandIn"
+      },
+      "RunCommandOut": {
+        "properties": {
+          "jid": {
+            "type": "string",
+            "title": "Jid"
+          },
+          "minions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Minions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jid",
+          "minions"
+        ],
+        "title": "RunCommandOut"
+      },
+      "RunDetailOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "minion_id": {
+            "type": "string",
+            "title": "Minion Id"
+          },
+          "jid": {
+            "type": "string",
+            "title": "Jid"
+          },
+          "fun": {
+            "type": "string",
+            "title": "Fun"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Completed At"
+          },
+          "pass_count": {
+            "type": "integer",
+            "title": "Pass Count"
+          },
+          "fail_count": {
+            "type": "integer",
+            "title": "Fail Count"
+          },
+          "change_count": {
+            "type": "integer",
+            "title": "Change Count"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "title": "Duration Ms"
+          },
+          "blocked": {
+            "type": "boolean",
+            "title": "Blocked"
+          },
+          "raw_result": {
+            "type": "object",
+            "title": "Raw Result"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "minion_id",
+          "jid",
+          "fun",
+          "completed_at",
+          "pass_count",
+          "fail_count",
+          "change_count",
+          "total_count",
+          "duration_ms",
+          "blocked",
+          "raw_result"
+        ],
+        "title": "RunDetailOut"
+      },
+      "SaltFunctionsOut": {
+        "properties": {
+          "functions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Functions"
+          },
+          "cached_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Cached At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "functions",
+          "cached_at"
+        ],
+        "title": "SaltFunctionsOut"
+      },
+      "SaltSettingsIn": {
+        "properties": {
+          "url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "verify": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verify"
+          },
+          "eauth": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "pam",
+                  "sharedsecret",
+                  "ldap",
+                  "file",
+                  "auto"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eauth"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SaltSettingsIn",
+        "description": "PUT body for the salt section. All fields optional \u2014 only the\nones present are applied. At least one must be present."
+      },
+      "SaltSettingsOut": {
+        "properties": {
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "password_set": {
+            "type": "boolean",
+            "title": "Password Set"
+          },
+          "verify": {
+            "type": "boolean",
+            "title": "Verify"
+          },
+          "eauth": {
+            "type": "string",
+            "enum": [
+              "pam",
+              "sharedsecret",
+              "ldap",
+              "file",
+              "auto"
+            ],
+            "title": "Eauth"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url",
+          "username",
+          "password_set",
+          "verify",
+          "eauth"
+        ],
+        "title": "SaltSettingsOut",
+        "description": "Salt API connection settings. Password is never returned \u2014 only\na boolean ``password_set`` so the UI can render \"(set)\" without\nexposing the value."
+      },
+      "SettingsOut": {
+        "properties": {
+          "salt": {
+            "$ref": "#/components/schemas/SaltSettingsOut"
+          },
+          "pollers": {
+            "$ref": "#/components/schemas/PollerSettingsOut"
+          },
+          "logging": {
+            "$ref": "#/components/schemas/LoggingSettingsOut"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "salt",
+          "pollers",
+          "logging",
+          "updated_at"
+        ],
+        "title": "SettingsOut"
+      },
+      "SettingsStatusOut": {
+        "properties": {
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "configured",
+          "missing"
+        ],
+        "title": "SettingsStatusOut",
+        "description": "Used by the setup-wizard guard."
+      },
+      "TemplateShareUpdate": {
+        "properties": {
+          "is_shared": {
+            "type": "boolean",
+            "title": "Is Shared"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_shared"
+        ],
+        "title": "TemplateShareUpdate"
+      },
+      "TestSaltConnectionIn": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url"
+          },
+          "username": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "title": "Password",
+            "writeOnly": true
+          },
+          "verify": {
+            "type": "boolean",
+            "title": "Verify"
+          },
+          "eauth": {
+            "type": "string",
+            "enum": [
+              "pam",
+              "sharedsecret",
+              "ldap",
+              "file",
+              "auto"
+            ],
+            "title": "Eauth"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "url",
+          "username",
+          "password",
+          "verify",
+          "eauth"
+        ],
+        "title": "TestSaltConnectionIn",
+        "description": "POST body for the test-connection endpoint. All fields required."
+      },
+      "TestSaltConnectionOut": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "minion_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minion Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "detail"
+        ],
+        "title": "TestSaltConnectionOut"
+      },
+      "TimelineBar": {
+        "properties": {
+          "jid": {
+            "type": "string",
+            "title": "Jid"
+          },
+          "function": {
+            "type": "string",
+            "title": "Function"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "changed",
+              "failed",
+              "running",
+              "unknown"
+            ],
+            "title": "Status"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "state",
+              "cmd",
+              "pkg",
+              "service",
+              "test",
+              "runner",
+              "wheel",
+              "manage",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "minion_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minion Count"
+          },
+          "failed_minion_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Minion Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jid",
+          "function",
+          "target",
+          "user",
+          "started_at",
+          "completed_at",
+          "status",
+          "category",
+          "minion_count",
+          "failed_minion_count"
+        ],
+        "title": "TimelineBar",
+        "description": "One job invocation on the timeline."
+      },
+      "TimelineGroup": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "state",
+              "cmd",
+              "pkg",
+              "service",
+              "test",
+              "runner",
+              "wheel",
+              "manage",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "bar_count": {
+            "type": "integer",
+            "title": "Bar Count"
+          },
+          "bars": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineBar"
+            },
+            "type": "array",
+            "title": "Bars"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "category",
+          "bar_count",
+          "bars"
+        ],
+        "title": "TimelineGroup",
+        "description": "A row on the timeline. ``key`` identifies the group (function name\nor username), ``label`` is what the UI displays."
+      },
+      "TimelineOut": {
+        "properties": {
+          "window_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Window End"
+          },
+          "group_by": {
+            "type": "string",
+            "enum": [
+              "function",
+              "user"
+            ],
+            "title": "Group By"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineGroup"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
+          "total_bars": {
+            "type": "integer",
+            "title": "Total Bars"
+          },
+          "last_polled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Polled At"
+          },
+          "active_known": {
+            "type": "boolean",
+            "title": "Active Known"
+          }
+        },
+        "type": "object",
+        "required": [
+          "window_start",
+          "window_end",
+          "group_by",
+          "groups",
+          "total_bars",
+          "last_polled_at",
+          "active_known"
+        ],
+        "title": "TimelineOut"
+      },
+      "TopFailureOut": {
+        "properties": {
+          "state_id": {
+            "type": "string",
+            "title": "State Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "fun": {
+            "type": "string",
+            "title": "Fun"
+          },
+          "failure_count": {
+            "type": "integer",
+            "title": "Failure Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state_id",
+          "name",
+          "fun",
+          "failure_count"
+        ],
+        "title": "TopFailureOut"
+      },
+      "TopFailuresOut": {
+        "properties": {
+          "failures": {
+            "items": {
+              "$ref": "#/components/schemas/TopFailureOut"
+            },
+            "type": "array",
+            "title": "Failures"
+          }
+        },
+        "type": "object",
+        "required": [
+          "failures"
+        ],
+        "title": "TopFailuresOut"
+      },
+      "UserCreatePayload": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Username"
+          },
+          "display_name": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Display Name",
+            "default": ""
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 8,
+            "title": "Password"
+          },
+          "must_change_pw": {
+            "type": "boolean",
+            "title": "Must Change Pw",
+            "default": true
+          },
+          "role_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Role Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "UserCreatePayload"
+      },
+      "UserListOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "users": {
+            "items": {
+              "$ref": "#/components/schemas/UserSummary"
+            },
+            "type": "array",
+            "title": "Users"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "users"
+        ],
+        "title": "UserListOut"
+      },
+      "UserOut": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "must_change_pw": {
+            "type": "boolean",
+            "title": "Must Change Pw"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/PermissionPair"
+            },
+            "type": "array",
+            "title": "Permissions",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "display_name",
+          "must_change_pw"
+        ],
+        "title": "UserOut"
+      },
+      "UserSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "is_builtin": {
+            "type": "boolean",
+            "title": "Is Builtin"
+          },
+          "must_change_pw": {
+            "type": "boolean",
+            "title": "Must Change Pw"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "display_name",
+          "email",
+          "is_active",
+          "is_builtin",
+          "must_change_pw",
+          "created_at",
+          "last_login_at"
+        ],
+        "title": "UserSummary"
+      },
+      "UserUpdatePayload": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "title": "UserUpdatePayload"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VersionAggregate": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "arch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Arch"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "minion_count": {
+            "type": "integer",
+            "title": "Minion Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "minion_count"
+        ],
+        "title": "VersionAggregate",
+        "description": "One row in the per-package version list."
+      },
+      "VersionAggregateOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VersionAggregate"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "total",
+          "items"
+        ],
+        "title": "VersionAggregateOut"
+      },
+      "VersionFilter": {
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "eq",
+              "ne",
+              "lt",
+              "lte",
+              "gt",
+              "gte"
+            ],
+            "title": "Op"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "op",
+          "value"
+        ],
+        "title": "VersionFilter",
+        "description": "A version comparison applied per-row in Python after SQL narrowing."
+      }
+    }
+  },
+  "x-mint": {
+    "metadata": {
+      "playground": "none"
+    }
+  }
+}
