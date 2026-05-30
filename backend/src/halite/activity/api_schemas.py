@@ -14,6 +14,7 @@ class ActivityEventOut(BaseModel):
     jid: str | None
     fun: str | None
     success: bool | None
+    changed: bool | None
     summary: str
 
 

@@ -35,6 +35,65 @@ def test_job_ret_failure_via_retcode():
     assert ev["success"] is False
 
 
+def test_job_ret_highstate_with_changes():
+    ev = normalize_event(
+        "salt/job/20260529120000000000/ret/web01",
+        {
+            "fun": "state.highstate",
+            "id": "web01",
+            "retcode": 0,
+            "return": {
+                "pkg_|-nginx_|-nginx_|-installed": {"changes": {"nginx": "1.2"}},
+                "file_|-conf_|-/etc/nginx_|-managed": {"changes": {}},
+            },
+        },
+    )
+    assert ev["event_type"] == "job.ret"
+    assert ev["success"] is True
+    assert ev["changed"] is True
+
+
+def test_job_ret_highstate_clean():
+    ev = normalize_event(
+        "salt/job/20260529120000000000/ret/web01",
+        {
+            "fun": "state.highstate",
+            "id": "web01",
+            "retcode": 0,
+            "return": {
+                "pkg_|-nginx_|-nginx_|-installed": {"changes": {}},
+                "file_|-conf_|-/etc/nginx_|-managed": {"changes": {}},
+            },
+        },
+    )
+    assert ev["success"] is True
+    assert ev["changed"] is False
+
+
+def test_job_ret_ping_changed_none():
+    ev = normalize_event(
+        "salt/job/20260529120000000000/ret/web01",
+        {"fun": "test.ping", "id": "web01", "retcode": 0, "return": True},
+    )
+    assert ev["changed"] is None
+
+
+def test_job_ret_failed_highstate_computes_changed():
+    ev = normalize_event(
+        "salt/job/20260529120000000000/ret/db07",
+        {
+            "fun": "state.highstate",
+            "id": "db07",
+            "retcode": 2,
+            "return": {
+                "pkg_|-x_|-x_|-installed": {"result": False, "changes": {"x": "y"}},
+            },
+        },
+    )
+    assert ev["success"] is False
+    assert ev["changed"] is True
+
+
 def test_minion_start():
     ev = normalize_event("salt/minion/web01/start", {"id": "web01"})
     assert ev["category"] == "minion"

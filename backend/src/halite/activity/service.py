@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from halite.activity.models import ActivityEvent
@@ -18,6 +18,7 @@ async def persist_event(db: AsyncSession, ev: NormalizedEvent) -> ActivityEvent:
         jid=ev["jid"],
         fun=ev["fun"],
         success=ev["success"],
+        changed=ev["changed"],
         summary=ev["summary"],
         raw=ev["raw"],
     )
@@ -33,6 +34,8 @@ async def list_events(
     minion_id: str | None = None,
     event_type: str | None = None,
     search: str | None = None,
+    hide_routine: bool = False,
+    since_minutes: int | None = None,
     limit: int = 100,
     offset: int = 0,
 ):
@@ -48,6 +51,19 @@ async def list_events(
         base = base.where(ActivityEvent.event_type == event_type)
     if search:
         base = base.where(ActivityEvent.summary.ilike(f"%{search}%"))
+    if hide_routine:
+        # Exclude routine successes: job.ret rows that succeeded and made no
+        # changes (changed false-or-null). Failures, changes, and all non-job.ret
+        # events are kept.
+        routine = and_(
+            ActivityEvent.event_type == "job.ret",
+            ActivityEvent.success.is_(True),
+            ActivityEvent.changed.is_not(True),
+        )
+        base = base.where(~routine)
+    if since_minutes is not None:
+        cutoff = datetime.now(tz=UTC) - timedelta(minutes=since_minutes)
+        base = base.where(ActivityEvent.ts >= cutoff)
     total = await db.scalar(select(func.count()).select_from(base.subquery()))
     rows = (
         await db.execute(

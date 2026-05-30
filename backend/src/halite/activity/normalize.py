@@ -16,8 +16,24 @@ class NormalizedEvent(TypedDict):
     jid: str | None
     fun: str | None
     success: bool | None
+    changed: bool | None
     summary: str
     raw: dict[str, Any]
+
+
+def _ret_made_changes(data: dict[str, Any]) -> bool | None:
+    """Whether a job return made changes.
+
+    A Salt state return (``data["return"]``) is a dict keyed by state-id, each
+    value a dict with a ``"changes"`` key. Returns True if any state value has a
+    non-empty changes dict, False if it's a state-style dict with no changes, and
+    None when ``return`` isn't a dict (e.g. test.ping's True, cmd.run's string)
+    so "changed" simply doesn't apply.
+    """
+    ret = data.get("return")
+    if not isinstance(ret, dict):
+        return None
+    return any(isinstance(v, dict) and v.get("changes") for v in ret.values())
 
 
 def normalize_event(tag: str, data: dict[str, Any]) -> NormalizedEvent | None:
@@ -35,7 +51,7 @@ def normalize_event(tag: str, data: dict[str, Any]) -> NormalizedEvent | None:
         if m.group("kind") == "new":
             return NormalizedEvent(
                 category="job", event_type="job.new", minion_id=None, jid=jid,
-                fun=fun, success=None,
+                fun=fun, success=None, changed=None,
                 summary=f"{fun or 'job'} dispatched ({len(data.get('minions') or [])} minions)",
                 raw=raw,
             )
@@ -44,7 +60,7 @@ def normalize_event(tag: str, data: dict[str, Any]) -> NormalizedEvent | None:
         success = (retcode == 0) if retcode is not None else None
         return NormalizedEvent(
             category="job", event_type="job.ret", minion_id=minion, jid=jid,
-            fun=fun, success=success,
+            fun=fun, success=success, changed=_ret_made_changes(data),
             summary=f"{minion} returned {fun or 'job'}"
             + ("" if success is None else (" ✓" if success else " ✗")),
             raw=raw,
@@ -55,7 +71,7 @@ def normalize_event(tag: str, data: dict[str, Any]) -> NormalizedEvent | None:
         minion = m.group("minion")
         return NormalizedEvent(
             category="minion", event_type="minion.start", minion_id=minion, jid=None,
-            fun=None, success=None, summary=f"{minion} came online", raw=raw,
+            fun=None, success=None, changed=None, summary=f"{minion} came online", raw=raw,
         )
 
     if tag == "salt/key" or tag == "salt/auth":
@@ -70,7 +86,8 @@ def normalize_event(tag: str, data: dict[str, Any]) -> NormalizedEvent | None:
         }
         return NormalizedEvent(
             category="key", event_type=f"key.{suffix}", minion_id=minion, jid=None,
-            fun=None, success=None, summary=f"{minion} key {labels[suffix]}", raw=raw,
+            fun=None, success=None, changed=None,
+            summary=f"{minion} key {labels[suffix]}", raw=raw,
         )
 
     return None

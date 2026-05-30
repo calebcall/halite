@@ -29,6 +29,8 @@ async def list_activity_route(
     minion_id: str | None = Query(default=None),
     event_type: str | None = Query(default=None),
     search: str | None = Query(default=None),
+    hide_routine: bool = Query(default=False),
+    since_minutes: int | None = Query(default=None, ge=1, le=10080),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ) -> ActivityListOut:
@@ -39,6 +41,8 @@ async def list_activity_route(
         minion_id=minion_id,
         event_type=event_type,
         search=search,
+        hide_routine=hide_routine,
+        since_minutes=since_minutes,
         limit=limit,
         offset=offset,
     )
@@ -51,7 +55,7 @@ async def list_activity_route(
 def _sse(event: dict) -> str:
     payload = {
         k: event.get(k)
-        for k in ("category", "event_type", "minion_id", "jid", "fun", "success", "summary")
+        for k in ("category", "event_type", "minion_id", "jid", "fun", "success", "changed", "summary")
     }
     return f"data: {json.dumps(payload)}\n\n"
 

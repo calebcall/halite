@@ -37,6 +37,7 @@ class ActivityEvent(Base):
     jid: Mapped[str | None] = mapped_column(String(64), nullable=True)
     fun: Mapped[str | None] = mapped_column(String(128), nullable=True)
     success: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    changed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     summary: Mapped[str] = mapped_column(String(512), nullable=False)
     raw: Mapped[dict[str, Any] | None] = mapped_column(
         JSON().with_variant(JSONB(), "postgresql"), nullable=True

@@ -914,6 +914,8 @@ export interface components {
             fun: string | null;
             /** Success */
             success: boolean | null;
+            /** Changed */
+            changed: boolean | null;
             /** Summary */
             summary: string;
         };
@@ -2220,6 +2222,8 @@ export interface operations {
                 minion_id?: string | null;
                 event_type?: string | null;
                 search?: string | null;
+                hide_routine?: boolean;
+                since_minutes?: number | null;
                 limit?: number;
                 offset?: number;
             };
