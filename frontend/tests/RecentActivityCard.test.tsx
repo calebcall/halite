@@ -30,6 +30,19 @@ globalThis.EventSource = class {
   close() {}
 } as unknown as typeof EventSource
 
+const recentEvent = {
+  id: 42,
+  ts: '2026-05-29T12:00:00Z',
+  category: 'job',
+  event_type: 'job.ret',
+  minion_id: 'web-01',
+  jid: '20260529120000000000',
+  fun: 'state.highstate',
+  success: false,
+  changed: false,
+  summary: 'state.highstate failed on web-01',
+}
+
 const server = setupServer(
   http.get('/api/auth/me', () =>
     HttpResponse.json({
@@ -39,24 +52,16 @@ const server = setupServer(
       permissions: [{ verb: 'view', resource_glob: 'job:*' }],
     }),
   ),
-  http.get('/api/activity', () =>
-    HttpResponse.json({
-      total: 1,
-      events: [
-        {
-          id: 42,
-          ts: '2026-05-29T12:00:00Z',
-          category: 'job',
-          event_type: 'job.ret',
-          minion_id: 'web-01',
-          jid: '20260529120000000000',
-          fun: 'test.ping',
-          success: true,
-          summary: 'test.ping returned on web-01',
-        },
-      ],
-    }),
-  ),
+  // The card calls /api/activity twice: heartbeat (since_minutes=60, limit=1)
+  // and notable recent (hide_routine=true, limit=6). Branch on since_minutes:
+  // the heartbeat only reads `total`, the list reads `events`.
+  http.get('/api/activity', ({ request }) => {
+    const url = new URL(request.url)
+    if (url.searchParams.get('since_minutes') === '60') {
+      return HttpResponse.json({ total: 142, events: [] })
+    }
+    return HttpResponse.json({ total: 1, events: [recentEvent] })
+  }),
 )
 
 beforeAll(() => server.listen())
@@ -73,32 +78,37 @@ function renderCard() {
 }
 
 describe('RecentActivityCard', () => {
-  it('renders an event summary from the activity feed', async () => {
+  it('renders the heartbeat count for the last hour', async () => {
     renderCard()
-    expect(await screen.findByText('test.ping returned on web-01')).toBeInTheDocument()
+    expect(await screen.findByText('142')).toBeInTheDocument()
+    expect(screen.getByText(/events · last hour/i)).toBeInTheDocument()
+  })
+
+  it('renders a recent notable event', async () => {
+    renderCard()
+    expect(await screen.findByText('web-01')).toBeInTheDocument()
+    expect(screen.getByText('state.highstate')).toBeInTheDocument()
   })
 
   it('renders a "View all" link pointing to /activity', async () => {
     renderCard()
-    // wait for data to load so component is stable
-    await screen.findByText('test.ping returned on web-01')
+    await screen.findByText('web-01')
     const link = screen.getByRole('link', { name: /view all/i })
     expect(link).toBeInTheDocument()
     expect(link).toHaveAttribute('href', '/activity')
   })
 
-  it('shows "No activity yet" when the feed is empty', async () => {
+  it('shows "No notable activity" when the recent feed is empty', async () => {
     server.use(
-      http.get('/api/activity', () =>
-        HttpResponse.json({ total: 0, events: [] }),
-      ),
+      http.get('/api/activity', ({ request }) => {
+        const url = new URL(request.url)
+        if (url.searchParams.get('since_minutes') === '60') {
+          return HttpResponse.json({ total: 0, events: [] })
+        }
+        return HttpResponse.json({ total: 0, events: [] })
+      }),
     )
     renderCard()
-    expect(await screen.findByText(/no activity yet/i)).toBeInTheDocument()
-  })
-
-  it('shows the event category label', async () => {
-    renderCard()
-    expect(await screen.findByText('job')).toBeInTheDocument()
+    expect(await screen.findByText(/no notable activity/i)).toBeInTheDocument()
   })
 })

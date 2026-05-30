@@ -393,6 +393,8 @@ export const api = {
       minion_id?: string | null
       event_type?: string | null
       search?: string | null
+      hide_routine?: boolean
+      since_minutes?: number
       limit?: number
       offset?: number
     } = {}) =>

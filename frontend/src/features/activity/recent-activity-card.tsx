@@ -3,30 +3,46 @@ import { Link } from '@tanstack/react-router'
 import { ChartCard } from '@/features/overview/chart-card'
 
 import { useActivityList } from './use-activity'
+import { ActivityRow } from './activity-row'
 
 interface RecentActivityCardProps {
   className?: string
 }
 
 export function RecentActivityCard({ className }: RecentActivityCardProps = {}) {
-  const { data } = useActivityList({ limit: 8 })
+  // Heartbeat: total events in the last hour (all events, including routine).
+  // Limit 1 keeps the payload tiny — we only read `total`. This re-fetches
+  // live because the global stream invalidates ['activity'].
+  const heartbeat = useActivityList({
+    since_minutes: 60,
+    hide_routine: false,
+    limit: 1,
+  })
+  const lastHour = heartbeat.data?.total ?? 0
+
+  // Notable recent events: hide the routine successful-no-change drip.
+  const { data } = useActivityList({ hide_routine: true, limit: 6 })
   const events = data?.events ?? []
+
   return (
     <ChartCard title="Recent activity" description="Live fleet events" className={className}>
-      <ul className="flex flex-col gap-1.5 px-3">
+      <div className="flex items-center gap-2 px-3 pb-3 text-sm">
+        <span className="relative flex size-2 shrink-0">
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-success/70" />
+          <span className="relative inline-flex size-2 rounded-full bg-success" />
+        </span>
+        <span className="font-semibold tabular-nums text-foreground">{lastHour}</span>
+        <span className="text-muted-foreground">events · last hour</span>
+      </div>
+
+      <ul className="flex flex-col px-3">
         {events.length === 0 ? (
-          <li className="text-sm text-muted-foreground">No activity yet.</li>
+          <li className="py-2 text-sm text-muted-foreground">No notable activity.</li>
         ) : (
-          events.map((e) => (
-            <li key={e.id} className="flex items-center gap-2 text-sm">
-              <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
-                {e.category}
-              </span>
-              <span className="truncate">{e.summary}</span>
-            </li>
-          ))
+          events.map((e) => <ActivityRow key={e.id} event={e} compact />)
         )}
       </ul>
+
       <Link
         to="/activity"
         className="mt-3 inline-block px-3 text-xs text-primary hover:underline"

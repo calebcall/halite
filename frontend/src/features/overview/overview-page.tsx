@@ -180,12 +180,12 @@ export function OverviewPage() {
         <ChartCard
           title="Key inventory"
           description="Counts by approval state"
-          className="lg:col-span-3"
+          className={canViewActivity ? 'lg:col-span-2' : 'lg:col-span-3'}
         >
           <KeyBarPanel enabled={canViewKeys} />
         </ChartCard>
 
-        {canViewActivity && <RecentActivityCard className="lg:col-span-3" />}
+        {canViewActivity && <RecentActivityCard className="lg:col-span-1" />}
       </div>
 
       <section>

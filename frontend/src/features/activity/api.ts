@@ -9,6 +9,8 @@ export interface ActivityFilter {
   minion_id?: string
   event_type?: string
   search?: string
+  hide_routine?: boolean
+  since_minutes?: number
   limit?: number
   offset?: number
 }

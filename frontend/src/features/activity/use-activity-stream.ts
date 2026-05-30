@@ -6,6 +6,9 @@ export interface ActivityStreamEvent {
   event_type: string
   minion_id?: string | null
   jid?: string | null
+  fun?: string | null
+  success?: boolean | null
+  changed?: boolean | null
   summary?: string
 }
 
