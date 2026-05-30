@@ -561,9 +561,16 @@ class SaltAPIClient:
         import json as _json
 
         token = await self._ensure_token()
+        # salt-api's /events stream was built for browser EventSource clients,
+        # which can't set headers — so it authenticates via the `?token=` query
+        # parameter (validated directly against the token cache). The
+        # X-Auth-Token header alone is session-dependent and returns a flaky 401
+        # on first connect, so we pass the token as a query param (the documented
+        # method) and keep the header too for version compatibility.
+        params = {"token": token}
         headers = {"X-Auth-Token": token, "Accept": "text/event-stream"}
         async with self._client.stream(
-            "GET", "/events", headers=headers, timeout=None
+            "GET", "/events", params=params, headers=headers, timeout=None
         ) as resp:
             if resp.status_code == 401:
                 # Prime a fresh token for the caller's next reconnect, then let
