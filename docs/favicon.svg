@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!--
+    Halite — "The Lattice".
+
+    A 3×3 grid of amber rounded squares. The center is the master atom /
+    Salt master; the 4 cardinal neighbors are bright (primary bonds, direct
+    minions); the 4 diagonal neighbors are dimmer (secondary bonds).
+
+    The hierarchy of opacity + size keeps the mark from reading as a flat
+    dot pattern — there's clear gravity at the center, with the rest
+    "orbiting" in service of it.
+
+    Grid stride: 128 (center-to-center). 9 cells fit comfortably with
+    breathing room from the viewBox edge.
+  -->
+  <g fill="#e5a00d">
+    <!-- Master atom — center, largest and boldest -->
+    <rect x="208" y="208" width="96" height="96" rx="18"/>
+
+    <!-- Cardinal neighbors — full opacity, medium size -->
+    <rect x="226" y="98"  width="60" height="60" rx="12"/>
+    <rect x="354" y="226" width="60" height="60" rx="12"/>
+    <rect x="226" y="354" width="60" height="60" rx="12"/>
+    <rect x="98"  y="226" width="60" height="60" rx="12"/>
+
+    <!-- Corner neighbors — reduced opacity, slightly smaller -->
+    <g fill-opacity="0.55">
+      <rect x="103" y="103" width="50" height="50" rx="10"/>
+      <rect x="359" y="103" width="50" height="50" rx="10"/>
+      <rect x="359" y="359" width="50" height="50" rx="10"/>
+      <rect x="103" y="359" width="50" height="50" rx="10"/>
+    </g>
+  </g>
+</svg>
