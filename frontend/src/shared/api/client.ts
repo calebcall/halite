@@ -364,6 +364,12 @@ export const api = {
         method: 'PUT',
         path: '/api/admin/settings/pollers',
       }),
+    putWidget: (body: paths['/api/admin/settings/widget']['put']['requestBody']['content']['application/json']) =>
+      request<paths['/api/admin/settings/widget']['put']['responses']['200']['content']['application/json']>({
+        body,
+        method: 'PUT',
+        path: '/api/admin/settings/widget',
+      }),
     putSalt: (body: paths['/api/admin/settings/salt']['put']['requestBody']['content']['application/json']) =>
       request<paths['/api/admin/settings/salt']['put']['responses']['200']['content']['application/json']>({
         body,
@@ -395,6 +401,7 @@ export const api = {
       search?: string | null
       hide_routine?: boolean
       hide_dispatch?: boolean
+      categories?: string
       since_minutes?: number
       limit?: number
       offset?: number
@@ -403,6 +410,11 @@ export const api = {
         method: 'GET',
         path: '/api/activity',
         query: query as Record<string, string | number | boolean | undefined>,
+      }),
+    widgetConfig: () =>
+      request<paths['/api/activity/widget-config']['get']['responses']['200']['content']['application/json']>({
+        method: 'GET',
+        path: '/api/activity/widget-config',
       }),
   },
   templates: {

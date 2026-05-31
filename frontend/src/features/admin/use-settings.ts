@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/shared/api/client'
+import { widgetConfigQueryKey } from '@/features/activity/use-widget-config'
 
 export const settingsKeys = {
   all: ['settings'] as const,
@@ -49,6 +50,21 @@ export function useUpdatePollers() {
   return useMutation({
     mutationFn: api.settings.putPollers,
     onSuccess: () => qc.invalidateQueries({ queryKey: settingsKeys.all }),
+  })
+}
+
+export function useUpdateWidget() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: api.settings.putWidget,
+    onSuccess: async () => {
+      // Invalidate both the admin settings query AND the read-only widget
+      // config query so the live Overview widget picks up the change.
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: settingsKeys.all }),
+        qc.invalidateQueries({ queryKey: widgetConfigQueryKey }),
+      ])
+    },
   })
 }
 

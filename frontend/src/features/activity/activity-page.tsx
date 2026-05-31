@@ -3,6 +3,13 @@ import { useMemo, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { MustChangePassword } from '@/features/auth/guards'
 import { useHasPerm } from '@/features/auth/use-has-perm'
@@ -72,17 +79,20 @@ function ActivityPageInner() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          aria-label="Filter by category"
+        <Select
+          value={category || 'all'}
+          onValueChange={(v) => setCategory(v === 'all' ? '' : v)}
         >
-          <option value="">All</option>
-          <option value="job">Jobs</option>
-          <option value="key">Keys</option>
-          <option value="minion">Minions</option>
-        </select>
+          <SelectTrigger className="w-40" aria-label="Filter by category">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="job">Jobs</SelectItem>
+            <SelectItem value="key">Keys</SelectItem>
+            <SelectItem value="minion">Minions</SelectItem>
+          </SelectContent>
+        </Select>
 
         <Input
           type="search"

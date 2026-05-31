@@ -46,6 +46,15 @@ const fullySetSettings = {
     minion_state_initial_delay_seconds: 10,
   },
   logging: { log_format: 'json' as const },
+  widget: {
+    widget_hide_dispatch: true,
+    widget_hide_routine: false,
+    widget_show_jobs: true,
+    widget_show_keys: true,
+    widget_show_minions: true,
+    widget_event_count: 6,
+    widget_heartbeat_minutes: 60,
+  },
   updated_at: new Date().toISOString(),
 }
 
@@ -100,6 +109,35 @@ describe('SettingsPage', () => {
     await userEvent.click(saveButtons[0])
     await waitFor(() => expect(receivedBody).not.toBeNull())
     expect(receivedBody!.password ?? null).toBeNull()
+  })
+
+  it('renders the Activity widget section seeded from initial.widget', async () => {
+    renderInRouter([
+      http.get('/api/admin/settings', () => HttpResponse.json(fullySetSettings)),
+    ])
+    expect(await screen.findByText(/^Activity widget$/i)).toBeInTheDocument()
+    const eventCount = document.getElementById('widget-event-count') as HTMLInputElement
+    const heartbeat = document.getElementById('widget-heartbeat-minutes') as HTMLInputElement
+    expect(eventCount.value).toBe('6')
+    expect(heartbeat.value).toBe('60')
+  })
+
+  it('PUT /api/admin/settings/widget submits the widget patch', async () => {
+    let receivedBody: Record<string, unknown> | null = null
+    renderInRouter([
+      http.get('/api/admin/settings', () => HttpResponse.json(fullySetSettings)),
+      http.put('/api/admin/settings/widget', async ({ request }) => {
+        receivedBody = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(fullySetSettings.widget)
+      }),
+    ])
+    await screen.findByText(/^Activity widget$/i)
+    const saveButtons = await screen.findAllByRole('button', { name: /^Save$/i })
+    // Sections render in order: Salt, Pollers, Activity widget, Logging.
+    await userEvent.click(saveButtons[2])
+    await waitFor(() => expect(receivedBody).not.toBeNull())
+    expect(receivedBody!.widget_event_count).toBe(6)
+    expect(receivedBody!.widget_hide_dispatch).toBe(true)
   })
 
   it('Test Connection button calls /api/admin/settings/test-salt', async () => {
