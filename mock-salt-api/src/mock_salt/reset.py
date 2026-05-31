@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import asyncio
 
-from mock_salt.fleet import build_fleet
-
 
 class ResetLoop:
     """Periodically re-seeds the fleet to baseline so the shared demo stays clean.
@@ -19,7 +17,7 @@ class ResetLoop:
     async def _run(self) -> None:
         while True:
             await asyncio.sleep(self._interval)
-            self._holder.fleet = build_fleet(seed=self._seed, size=self._size)
+            self._holder.fleet.reseed(self._seed, self._size)
 
     def start(self) -> None:
         if self._interval > 0 and self._task is None:

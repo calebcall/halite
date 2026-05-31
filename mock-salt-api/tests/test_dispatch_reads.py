@@ -76,3 +76,40 @@ async def test_sys_list_functions(fleet):
 async def test_unknown_call_is_safe(fleet):
     body = await dispatch(fleet, None, {"client": "runner", "fun": "does.not_exist"})
     assert body == {"return": [{}]}
+
+
+@pytest.mark.asyncio
+async def test_jobs_active_shape(fleet):
+    jid = next(iter(fleet.jobs))
+    fleet.jobs[jid].active = True
+    body = await dispatch(fleet, None, {"client": "runner", "fun": "jobs.active"})
+    active = body["return"][0]
+    assert jid in active and "Function" in active[jid]
+
+
+@pytest.mark.asyncio
+async def test_cache_grains_shape(fleet):
+    body = await dispatch(fleet, None, {"client": "runner", "fun": "cache.grains",
+                                        "tgt": "*", "tgt_type": "glob"})
+    result = body["return"][0]
+    mid = fleet.accepted_ids()[0]
+    assert result[mid]["os_family"]
+
+
+@pytest.mark.asyncio
+async def test_grains_get_os_family(fleet):
+    body = await dispatch(fleet, None, {"client": "local", "fun": "grains.get",
+                                        "tgt": "*", "tgt_type": "glob",
+                                        "arg": ["os_family"]})
+    result = body["return"][0]
+    mid = fleet.accepted_ids()[0]
+    assert result[mid] in ("Debian", "RedHat", "Alpine", "Windows")
+
+
+@pytest.mark.asyncio
+async def test_grains_items_shape(fleet):
+    body = await dispatch(fleet, None, {"client": "local", "fun": "grains.items",
+                                        "tgt": "*", "tgt_type": "glob"})
+    result = body["return"][0]
+    mid = fleet.accepted_ids()[0]
+    assert result[mid]["id"] == mid

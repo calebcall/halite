@@ -39,3 +39,13 @@ def test_some_minions_offline_or_stale(fleet):
 def test_packages_present(fleet):
     accepted = next(m for m in fleet.minions.values() if m.key_state == "accepted")
     assert fleet.packages[accepted.id]
+
+
+def test_reseed_in_place_preserves_identity():
+    f = build_fleet(seed=1337, size=40)
+    captured = f                      # a long-lived holder (like the simulator)
+    f.reseed(seed=99, size=10)
+    assert captured is f              # same object
+    assert len(f.minions) == 10       # contents rebuilt
+    # a reference captured to the fleet still sees the new data
+    assert captured.present_ids() == f.present_ids()

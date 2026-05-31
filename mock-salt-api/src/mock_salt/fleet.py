@@ -74,6 +74,15 @@ class Fleet:
             m.online = True
         return True
 
+    def reseed(self, seed: int, size: int) -> None:
+        """Rebuild this fleet's contents in place. Preserves object identity so
+        long-lived holders (the simulator, the app state) keep seeing live data
+        after a reset."""
+        fresh = build_fleet(seed=seed, size=size)
+        self.minions = fresh.minions
+        self.jobs = fresh.jobs
+        self.packages = fresh.packages
+
     def delete_minion(self, minion_id: str) -> bool:
         self.packages.pop(minion_id, None)
         return self.minions.pop(minion_id, None) is not None

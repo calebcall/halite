@@ -161,14 +161,18 @@ async def _local_async(fleet: Fleet, bus, lowstate: dict[str, Any]) -> dict[str,
 
 def _resolve_targets(fleet: Fleet, tgt: str, tgt_type: str) -> list[str]:
     """Map a salt target to present accepted minion ids. Good enough for the demo:
-    glob '*' = all present; 'list' = comma/list match; otherwise substring match."""
+    glob '*' = all present; an exact id matches just that minion; 'list' = membership;
+    otherwise a glob stem substring match."""
     present = fleet.present_ids()
     if tgt in ("*", ""):
         return present
     if tgt_type == "list":
         wanted = set(tgt.split(",")) if isinstance(tgt, str) else set(tgt)
         return [m for m in present if m in wanted]
-    return [m for m in present if tgt.strip("*") in m]
+    if tgt in present:
+        return [tgt]
+    stem = tgt.strip("*")
+    return [m for m in present if stem and stem in m]
 
 
 async def dispatch(fleet: Fleet, bus, lowstate: dict[str, Any]) -> dict[str, Any]:
