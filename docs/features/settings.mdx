@@ -77,6 +77,50 @@ These fields control how often background tasks run. Set any interval to `0` to 
   Seconds to wait after startup before the minion scheduler's first tick. Range: 0–3600.
 </ParamField>
 
+## Event stream
+
+The **Event stream** controls live at the bottom of the Pollers section. They drive the [Activity](/features/activity) feed, which tails the Salt event bus instead of polling. Saving the Pollers section calls `runtime.reload()`, so toggling the stream starts or stops the event consumer with no restart.
+
+<ParamField body="event_stream_enabled" type="boolean" default="false">
+  Master switch for the live event stream. When on, Halite holds a long-lived connection to salt-api's `/events` endpoint, captures job / key / minion events, stores them, and exposes them via the Activity page and SSE stream. When off, no events are captured and the Activity page is empty.
+</ParamField>
+
+<ParamField body="event_stream_retention_days" type="integer" default="30">
+  How many days of captured events to keep. The event consumer prunes rows older than this. Range: 1–365.
+</ParamField>
+
+## Activity widget
+
+These fields configure the **Recent activity** widget on the [Overview](/features/overview#recent-activity) dashboard. They are display-only — saving this section does **not** trigger a `runtime.reload()`, and the values are readable by every authenticated user (via `GET /api/activity/widget-config`) so the widget renders the same way for everyone.
+
+<ParamField body="widget_hide_dispatch" type="boolean" default="true">
+  Hide job dispatch (`job.new`) events from the widget, leaving only completions and outcomes.
+</ParamField>
+
+<ParamField body="widget_hide_routine" type="boolean" default="false">
+  Hide routine successes — successful job returns that made no changes.
+</ParamField>
+
+<ParamField body="widget_show_jobs" type="boolean" default="true">
+  Include job events in the widget.
+</ParamField>
+
+<ParamField body="widget_show_keys" type="boolean" default="true">
+  Include key events in the widget.
+</ParamField>
+
+<ParamField body="widget_show_minions" type="boolean" default="true">
+  Include minion events in the widget.
+</ParamField>
+
+<ParamField body="widget_event_count" type="integer" default="6">
+  How many events to list in the widget. Range: 1–50.
+</ParamField>
+
+<ParamField body="widget_heartbeat_minutes" type="integer" default="60">
+  The time window (in minutes) the heartbeat indicator counts events over. Range: 5–1440.
+</ParamField>
+
 ## Logging
 
 <ParamField body="log_format" type="string" default="json">
@@ -85,13 +129,13 @@ These fields control how often background tasks run. Set any interval to `0` to 
 
 ## How live reload works
 
-When you save the **Salt** or **Pollers** sections, Halite calls `runtime.reload(db)` to rewire the live Salt client and schedulers with no restart. Saving the **Logging** section does **not** trigger a reload.
+When you save the **Salt** or **Pollers** sections, Halite calls `runtime.reload(db)` to rewire the live Salt client, schedulers, and event consumer with no restart. Saving the **Activity widget** or **Logging** sections does **not** trigger a reload — those are display-only.
 
-1. All running schedulers (minion, fleet, inventory, jobs) are cancelled and awaited.
+1. All running schedulers (minion, fleet, inventory, jobs) and the event consumer are cancelled and awaited.
 2. The Salt client is closed.
 3. The `AppSettings` row is re-read from the database.
 4. If `salt_api_url`, `salt_api_username`, and the decrypted password are all present, a new `SaltAPIClient` is created and logged in.
-5. Any schedulers whose interval is `> 0` are started fresh with the new settings.
+5. Any schedulers whose interval is `> 0` are started fresh with the new settings, and — if `event_stream_enabled` is on — the event consumer is started.
 
 If the Salt credentials are incomplete or the login fails, the client remains `None` and all schedulers stay stopped. Salt-backed endpoints (minion presence, job dispatch, inventory refresh, etc.) degrade gracefully — they return empty results rather than hard-failing.
 
@@ -131,6 +175,8 @@ If the Salt credentials are incomplete or the login fails, the client remains `N
 | `GET /api/admin/settings` | `edit:settings:*` |
 | `PUT /api/admin/settings/salt` | `edit:settings:*` |
 | `PUT /api/admin/settings/pollers` | `edit:settings:*` |
+| `PUT /api/admin/settings/widget` | `edit:settings:*` |
+| `GET /api/activity/widget-config` | Authenticated session only |
 | `PUT /api/admin/settings/logging` | `edit:settings:*` |
 | `POST /api/admin/settings/test-salt` | `edit:settings:*` |
 | `POST /api/admin/settings/test-salt-saved` | `edit:settings:*` |
