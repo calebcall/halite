@@ -1,6 +1,85 @@
 ---
-title: "Database"
-description: "Placeholder — filled in by a later task."
+title: "Database & Migrations"
+description: "Dual-backend portability and Alembic."
 ---
 
-Coming soon.
+Halite runs on both **PostgreSQL** (via `asyncpg`) and **SQLite** (via `aiosqlite`). SQLite is the default for local development and homelab deployments; Postgres is recommended for production.
+
+## Portability rules
+
+Because the app must work on both backends, you must follow a few constraints when writing queries or models:
+
+- **Do not use Postgres-only operators or types.** No `ILIKE`, `JSONB` operators, arrays, or other PG-only features.
+- **Route portability concerns through `db_dialect.py`.** Any helper that needs to behave differently on each backend belongs there.
+
+The main helper today is `lower_eq`:
+
+```python
+from halite.db_dialect import lower_eq
+
+# Case-insensitive username lookup — works on both Postgres and SQLite.
+stmt = select(User).where(lower_eq(User.username_lower, username))
+```
+
+`lower_eq` compares against a **pre-lowercased column** (e.g. `username_lower`). The column stores only lowercase values; `lower_eq` lowercases the input at query time. This avoids `LOWER()` in the `WHERE` clause, which can bypass indexes on some backends.
+
+## Dialect variant pattern
+
+SQLite only autocrements `INTEGER PRIMARY KEY`, not `BIGINT`. For tables that expect large row counts (like the audit log), use SQLAlchemy's `.with_variant()` to select the right type per backend:
+
+```python
+from sqlalchemy import BigInteger, Integer
+
+# backend/src/halite/audit/models.py
+_audit_pk_type = BigInteger().with_variant(Integer(), "sqlite")
+
+class AuditEntry(Base):
+    id: Mapped[int] = mapped_column(_audit_pk_type, primary_key=True, autoincrement=True)
+```
+
+This gives you a real `BIGINT` autoincrement on Postgres and an `INTEGER` autoincrement on SQLite.
+
+## Alembic migrations
+
+All schema changes go through **Alembic**. Migrations live in `backend/alembic/versions/` and use a dated filename convention:
+
+```
+20260519_0001_initial_users_sessions.py
+20260519_0002_rbac_tables.py
+20260519_0003_audit_log.py
+20260525_0004_inventory.py
+20260526_0005_command_templates.py
+```
+
+The prefix is `YYYYMMDD_NNNN_description` — the date the migration was written, a four-digit sequence number, and a short snake-case description.
+
+### Common commands
+
+Apply all pending migrations:
+
+```sh
+alembic upgrade head
+```
+
+Create a new migration (from `backend/`):
+
+```sh
+alembic revision -m "add_widget_table"
+```
+
+Alembic creates the file in `backend/alembic/versions/`. Edit the generated `upgrade()` and `downgrade()` functions, then commit the file alongside your model changes.
+
+<Note>
+  When writing a migration that touches column types, check whether you need the `.with_variant()` pattern to stay portable. Test your migration against both backends before merging — the CI suite runs every DB test against both SQLite and Postgres.
+</Note>
+
+## Engine setup
+
+`db.py` initialises the async SQLAlchemy engine. SQLite gets two extra connect args:
+
+- `check_same_thread=False` — required for async use.
+- `timeout=15` — aiosqlite busy-timeout (15 s), which prevents write-lock races between the fleet and inventory schedulers during cold start.
+
+## Related pages
+
+- [Testing](/develop/testing) — running the dual-backend test suite

@@ -1,6 +1,71 @@
 ---
 title: "Frontend"
-description: "Placeholder — filled in by a later task."
+description: "React 19, TanStack, shadcn/ui, and generated API types."
 ---
 
-Coming soon.
+The frontend is a React 19 single-page application built with Vite. Its source lives in `frontend/src/`.
+
+## Stack
+
+| Layer | Library |
+|---|---|
+| UI framework | React 19 |
+| Routing | TanStack Router |
+| Server state | TanStack Query |
+| Component primitives | shadcn/ui (Radix + Tailwind) |
+| Charts | Recharts (lazy-split into its own chunk) |
+| Build tool | Vite |
+| Language | TypeScript |
+
+TanStack Query manages all server state. Long-lived list views (minions, jobs, keys, fleet, etc.) auto-refresh every **30 seconds** without any user interaction.
+
+## Source layout
+
+```
+frontend/src/
+  app/                    # layout, theme (CSS-variable light/dark), TanStack Router setup
+  features/
+    audit/
+    fleet/
+    inventory/
+    jobs/
+    keys/
+    minions/
+    overview/             # Recharts charts — lazy-split chunk
+    roles/
+    run/
+    settings/
+    users/
+    ...
+  shared/
+    api/
+      client.ts           # fetch wrapper
+      types.gen.ts        # GENERATED OpenAPI TypeScript types — do not hand-edit
+  components/
+    ui/                   # shadcn/ui primitives
+```
+
+Each `features/<area>/` folder mirrors the corresponding backend module. Feature components, hooks, and route definitions live together inside their feature folder.
+
+## Theme
+
+The app uses CSS variables for light/dark theming, defaulting to **dark mode**. The single accent colour is **Halite Amber `#e5a00d`**.
+
+## Generated API types
+
+The file `frontend/src/shared/api/types.gen.ts` is generated from the backend's OpenAPI schema. **Do not hand-edit this file.** After changing any backend Pydantic schema or route, regenerate it:
+
+```sh
+./scripts/gen-types.sh
+```
+
+The script boots the backend against a throwaway SQLite database, extracts `app.openapi()`, and pipes the JSON through `openapi-typescript` to produce `types.gen.ts`. Commit the regenerated file alongside your backend changes.
+
+<Note>
+  `gen-types.sh` requires the backend's `.venv` to exist and have the package installed (`pip install -e '.[dev]'`). The script activates it automatically — you do not need to activate it yourself first.
+</Note>
+
+## Related pages
+
+- [API Spec](/develop/api-spec) — regenerating the OpenAPI spec and types
+- [Local Development](/develop/local-development) — running the frontend locally
