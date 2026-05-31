@@ -9,14 +9,21 @@ title: "Halite"
   <img className="hidden dark:block" src="/logo/lockup-horizontal.svg" alt="Halite" noZoom style={{ width: "460px", maxWidth: "100%" }} />
 </div>
 
-Halite is a self-hosted web console that manages a SaltStack deployment end-to-end from one UI — covering minion status, key management, job dispatch, package inventory, fleet health, and user access control, all in a single browser tab.
+Halite is a self-hosted web console that manages a SaltStack deployment end-to-end from one UI — covering minion status, key management, job dispatch, a live activity feed, package inventory, fleet health, and user access control, all in a single browser tab.
 
 ## Why "Halite"?
 
 Halite (/ˈheɪlaɪt/) is the mineralogical name for rock salt — sodium chloride in its natural crystalline form. The mineral grows in perfect cubes, with sodium and chloride ions locked in a regular three-dimensional lattice. That structure mirrors the topology of a SaltStack deployment: a master at the center orchestrating a constellation of minions arranged across the network. The same diagram you would draw for an NaCl unit cell is the diagram you would draw for a Salt master surrounded by its minions.
 
 <Frame caption="Halite dashboard overview">
-  <img src="/images/index-dashboard.png" alt="Halite dashboard showing KPIs, minion-status donut, 24-hour job-activity chart, and key-status bar" />
+    
+  <img 
+      src="/images/index-dashboard.png" 
+      alt="Halite dashboard showing KPIs, minion-status donut, 24-hour job-activity chart, and key-status bar"
+      style={{width: "450px", height: "auto"}}
+      className="rounded-lg"
+  />
+  
 </Frame>
 
 ## Features
@@ -24,6 +31,9 @@ Halite (/ˈheɪlaɪt/) is the mineralogical name for rock salt — sodium chlori
 <CardGroup cols={2}>
   <Card title="Overview" icon="gauge" href="/features/overview">
     KPIs (online minions, pending keys, running jobs, jobs in 24h) plus interactive charts. Auto-refreshes every 30 seconds.
+  </Card>
+  <Card title="Activity" icon="activity" href="/features/activity">
+    A live feed of Salt event-bus activity — jobs, keys, and minions — streamed straight to your browser.
   </Card>
   <Card title="Minions" icon="server" href="/features/minions">
     Live status of every connected minion, with grains drilled down on demand.
