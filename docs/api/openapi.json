@@ -1938,6 +1938,47 @@
         }
       }
     },
+    "/api/admin/settings/widget": {
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Put Widget Route",
+        "operationId": "put_widget_route_api_admin_settings_widget_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WidgetSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/settings/logging": {
       "put": {
         "tags": [
