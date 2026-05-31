@@ -64,6 +64,7 @@ def create_app(
     from halite.inventory.routes import router as inventory_router
     from halite.jobs.routes import router as jobs_router
     from halite.keys.routes import router as keys_router
+    from halite.meta_routes import router as meta_router
     from halite.minions.routes import router as minions_router
     from halite.rbac.routes import router as rbac_router
     from halite.run.routes import router as run_router
@@ -72,6 +73,7 @@ def create_app(
     from halite.templates.routes import router as templates_router
     from halite.users.routes import router as users_router
     app.include_router(health_router)
+    app.include_router(meta_router)
     app.include_router(auth_router)
     app.include_router(activity_router)
     app.include_router(audit_router)

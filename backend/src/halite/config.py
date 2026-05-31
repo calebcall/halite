@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=None, env_prefix="", extra="ignore")
+    model_config = SettingsConfigDict(env_file=None, env_prefix="", extra="ignore", populate_by_name=True)
 
     database_url: str = Field(..., description="SQLAlchemy URL")
 
@@ -26,6 +26,13 @@ class Settings(BaseSettings):
 
     # Static SPA — path to the built frontend dist. None disables SPA serving.
     static_dir: str | None = Field(default=None, validation_alias="HALITE_STATIC_DIR")
+
+    # ---- Demo mode ----
+    demo_mode: bool = Field(default=False, validation_alias="HALITE_DEMO_MODE")
+    demo_admin_password: str = "halite-demo-admin"   # DEMO_ADMIN_PASSWORD
+    demo_salt_url: str = "http://mock-salt-api:8000"  # DEMO_SALT_URL
+    demo_salt_username: str = "halite-demo"           # DEMO_SALT_USERNAME
+    demo_salt_password: str = "demo"                  # DEMO_SALT_PASSWORD
 
     @field_validator("cookie_secret")
     @classmethod
