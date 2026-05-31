@@ -38,7 +38,12 @@ with contextlib.suppress(ImportError):
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers=False: without it, running a migration would
+    # disable every app logger created before this point (fileConfig defaults
+    # to True). In the test suite that silently muted loggers like
+    # halite.inventory.scheduler, so caplog captured nothing in any test that
+    # ran after a migration. We only want alembic's own logging config here.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 config.set_main_option("sqlalchemy.url", get_settings().database_url)
 target_metadata = Base.metadata

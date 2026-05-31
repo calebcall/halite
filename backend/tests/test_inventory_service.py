@@ -51,6 +51,8 @@ def _two_minion_handler():
             }
         if fun == "grains.get":
             return {"return": [{"web-01": "Debian", "db-01": "RedHat"}]}
+        if fun == "manage.present":
+            return {"return": [["web-01", "db-01"]]}
         return {"return": [{}]}
 
     return handler
@@ -103,6 +105,8 @@ async def test_refresh_packages_replaces_previous_snapshot(session, fake_salt_ap
                 return {"return": [{"web-01": {"vim": "2:9.1"}}]}
             if fun == "grains.get":
                 return {"return": [{"web-01": "Debian"}]}
+            if fun == "manage.present":
+                return {"return": [["web-01"]]}
             return {"return": [{}]}
 
         fake_salt_api.run_handler = shrink_handler
@@ -146,6 +150,9 @@ async def test_refresh_packages_offline_minion_keeps_old_data(session, fake_salt
                 return {"return": [{"web-01": False, "db-01": {"bash": "4.4.20-5.el8"}}]}
             if fun == "grains.get":
                 return {"return": [{"db-01": "RedHat"}]}
+            if fun == "manage.present":
+                # web-01 is offline this cycle — only db-01 is present.
+                return {"return": [["db-01"]]}
             return {"return": [{}]}
 
         fake_salt_api.run_handler = offline_handler
@@ -203,6 +210,8 @@ async def test_refresh_packages_deduplicates_repeated_name_arch(session, fake_sa
             }
         if payload.get("fun") == "grains.get":
             return {"return": [{"web-01": "Debian"}]}
+        if payload.get("fun") == "manage.present":
+            return {"return": [["web-01"]]}
         return {"return": [{}]}
 
     fake_salt_api.run_handler = handler
