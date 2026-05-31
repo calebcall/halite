@@ -7,8 +7,8 @@ Halite is a read/console layer that sits on top of a running SaltStack master. I
 
 ## Topology
 
-```mermaid
-%%{init: {'theme':'base','flowchart':{'curve':'step'},'themeVariables':{'fontFamily':'Inter, ui-sans-serif, system-ui, -apple-system, sans-serif','fontSize':'14px','primaryColor':'#1f1f1f','primaryTextColor':'#ebebeb','primaryBorderColor':'#e5a00d','lineColor':'#8a8a8a','clusterBkg':'#141414','clusterBorder':'#2a2a2a','titleColor':'#e5a00d','edgeLabelBackground':'#0e0e0e'}}}%%
+```mermaid actions={false}
+%%{init: {'theme':'base','flowchart':{'curve':'linear','subGraphTitleMargin':{'top':8,'bottom':12}},'themeVariables':{'fontFamily':'Inter, ui-sans-serif, system-ui, -apple-system, sans-serif','fontSize':'14px','primaryColor':'#1f1f1f','primaryTextColor':'#ebebeb','primaryBorderColor':'#e5a00d','lineColor':'#8a8a8a','clusterBkg':'#141414','clusterBorder':'#2a2a2a','titleColor':'#e5a00d','edgeLabelBackground':'#0e0e0e'}}}%%
 flowchart TD
     subgraph Salt["SaltStack deployment"]
         M[Salt master] -->|manages| Minions[Minions]
