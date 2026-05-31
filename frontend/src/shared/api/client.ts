@@ -394,6 +394,7 @@ export const api = {
       event_type?: string | null
       search?: string | null
       hide_routine?: boolean
+      hide_dispatch?: boolean
       since_minutes?: number
       limit?: number
       offset?: number

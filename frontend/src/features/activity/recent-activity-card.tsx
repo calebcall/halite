@@ -20,8 +20,10 @@ export function RecentActivityCard({ className }: RecentActivityCardProps = {}) 
   })
   const lastHour = heartbeat.data?.total ?? 0
 
-  // Notable recent events: hide the routine successful-no-change drip.
-  const { data } = useActivityList({ hide_routine: true, limit: 6 })
+  // Notable recent events: all returns (including routine successes) + key/minion
+  // events. Excludes only job.new dispatches — routine successes are intentionally
+  // included here so the widget reflects real fleet activity.
+  const { data } = useActivityList({ hide_dispatch: true, limit: 6 })
   const events = data?.events ?? []
 
   return (

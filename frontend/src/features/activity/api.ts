@@ -10,6 +10,7 @@ export interface ActivityFilter {
   event_type?: string
   search?: string
   hide_routine?: boolean
+  hide_dispatch?: boolean
   since_minutes?: number
   limit?: number
   offset?: number

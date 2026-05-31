@@ -13,8 +13,9 @@ globalThis.EventSource = class {
   close() {}
 } as unknown as typeof EventSource
 
-// Captures the hide_routine query param of the most recent /api/activity call.
+// Captures the most recent query params from /api/activity
 let lastHideRoutine: string | null = null
+let lastHideDispatch: string | null = null
 
 const failedEvent = {
   id: 1,
@@ -48,6 +49,7 @@ const changedEvent = {
   summary: 'state.highstate applied changes on db-02',
 }
 
+// Routine success: success=true, changed=false — filtered by hide_routine
 const okEvent = {
   id: 3,
   ts: '2026-05-29T12:02:00Z',
@@ -81,6 +83,8 @@ const dispatchEvent = {
   summary: 'test.ping dispatched to web/*',
 }
 
+const allEvents = [failedEvent, changedEvent, okEvent, dispatchEvent]
+
 const server = setupServer(
   http.get('/api/auth/me', () =>
     HttpResponse.json({
@@ -93,10 +97,12 @@ const server = setupServer(
   http.get('/api/activity', ({ request }) => {
     const url = new URL(request.url)
     lastHideRoutine = url.searchParams.get('hide_routine')
+    lastHideDispatch = url.searchParams.get('hide_dispatch')
     const hideRoutine = lastHideRoutine === 'true'
-    const events = hideRoutine
-      ? [failedEvent, changedEvent, dispatchEvent]
-      : [failedEvent, changedEvent, dispatchEvent, okEvent]
+    const hideDispatch = lastHideDispatch === 'true'
+    const events = allEvents
+      .filter((e) => !(hideRoutine && e.event_type === 'job.ret' && e.success && !e.changed))
+      .filter((e) => !(hideDispatch && e.event_type === 'job.new'))
     return HttpResponse.json({ total: events.length, events })
   }),
 )
@@ -105,6 +111,7 @@ beforeAll(() => server.listen())
 afterEach(() => {
   server.resetHandlers()
   lastHideRoutine = null
+  lastHideDispatch = null
 })
 afterAll(() => server.close())
 
@@ -118,20 +125,21 @@ function renderPage() {
 }
 
 describe('ActivityPage', () => {
-  it('defaults to hide_routine=true and renders Failed and Changes rows', async () => {
+  it('defaults to showing ALL events (no hide flags sent)', async () => {
     renderPage()
+    // All four events visible: Failed, Changes, OK, and Dispatched
     expect(await screen.findByText('web-01')).toBeInTheDocument()
     expect(screen.getByText('Failed')).toBeInTheDocument()
     expect(screen.getByText('Changes')).toBeInTheDocument()
-    // routine OK row should not be present by default
-    expect(screen.queryByText('OK')).not.toBeInTheDocument()
-    expect(lastHideRoutine).toBe('true')
+    expect(screen.getByText('OK')).toBeInTheDocument()
+    expect(screen.getByText('Dispatched')).toBeInTheDocument()
+    // No filter flags sent
+    expect(lastHideRoutine).toBeNull()
+    expect(lastHideDispatch).toBeNull()
   })
 
   it('shows the target as the subject for a job.new dispatch and the initiator', async () => {
     renderPage()
-    // job.new has no minion_id — the subject should be the target glob,
-    // never the literal "fleet".
     expect(await screen.findByText('web/*')).toBeInTheDocument()
     expect(screen.queryByText('fleet')).not.toBeInTheDocument()
     expect(screen.getByText('by admin')).toBeInTheDocument()
@@ -144,16 +152,32 @@ describe('ActivityPage', () => {
     expect(await screen.findByText('4.2s')).toBeInTheDocument()
   })
 
-  it('toggling "Show routine successes" sends hide_routine=false and shows OK rows', async () => {
+  it('toggling "Hide routine successes" sends hide_routine=true and hides OK rows', async () => {
     const user = userEvent.setup()
     renderPage()
-    await screen.findByText('web-01')
-
-    await user.click(screen.getByRole('switch', { name: /show routine successes/i }))
-
-    // The routine success row renders with the "OK" success badge.
+    // Wait for initial render (everything shown)
     expect(await screen.findByText('OK')).toBeInTheDocument()
-    expect(lastHideRoutine).toBe('false')
+
+    await user.click(screen.getByRole('switch', { name: /hide routine successes/i }))
+
+    // Routine OK row disappears; failed and changes remain
+    expect(await screen.findByText('Failed')).toBeInTheDocument()
+    expect(screen.queryByText('OK')).not.toBeInTheDocument()
+    expect(lastHideRoutine).toBe('true')
+  })
+
+  it('toggling "Hide dispatches" sends hide_dispatch=true and hides job.new rows', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    // Wait for initial render (dispatch shown)
+    expect(await screen.findByText('Dispatched')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('switch', { name: /hide dispatches/i }))
+
+    // Dispatch row disappears; other events remain
+    expect(await screen.findByText('Failed')).toBeInTheDocument()
+    expect(screen.queryByText('Dispatched')).not.toBeInTheDocument()
+    expect(lastHideDispatch).toBe('true')
   })
 
   it('shows no-access message when user has no view perms', async () => {

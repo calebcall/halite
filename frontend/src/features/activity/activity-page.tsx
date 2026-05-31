@@ -26,18 +26,20 @@ function ActivityPageInner() {
 
   const [category, setCategory] = useState('')
   const [search, setSearch] = useState('')
-  // Default OFF → hide routine successful-no-change returns (the constant
-  // state.highstate drip). Toggling on surfaces them.
-  const [showRoutine, setShowRoutine] = useState(false)
+  // Both default OFF → show everything by default.
+  // When toggled ON, the corresponding filter flag is sent.
+  const [hideRoutine, setHideRoutine] = useState(false)
+  const [hideDispatch, setHideDispatch] = useState(false)
 
   const filter: ActivityFilter = useMemo(
     () => ({
       category: category || undefined,
       search: search || undefined,
-      hide_routine: !showRoutine,
+      hide_routine: hideRoutine || undefined,
+      hide_dispatch: hideDispatch || undefined,
       limit: 200,
     }),
-    [category, search, showRoutine],
+    [category, search, hideRoutine, hideDispatch],
   )
 
   const { data, isPending, error } = useActivityList(filter)
@@ -92,11 +94,20 @@ function ActivityPageInner() {
 
         <label className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
           <Switch
-            checked={showRoutine}
-            onCheckedChange={setShowRoutine}
-            aria-label="Show routine successes"
+            checked={hideRoutine}
+            onCheckedChange={setHideRoutine}
+            aria-label="Hide routine successes"
           />
-          Show routine successes
+          Hide routine successes
+        </label>
+
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Switch
+            checked={hideDispatch}
+            onCheckedChange={setHideDispatch}
+            aria-label="Hide dispatches"
+          />
+          Hide dispatches
         </label>
       </div>
 
