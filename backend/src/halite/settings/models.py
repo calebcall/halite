@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+import sqlalchemy as sa
 from sqlalchemy import Boolean, CheckConstraint, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,6 +34,13 @@ class AppSettings(Base):
     minion_state_presence_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
     minion_state_grains_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=300)
     minion_state_initial_delay_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+
+    event_stream_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa.false()
+    )
+    event_stream_retention_days: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=30, server_default="30"
+    )
 
     log_format: Mapped[str] = mapped_column(String(8), nullable=False, default="json")
 

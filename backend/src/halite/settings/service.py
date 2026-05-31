@@ -52,6 +52,8 @@ async def get_settings(db: AsyncSession) -> SettingsOut:
             minion_state_presence_interval_seconds=row.minion_state_presence_interval_seconds,
             minion_state_grains_interval_seconds=row.minion_state_grains_interval_seconds,
             minion_state_initial_delay_seconds=row.minion_state_initial_delay_seconds,
+            event_stream_enabled=row.event_stream_enabled,
+            event_stream_retention_days=row.event_stream_retention_days,
         ),
         logging=LoggingSettingsOut(log_format=row.log_format),  # type: ignore[arg-type]
         updated_at=row.updated_at,
@@ -101,6 +103,8 @@ async def update_pollers(db: AsyncSession, patch: PollerSettingsIn) -> AppSettin
         "minion_state_presence_interval_seconds",
         "minion_state_grains_interval_seconds",
         "minion_state_initial_delay_seconds",
+        "event_stream_enabled",
+        "event_stream_retention_days",
     ):
         v = getattr(patch, field)
         if v is not None:

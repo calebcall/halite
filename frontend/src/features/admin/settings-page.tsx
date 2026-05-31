@@ -406,6 +406,7 @@ const pollersSchema = z.object({
   minion_state_initial_delay_seconds: z.coerce.number().int().min(0),
   minion_state_keys_interval_seconds: z.coerce.number().int().min(1),
   minion_state_presence_interval_seconds: z.coerce.number().int().min(1),
+  event_stream_retention_days: z.coerce.number().int().min(1).max(365),
 })
 
 type PollersFormValues = z.infer<typeof pollersSchema>
@@ -422,6 +423,7 @@ const POLLER_DEFAULTS = {
   minion_state_initial_delay_seconds: 10,
   minion_state_keys_interval_seconds: 300,
   minion_state_presence_interval_seconds: 60,
+  event_stream_retention_days: 30, // matches DB column default
 } as const
 
 
@@ -438,6 +440,7 @@ function PollersSection({ initial }: { initial: PollerSettingsOut }) {
       initial.minion_state_keys_interval_seconds > 0 ||
       initial.minion_state_presence_interval_seconds > 0 ||
       initial.minion_state_grains_interval_seconds > 0,
+    eventStream: initial.event_stream_enabled,
   })
 
   // The form holds the DESIRED interval values. When a group is toggled off
@@ -465,6 +468,8 @@ function PollersSection({ initial }: { initial: PollerSettingsOut }) {
         initial.minion_state_keys_interval_seconds || POLLER_DEFAULTS.minion_state_keys_interval_seconds,
       minion_state_presence_interval_seconds:
         initial.minion_state_presence_interval_seconds || POLLER_DEFAULTS.minion_state_presence_interval_seconds,
+      event_stream_retention_days:
+        initial.event_stream_retention_days || POLLER_DEFAULTS.event_stream_retention_days,
     },
     resolver: zodResolver(pollersSchema),
   })
@@ -473,7 +478,7 @@ function PollersSection({ initial }: { initial: PollerSettingsOut }) {
     setSaveMsg(null)
     // Mask out disabled groups before sending. The interval inputs stay
     // intact in the form so toggling back on restores the user's value.
-    const payload: PollersFormValues = {
+    const payload = {
       fleet_poll_interval_seconds: enabled.fleet ? values.fleet_poll_interval_seconds : 0,
       inventory_refresh_initial_delay_s: values.inventory_refresh_initial_delay_s,
       inventory_refresh_minutes: enabled.inventory ? values.inventory_refresh_minutes : 0,
@@ -485,6 +490,8 @@ function PollersSection({ initial }: { initial: PollerSettingsOut }) {
         enabled.minionState ? values.minion_state_keys_interval_seconds : 0,
       minion_state_presence_interval_seconds:
         enabled.minionState ? values.minion_state_presence_interval_seconds : 0,
+      event_stream_enabled: enabled.eventStream,
+      event_stream_retention_days: values.event_stream_retention_days,
     }
     try {
       await updateMut.mutateAsync(payload)
@@ -601,6 +608,34 @@ function PollersSection({ initial }: { initial: PollerSettingsOut }) {
               error={errors.inventory_refresh_initial_delay_s?.message}
             />
           </PollerGroup>
+
+          <section className="rounded-md border border-border p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-0.5">
+                <h3 className="text-sm font-medium">Event stream</h3>
+                <p className="text-xs text-muted-foreground">
+                  Captures live Salt event bus activity. When enabled, events are stored and exposed via the Activity page and SSE stream.
+                </p>
+              </div>
+              <Switch
+                checked={enabled.eventStream}
+                onCheckedChange={(v) => setEnabled((e) => ({ ...e, eventStream: v }))}
+                aria-label="Event stream enabled"
+              />
+            </div>
+            {enabled.eventStream && (
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <PollerField
+                  id="event_stream_retention_days"
+                  label="Retention (days)"
+                  help="Events older than this are pruned automatically. Min 1, max 365."
+                  disabled={!enabled.eventStream}
+                  register={register}
+                  error={errors.event_stream_retention_days?.message}
+                />
+              </div>
+            )}
+          </section>
 
           <div className="flex flex-wrap items-center gap-3 border-t pt-4">
             <Button type="submit" disabled={isSubmitting}>

@@ -10,6 +10,7 @@ import { LoginPage } from '@/features/auth/login-page'
 import { ChangePasswordPage } from '@/features/auth/change-password-page'
 import { LoginRequired, MustChangePassword, PublicOnly } from '@/features/auth/guards'
 import { AboutPage } from '@/features/about/about-page'
+import { ActivityPage } from '@/features/activity/activity-page'
 import { AuditViewerPage } from '@/features/audit/audit-viewer-page'
 import { InventoryPackagesPage } from '@/features/inventory/inventory-packages-page'
 import { JobDetailPage } from '@/features/jobs/job-detail-page'
@@ -152,6 +153,12 @@ const auditRoute = createRoute({
   component: () => <AuditViewerPage />,
 })
 
+const activityRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/activity',
+  component: () => <ActivityPage />,
+})
+
 const settingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/admin/settings',
@@ -200,6 +207,7 @@ const routeTree = rootRoute.addChildren([
     rolesRoute,
     runRoute,
     auditRoute,
+    activityRoute,
     settingsRoute,
     aboutRoute,
   ]),

@@ -553,6 +553,51 @@ class SaltAPIClient:
                         union.add(f)
         return sorted(union)
 
+    async def stream_events(self):
+        """Async generator yielding (tag, data) tuples from salt-api's SSE
+        /events endpoint. One long-lived connection. Caller is responsible for
+        reconnect/backoff; this raises on the first network error or stream end.
+        """
+        import json as _json
+
+        token = await self._ensure_token()
+        # salt-api's /events stream was built for browser EventSource clients,
+        # which can't set headers — so it authenticates via the `?token=` query
+        # parameter (validated directly against the token cache). The
+        # X-Auth-Token header alone is session-dependent and returns a flaky 401
+        # on first connect, so we pass the token as a query param (the documented
+        # method) and keep the header too for version compatibility.
+        params = {"token": token}
+        headers = {"X-Auth-Token": token, "Accept": "text/event-stream"}
+        async with self._client.stream(
+            "GET", "/events", params=params, headers=headers, timeout=None
+        ) as resp:
+            if resp.status_code == 401:
+                # Prime a fresh token for the caller's next reconnect, then let
+                # raise_for_status() surface the 401 so the caller backs off and
+                # reopens the stream. We don't retry inline — this is a long-lived
+                # streaming GET, not a unary request.
+                await self._ensure_token(force=True)
+            resp.raise_for_status()
+            data_lines: list[str] = []
+            async for line in resp.aiter_lines():
+                if line == "":
+                    if data_lines:
+                        payload = "\n".join(data_lines)
+                        data_lines = []
+                        try:
+                            obj = _json.loads(payload)
+                        except ValueError:
+                            continue
+                        tag = obj.get("tag")
+                        if tag:
+                            yield tag, obj.get("data") or {}
+                    continue
+                if line.startswith("data:"):
+                    data_lines.append(line[5:].lstrip())
+                # "tag:" / "retry:" lines are ignored — the tag is inside the
+                # JSON payload on the data: line (salt includes it both places).
+
 
 # ---------- helpers ----------
 
