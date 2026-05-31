@@ -1,6 +1,97 @@
 ---
-title: "Audit"
-description: "Placeholder — filled in by a later task."
+title: "Audit Log"
+description: "Query the authorization audit trail."
 ---
 
-Coming soon.
+Every decision Halite's policy engine makes — allow or deny — is written to the audit log. This includes user logins, Salt command dispatches, key operations, settings changes, and any action that passes through a `require_perm` check. You can browse, paginate, and filter the log from the Audit page.
+
+For a conceptual explanation of what gets recorded and when, see [Audit Log](/concepts/audit-log).
+
+<Frame caption="Audit log table showing recent authorization decisions">
+  <img src="/images/audit-log.png" alt="Table of audit entries with timestamp, user, action, resource, decision, and result code columns" />
+</Frame>
+
+## Audit entry fields
+
+Each entry in the log has the following fields (from `AuditEntry` in `audit/models.py`):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | integer | Auto-incrementing primary key |
+| `at` | datetime | Timestamp of the event (timezone-aware) |
+| `user_id` | UUID or null | The Halite user who triggered the action; `null` for unauthenticated requests |
+| `action` | string | Dot-separated action name (e.g. `salt.run`, `user.create`, `settings.salt.update`) |
+| `resource` | string | The resource path the action targeted (e.g. `minion:*`, `user:alice`) |
+| `args_json` | object or null | The request arguments — passwords are redacted to `"<redacted>"` |
+| `salt_jid` | string or null | The Salt JID if the action dispatched a Salt job |
+| `decision` | string | `"allow"` or `"deny"` |
+| `result_code` | integer | HTTP status code of the response |
+| `duration_ms` | integer | Request processing time in milliseconds |
+
+## Browsing and filtering
+
+The audit log endpoint is `GET /api/audit`. Results are sorted by `at` descending (newest first) and paginated.
+
+### Query parameters
+
+<ParamField query="user_id" type="UUID">
+  Filter to entries created by a specific Halite user.
+</ParamField>
+
+<ParamField query="action" type="string">
+  Filter to entries with an exact action name (e.g. `salt.run`).
+</ParamField>
+
+<ParamField query="decision" type="string">
+  Filter to entries with a specific decision. Use `allow` or `deny`.
+</ParamField>
+
+<ParamField query="since" type="datetime (ISO 8601)">
+  Return entries at or after this timestamp (inclusive lower bound on `at`).
+</ParamField>
+
+<ParamField query="until" type="datetime (ISO 8601)">
+  Return entries strictly before this timestamp (exclusive upper bound on `at`).
+</ParamField>
+
+<ParamField query="limit" type="integer" default="50">
+  Number of entries to return. Range: 1–500.
+</ParamField>
+
+<ParamField query="offset" type="integer" default="0">
+  Number of entries to skip for pagination.
+</ParamField>
+
+## Example: reviewing recent denied requests
+
+```http
+GET /api/audit?decision=deny&limit=50
+```
+
+This returns the 50 most recent `deny` decisions — useful for spotting permission misconfigurations or unauthorized access attempts.
+
+## Example: auditing a specific user's actions
+
+```http
+GET /api/audit?user_id=3f4b2c1a-0000-0000-0000-000000000001&since=2025-01-01T00:00:00Z
+```
+
+Returns all audit entries for the given user since 1 January 2025.
+
+## Example: finding all Salt jobs dispatched in a time window
+
+```http
+GET /api/audit?action=salt.run&since=2025-06-01T09:00:00Z&until=2025-06-01T17:00:00Z
+```
+
+Returns every `salt.run` action recorded during business hours on June 1st, with the `salt_jid` field identifying each dispatched job.
+
+## Permissions
+
+| Route | Required permission |
+|-------|-------------------|
+| `GET /api/audit` | `view:audit:*` |
+
+<Warning>
+  The built-in **viewer** role does **not** include `view:audit:*`. Access to the audit log is restricted to the **admin** role (and any custom role you explicitly grant `view:audit:*`). This is intentional — the audit log contains user IDs and request arguments that may be sensitive.
+</Warning>

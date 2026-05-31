@@ -1,6 +1,81 @@
 ---
 title: "About"
-description: "Placeholder — filled in by a later task."
+description: "The in-app colophon and brand story."
 ---
 
-Coming soon.
+The **About** page at `/about` is Halite's in-app colophon. It tells the story behind the name, showcases the brand marks, documents the color palette, lists capabilities, and credits the open-source projects that Halite builds on.
+
+<Frame caption="Halite About page showing the brand mark, name origin, and color palette">
+  <img src="/images/about-colophon.png" alt="The Halite About page with the lattice brand mark, NaCl mineral fact card, three mark families, and amber color swatches" />
+</Frame>
+
+## Why "halite"?
+
+**Halite** (/ˈheɪlaɪt/) is the mineralogical name for rock salt — sodium chloride in its natural crystalline form. The mineral grows in perfect isometric cubes, with sodium and chloride ions locked in a regular three-dimensional lattice.
+
+That structure mirrors the topology of a SaltStack deployment: a master node at the center, orchestrating minions arranged across the network. The same diagram you would draw for a NaCl unit cell is the diagram you would draw for a Salt master surrounded by its minions. The dual meaning — **Salt → halite**, **lattice → master/minions** — is carried through every part of the brand.
+
+The mineral fact card on the About page documents the connection:
+
+| Property | Value |
+|----------|-------|
+| Mineral | Halite |
+| Formula | NaCl |
+| Crystal system | Isometric · cubic |
+| Cleavage | Perfect, three directions |
+| Mohs hardness | 2–2.5 |
+| Color | Colorless to white; amber when impure |
+
+## Brand marks
+
+The brand ships three mark families, each representing the same mineral from a different angle:
+
+<CardGroup cols={3}>
+  <Card title="The Lattice" icon="grid-3x3">
+    The primary mark — a 3×3 grid of nodes that diagrams both halite's atomic lattice and the Salt master+minion topology. Used as the app icon and favicon.
+  </Card>
+  <Card title="The Salt Cube" icon="cube">
+    A single isometric cube — the literal cubic crystal habit of halite (NaCl). Tri-tone faces in amber (`#f5b938` top, `#e5a00d` right, `#a77100` left). Used in marketing and hero visuals.
+  </Card>
+  <Card title="The Triple Stack" icon="layers">
+    Three crystals stacked into a small aggregate. A compact sculpture for section dividers and secondary moments in the UI.
+  </Card>
+</CardGroup>
+
+All three marks are available as SVG files in `logos/brand/{lattice,cube,stack}/` with horizontal and stacked lockup variants. PNG exports at 16/32/48/192/512/1024/2048 px are included for favicons and app icons.
+
+## Color palette
+
+Halite's color system is built on a single signature amber — **#e5a00d** (HSL `41° 89% 47%`) — sitting on a stack of deep neutral surfaces. The palette is intentionally dark-first, inspired by media-console aesthetics.
+
+| Token | Hex | Role |
+|-------|-----|------|
+| `amber` | `#e5a00d` | Primary brand color — accent, interactive elements |
+| `amber-light` | `#f5b938` | Cube top face, hover highlights |
+| `amber-dark` | `#a77100` | Cube shadow face, pressed states |
+| `black` | `#0e0e0e` | Deepest background |
+| `graphite` | `#141414` | Body background |
+| `onyx` | `#1f1f1f` | Card surface |
+| `slate` | `#2a2a2a` | Borders, elevated surfaces |
+| `fog` | `#999999` | Muted / secondary text |
+| `bone` | `#ebebeb` | Primary text on dark surfaces |
+
+CSS custom properties and W3C Design Tokens JSON are available in `logos/brand/tokens/`.
+
+## Built with
+
+The About page also lists the open-source projects Halite depends on:
+
+| Project | Role |
+|---------|------|
+| SaltStack | Underlying execution layer — Halite is a console on top of it |
+| Inter | Wordmark and UI typeface |
+| React + TanStack Router | Frontend application layer |
+| FastAPI + Pydantic | Backend HTTP layer |
+| shadcn/ui + Tailwind | Component primitives and tokenized styling |
+| Lucide | Icon set |
+| Recharts | Charting layer for Overview metrics |
+
+## Permissions
+
+The `/about` page is accessible to any authenticated Halite user. There are no `require_perm` checks on the route — any valid session can view it.
