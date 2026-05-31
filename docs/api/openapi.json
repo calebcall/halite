@@ -4435,6 +4435,30 @@
               }
             ],
             "title": "Minion State Initial Delay Seconds"
+          },
+          "event_stream_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Stream Enabled"
+          },
+          "event_stream_retention_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 365.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Stream Retention Days"
           }
         },
         "additionalProperties": false,
@@ -4474,6 +4498,14 @@
           "minion_state_initial_delay_seconds": {
             "type": "integer",
             "title": "Minion State Initial Delay Seconds"
+          },
+          "event_stream_enabled": {
+            "type": "boolean",
+            "title": "Event Stream Enabled"
+          },
+          "event_stream_retention_days": {
+            "type": "integer",
+            "title": "Event Stream Retention Days"
           }
         },
         "type": "object",
@@ -4485,7 +4517,9 @@
           "minion_state_keys_interval_seconds",
           "minion_state_presence_interval_seconds",
           "minion_state_grains_interval_seconds",
-          "minion_state_initial_delay_seconds"
+          "minion_state_initial_delay_seconds",
+          "event_stream_enabled",
+          "event_stream_retention_days"
         ],
         "title": "PollerSettingsOut"
       },
@@ -4977,6 +5011,9 @@
           "pollers": {
             "$ref": "#/components/schemas/PollerSettingsOut"
           },
+          "widget": {
+            "$ref": "#/components/schemas/WidgetSettingsOut"
+          },
           "logging": {
             "$ref": "#/components/schemas/LoggingSettingsOut"
           },
@@ -4990,6 +5027,7 @@
         "required": [
           "salt",
           "pollers",
+          "widget",
           "logging",
           "updated_at"
         ],
@@ -5718,6 +5756,180 @@
         ],
         "title": "VersionFilter",
         "description": "A version comparison applied per-row in Python after SQL narrowing."
+      },
+      "WidgetConfigOut": {
+        "properties": {
+          "widget_hide_dispatch": {
+            "type": "boolean",
+            "title": "Widget Hide Dispatch"
+          },
+          "widget_hide_routine": {
+            "type": "boolean",
+            "title": "Widget Hide Routine"
+          },
+          "widget_show_jobs": {
+            "type": "boolean",
+            "title": "Widget Show Jobs"
+          },
+          "widget_show_keys": {
+            "type": "boolean",
+            "title": "Widget Show Keys"
+          },
+          "widget_show_minions": {
+            "type": "boolean",
+            "title": "Widget Show Minions"
+          },
+          "widget_event_count": {
+            "type": "integer",
+            "title": "Widget Event Count"
+          },
+          "widget_heartbeat_minutes": {
+            "type": "integer",
+            "title": "Widget Heartbeat Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "widget_hide_dispatch",
+          "widget_hide_routine",
+          "widget_show_jobs",
+          "widget_show_keys",
+          "widget_show_minions",
+          "widget_event_count",
+          "widget_heartbeat_minutes"
+        ],
+        "title": "WidgetConfigOut"
+      },
+      "WidgetSettingsIn": {
+        "properties": {
+          "widget_hide_dispatch": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Widget Hide Dispatch"
+          },
+          "widget_hide_routine": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Widget Hide Routine"
+          },
+          "widget_show_jobs": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Widget Show Jobs"
+          },
+          "widget_show_keys": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Widget Show Keys"
+          },
+          "widget_show_minions": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Widget Show Minions"
+          },
+          "widget_event_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Widget Event Count"
+          },
+          "widget_heartbeat_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1440.0,
+                "minimum": 5.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Widget Heartbeat Minutes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WidgetSettingsIn"
+      },
+      "WidgetSettingsOut": {
+        "properties": {
+          "widget_hide_dispatch": {
+            "type": "boolean",
+            "title": "Widget Hide Dispatch"
+          },
+          "widget_hide_routine": {
+            "type": "boolean",
+            "title": "Widget Hide Routine"
+          },
+          "widget_show_jobs": {
+            "type": "boolean",
+            "title": "Widget Show Jobs"
+          },
+          "widget_show_keys": {
+            "type": "boolean",
+            "title": "Widget Show Keys"
+          },
+          "widget_show_minions": {
+            "type": "boolean",
+            "title": "Widget Show Minions"
+          },
+          "widget_event_count": {
+            "type": "integer",
+            "title": "Widget Event Count"
+          },
+          "widget_heartbeat_minutes": {
+            "type": "integer",
+            "title": "Widget Heartbeat Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "widget_hide_dispatch",
+          "widget_hide_routine",
+          "widget_show_jobs",
+          "widget_show_keys",
+          "widget_show_minions",
+          "widget_event_count",
+          "widget_heartbeat_minutes"
+        ],
+        "title": "WidgetSettingsOut"
       }
     }
   },
