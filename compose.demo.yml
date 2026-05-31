@@ -1,0 +1,42 @@
+# Halite demo stack: mock salt-api + Halite in demo mode (read-only public,
+# admin login enabled). Ephemeral SQLite — restart = clean slate.
+#   COOKIE_SECRET=$(./scripts/gen-bootstrap-secret.sh) DEMO_ADMIN_PASSWORD=... \
+#     docker compose -f compose.demo.yml up --build
+services:
+  mock-salt-api:
+    build:
+      context: ./mock-salt-api
+    environment:
+      MOCK_SIM_INTERVAL_S: "6"
+      MOCK_RESET_MINUTES: "30"
+    expose:
+      - "8000"
+
+  app:
+    build:
+      context: .
+      args:
+        BUILD_HASH: ${BUILD_HASH:-demo}
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:////data/halite.db
+      COOKIE_SECRET: ${COOKIE_SECRET:?Run scripts/gen-bootstrap-secret.sh and set COOKIE_SECRET}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      HALITE_STATIC_DIR: /app/frontend/dist
+      HALITE_DEMO_MODE: "true"
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-halite-demo-admin}
+      DEMO_SALT_URL: http://mock-salt-api:8000
+      DEMO_SALT_USERNAME: halite-demo
+      DEMO_SALT_PASSWORD: demo
+    depends_on:
+      - mock-salt-api
+    tmpfs:
+      - /data
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test:
+        ["CMD", "python", "-c",
+         "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
