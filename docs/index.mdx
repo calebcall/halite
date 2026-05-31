@@ -1,0 +1,47 @@
+---
+title: "Halite"
+description: "A modern self-hosted web console for SaltStack."
+---
+
+Halite is a self-hosted web console that manages a SaltStack deployment end-to-end from one UI — covering minion status, key management, job dispatch, package inventory, fleet health, and user access control, all in a single browser tab.
+
+## Why "Halite"?
+
+Halite (/ˈheɪlaɪt/) is the mineralogical name for rock salt — sodium chloride in its natural crystalline form. The mineral grows in perfect cubes, with sodium and chloride ions locked in a regular three-dimensional lattice. That structure mirrors the topology of a SaltStack deployment: a master at the center orchestrating a constellation of minions arranged across the network. The same diagram you would draw for an NaCl unit cell is the diagram you would draw for a Salt master surrounded by its minions.
+
+<Frame caption="Halite dashboard overview">
+  <img src="/images/index-dashboard.png" alt="Halite dashboard showing KPIs, minion-status donut, 24-hour job-activity chart, and key-status bar" />
+</Frame>
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Overview" icon="gauge" href="/features/overview">
+    KPIs (online minions, pending keys, running jobs, jobs in 24h) plus interactive charts. Auto-refreshes every 30 seconds.
+  </Card>
+  <Card title="Minions" icon="server" href="/features/minions">
+    Live status of every connected minion, with grains drilled down on demand.
+  </Card>
+  <Card title="Keys" icon="key" href="/features/keys">
+    Accept, reject, or delete pending minion keys.
+  </Card>
+  <Card title="Jobs" icon="list-checks" href="/features/jobs">
+    Browse recent jobs, inspect per-minion results with highstate parsing, and kill running jobs mid-flight.
+  </Card>
+  <Card title="Run" icon="terminal" href="/features/run">
+    Dispatch any Salt execution module function against any target, with full target-type support.
+  </Card>
+  <Card title="Inventory" icon="package" href="/features/inventory">
+    3-level drill-down through installed packages across the fleet (package → versions → installed-on, or minion → packages).
+  </Card>
+  <Card title="Fleet Health" icon="heart-pulse" href="/features/fleet">
+    Fleet-wide highstate health derived from recent job history.
+  </Card>
+  <Card title="Users & Roles" icon="users" href="/features/users-roles">
+    Permission-driven access with built-in admin / operator / viewer roles plus arbitrary custom roles using verb:resource permission globs.
+  </Card>
+</CardGroup>
+
+<Card horizontal icon="rocket" href="/quickstart" title="Quickstart">
+  Run Halite with Docker in minutes.
+</Card>

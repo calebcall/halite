@@ -1,0 +1,74 @@
+---
+title: "Testing"
+description: "pytest dual-backend, vitest, lint, and build."
+---
+
+## Backend tests
+
+Tests live in `backend/tests/` and are named `test_<feature>_<layer>.py`. Run them from the `backend/` directory with the virtual environment activated.
+
+### Running tests
+
+Run the full suite against SQLite (fast, no external dependencies):
+
+```sh
+pytest -v
+```
+
+Run a single test file:
+
+```sh
+pytest tests/test_rbac_engine.py -v
+```
+
+Run a single test by name:
+
+```sh
+pytest tests/test_rbac_engine.py::test_name -v
+```
+
+### Dual-backend suite
+
+The test suite runs every database test against **both SQLite and Postgres**. SQLite runs by default; Postgres requires Docker (via testcontainers) and is enabled with:
+
+```sh
+HALITE_TEST_PG=1 pytest -v
+```
+
+CI always runs both legs. Locally, SQLite-only is sufficient for day-to-day development. Before submitting a migration or a change that touches queries, run the full dual-backend suite to catch portability regressions.
+
+### DB fixtures and sync context
+
+The `conftest.py` fixtures that run Alembic migrations are **synchronous** (`pytest.fixture`, not `pytest_asyncio.fixture`). This is intentional: Alembic's `env.py` uses `asyncio.run()` internally, so migrations must be driven from a sync context. Async session fixtures are layered on top after migrations complete.
+
+The `fake_salt_api` fixture provides an `httpx.MockTransport`-backed fake salt-api. Tests configure its responses via attribute assignment and pass `transport=fake_salt_api.transport` when constructing a `SaltAPIClient`.
+
+## Lint and format
+
+Halite uses **ruff** for linting and formatting. Run from `backend/`:
+
+```sh
+ruff check src tests     # lint
+ruff format src tests    # format
+```
+
+Configuration: line length 100 (E501 ignored), rules `E`, `F`, `W`, `I`, `B`, `UP`, `SIM`.
+
+## Frontend tests
+
+Run from the `frontend/` directory:
+
+```sh
+npm test          # vitest (unit/component tests)
+npm run build     # tsc -b && vite build (type-check + production build)
+npm run lint      # eslint
+```
+
+<Tip>
+  Run `npm run build` before pushing frontend changes. The build step runs `tsc -b` which catches type errors that vitest may not surface.
+</Tip>
+
+## Related pages
+
+- [Local Development](/develop/local-development) — setting up the dev environment
+- [Database & Migrations](/develop/database) — portability rules and the dual-backend pattern

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 280">
+  <!--
+    Halite — Lattice horizontal lockup.
+    Icon occupies a 280×280 slot on the left; "halite" wordmark sits to the
+    right with 32u of breathing room between them. Wordmark vertical center
+    is tuned to align with the icon's visual center.
+  -->
+  <g transform="scale(0.546875)">
+    <g fill="#e5a00d">
+      <rect x="208" y="208" width="96" height="96" rx="18"/>
+      <rect x="226" y="98"  width="60" height="60" rx="12"/>
+      <rect x="354" y="226" width="60" height="60" rx="12"/>
+      <rect x="226" y="354" width="60" height="60" rx="12"/>
+      <rect x="98"  y="226" width="60" height="60" rx="12"/>
+      <g fill-opacity="0.55">
+        <rect x="103" y="103" width="50" height="50" rx="10"/>
+        <rect x="359" y="103" width="50" height="50" rx="10"/>
+        <rect x="359" y="359" width="50" height="50" rx="10"/>
+        <rect x="103" y="359" width="50" height="50" rx="10"/>
+      </g>
+    </g>
+  </g>
+  <text x="312" y="206"
+        font-family="'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+        font-size="200" font-weight="600" letter-spacing="-3"
+        fill="#141414">halite</text>
+</svg>

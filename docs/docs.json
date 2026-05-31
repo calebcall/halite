@@ -1,0 +1,43 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "Halite",
+  "description": "A modern self-hosted web console for SaltStack.",
+  "colors": {
+    "primary": "#e5a00d",
+    "light": "#f5b938",
+    "dark": "#a77100"
+  },
+  "appearance": { "default": "dark" },
+  "background": { "color": { "light": "#ffffff", "dark": "#0e0e0e" } },
+  "logo": {
+    "light": "/logo/lockup-horizontal-light.svg",
+    "dark": "/logo/lockup-horizontal.svg",
+    "href": "https://github.com/calebcall/halite"
+  },
+  "favicon": "/favicon.svg",
+  "fonts": { "family": "Inter" },
+  "styling": { "codeblocks": "dark" },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          { "group": "Get Started", "pages": ["index", "quickstart", "deployment", "configuration"] },
+          { "group": "Concepts", "pages": ["concepts/how-it-works", "concepts/authentication", "concepts/rbac", "concepts/audit-log"] },
+          { "group": "Features", "pages": ["features/overview", "features/minions", "features/keys", "features/jobs", "features/run", "features/templates", "features/inventory", "features/fleet", "features/users-roles", "features/audit", "features/settings", "features/about"] },
+          { "group": "Develop", "pages": ["develop/architecture", "develop/backend", "develop/database", "develop/frontend", "develop/local-development", "develop/testing", "develop/api-spec"] }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          { "group": "API Reference", "pages": ["api/introduction"] },
+          { "group": "Endpoints", "openapi": "api/openapi.json" }
+        ]
+      }
+    ]
+  },
+  "navbar": { "links": [ { "label": "GitHub", "href": "https://github.com/calebcall/halite" } ] },
+  "footer": { "socials": { "github": "https://github.com/calebcall/halite" } }
+}

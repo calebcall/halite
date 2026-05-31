@@ -30,3 +30,6 @@ data/
 
 # Misc
 .superpowers/
+
+# Mintlify local preview
+docs/.mint/

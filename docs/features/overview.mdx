@@ -1,0 +1,67 @@
+---
+title: "Overview"
+description: "Dashboard KPIs and fleet activity charts."
+---
+
+The Overview page is the first screen you see after signing in. It gives you an at-a-glance health summary of your entire fleet — four live KPI tiles, three activity charts, a fleet heatmap, and quick-jump tiles to every other section of the console.
+
+All metrics refresh automatically every 30 seconds without a page reload.
+
+<Frame caption="Halite Overview dashboard showing KPI tiles and activity charts">
+  <img src="/images/overview-dashboard.png" alt="Halite Overview dashboard with KPI tiles and three charts" />
+</Frame>
+
+## KPI tiles
+
+The four stat cards at the top of the page answer the most common operational questions at a glance:
+
+| Tile | Source | What it measures |
+|------|--------|-----------------|
+| **Online minions** | `/api/minions` | Minions whose `status` is `online` out of the total known |
+| **Pending keys** | `/api/keys` | Keys whose `status` is `pending` (awaiting acceptance) |
+| **Running jobs** | `/api/jobs/activity` | Jobs currently in-flight according to the scheduler's active-JID cache |
+| **Jobs · 24h** | `/api/jobs/activity` | Total jobs dispatched in the last 24 hours |
+
+<Frame caption="KPI tiles showing online minions, pending keys, running jobs, and 24h job count">
+  <img src="/images/overview-kpis.png" alt="Four KPI stat cards at the top of the Overview page" />
+</Frame>
+
+<Note>
+  The KPI tiles render a dash (`—`) for any metric your role does not have permission to view. The tiles are independent — having `view:job:*` but not `view:key:*` is valid.
+</Note>
+
+## Activity charts
+
+Below the KPI row, three charts give you a time-series and distribution picture of fleet activity:
+
+### Job activity area chart
+
+A 24-hour area chart of jobs dispatched per hour, built from the `jobs_index` database table. The server buckets the data by hour before sending it to the browser, so the chart scales past whatever the in-memory job-cache can hold. The `active_known` flag lets the UI warn you when the background scheduler has not yet ticked.
+
+### Minion-status donut
+
+A donut chart breaking down all known minions by their status: **online**, **offline**, **pending**, **rejected**, or **denied**. Data comes from the same minion snapshot table used by the [Minions](./minions) page.
+
+### Key-status bar chart
+
+A bar chart grouping all keys by their approval state (accepted, pending, rejected, denied). This gives you an inventory-level view of fleet onboarding health. The data is served live from the Salt master via the same `/api/keys` endpoint used by the [Keys](./keys) page.
+
+## Fleet heatmap and compliance sparkline
+
+Above the KPI row, the **fleet heatmap** shows every minion as a tile, colour-coded by online/offline status; clicking a tile opens a side panel where you can run a command directly against that minion. Below it, the **compliance sparkline** and **top-failures chart** surface recent highstate trends.
+
+## Navigation tiles
+
+At the bottom of the page, a grid of section tiles links to every major feature. Tiles your role cannot access are hidden automatically — you only see what you have permission to use.
+
+## Permissions
+
+The Overview page assembles data from multiple endpoints. Each section is gated by the permission of its underlying endpoint:
+
+| Section | Permission required |
+|---------|-------------------|
+| Minion KPI / donut | `view:minion:*` |
+| Keys KPI / bar chart | `view:key:*` |
+| Running jobs / area chart | `view:job:*` |
+
+Any authenticated session can load the page shell; the tiles and charts that you lack permissions for render a graceful empty state rather than an error.

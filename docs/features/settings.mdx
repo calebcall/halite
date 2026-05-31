@@ -1,0 +1,136 @@
+---
+title: "Settings"
+description: "Configure the Salt-API connection and pollers."
+---
+
+The Settings page is where you connect Halite to your Salt master and tune background poller intervals. All settings are stored in the database (the singleton `AppSettings` row) and take effect immediately without a container restart — saving a change calls `runtime.reload()`, which tears down the existing Salt client and schedulers and rebuilds them from the new values.
+
+<Warning>
+  The Settings page is restricted to users with the `edit:settings:*` permission. Only the built-in **admin** role has this permission.
+</Warning>
+
+<Frame caption="Settings form showing Salt API connection fields and poller intervals">
+  <img src="/images/settings-form.png" alt="Settings form with Salt API URL, username, eauth, TLS verify toggle, and poller interval fields" />
+</Frame>
+
+## Salt API connection
+
+These fields configure how Halite authenticates to `salt-api`.
+
+<ParamField body="url" type="URL">
+  The full URL of your `salt-api` instance, including scheme and port (e.g. `https://salt.internal:8000`). Clearing this field disables the Salt connection — all background schedulers stop and salt-backed endpoints return empty or degraded responses.
+</ParamField>
+
+<ParamField body="username" type="string">
+  The Salt service account username. Maximum 255 characters.
+</ParamField>
+
+<ParamField body="password" type="string (write-only)">
+  The service account password. The password is encrypted at rest using the server's `COOKIE_SECRET` and is never returned by the API — only a boolean `password_set` flag is returned so the UI can show `(set)` without exposing the value.
+</ParamField>
+
+<ParamField body="eauth" type="string" default="pam">
+  The Salt external auth backend. Accepted values: `pam`, `sharedsecret`, `ldap`, `file`, `auto`.
+</ParamField>
+
+<ParamField body="verify" type="boolean" default="true">
+  Whether to verify the `salt-api` TLS certificate. Set to `false` only if your salt-api uses a self-signed certificate and you accept the risk.
+</ParamField>
+
+### Testing the connection
+
+Before saving, click **Test Connection** to validate the credentials without persisting them (`POST /api/admin/settings/test-salt`). The response includes `ok`, a `detail` message, and a `minion_count` when `manage.present` succeeds. You can also test the currently-saved credentials with `POST /api/admin/settings/test-salt-saved` (the password is read from the database, not re-entered).
+
+## Poller intervals
+
+These fields control how often background tasks run. Set any interval to `0` to disable that scheduler.
+
+<ParamField body="inventory_refresh_minutes" type="integer" default="0">
+  How often (in minutes) the inventory scheduler collects `pkg.list_pkgs` from the entire fleet. `0` disables the scheduler. Range: 0–1440.
+</ParamField>
+
+<ParamField body="inventory_refresh_initial_delay_s" type="integer" default="30">
+  Seconds to wait after startup before the first inventory collection run. Range: 0–3600.
+</ParamField>
+
+<ParamField body="fleet_poll_interval_seconds" type="integer" default="0">
+  How often (in seconds) the fleet scheduler looks for new `state.*` JIDs and ingests highstate results. `0` disables. Range: 0–86400.
+</ParamField>
+
+<ParamField body="jobs_poll_interval_seconds" type="integer" default="0">
+  How often (in seconds) the jobs scheduler polls for new job index entries. `0` disables. Range: 0–86400.
+</ParamField>
+
+<ParamField body="minion_state_keys_interval_seconds" type="integer" default="300">
+  How often (in seconds) the minion scheduler refreshes key state for all minions. Range: 0–86400.
+</ParamField>
+
+<ParamField body="minion_state_presence_interval_seconds" type="integer" default="60">
+  How often (in seconds) the minion scheduler refreshes online/offline presence via `manage.present`. Range: 0–86400.
+</ParamField>
+
+<ParamField body="minion_state_grains_interval_seconds" type="integer" default="300">
+  How often (in seconds) the minion scheduler refreshes grains for accepted online minions. Range: 0–86400.
+</ParamField>
+
+<ParamField body="minion_state_initial_delay_seconds" type="integer" default="10">
+  Seconds to wait after startup before the minion scheduler's first tick. Range: 0–3600.
+</ParamField>
+
+## Logging
+
+<ParamField body="log_format" type="string" default="json">
+  The backend log format. Accepted values: `json` (structured JSON lines, best for log aggregators) or `text` (human-readable). Note that current builds initialize logging with a hardcoded `json` format at startup, so this setting is not applied to the running process — a container restart would be required once it is wired up.
+</ParamField>
+
+## How live reload works
+
+When you save the **Salt** or **Pollers** sections, Halite calls `runtime.reload(db)` to rewire the live Salt client and schedulers with no restart. Saving the **Logging** section does **not** trigger a reload.
+
+1. All running schedulers (minion, fleet, inventory, jobs) are cancelled and awaited.
+2. The Salt client is closed.
+3. The `AppSettings` row is re-read from the database.
+4. If `salt_api_url`, `salt_api_username`, and the decrypted password are all present, a new `SaltAPIClient` is created and logged in.
+5. Any schedulers whose interval is `> 0` are started fresh with the new settings.
+
+If the Salt credentials are incomplete or the login fails, the client remains `None` and all schedulers stay stopped. Salt-backed endpoints (minion presence, job dispatch, inventory refresh, etc.) degrade gracefully — they return empty results rather than hard-failing.
+
+## Walkthrough: connecting to a Salt master
+
+<Steps>
+  <Step title="Open Settings">
+    Click **Settings** in the left sidebar. You need the **admin** role.
+  </Step>
+
+  <Step title="Enter the Salt API URL">
+    In the **Salt API** section, enter the full URL of your `salt-api` instance, e.g. `https://salt.example.com:8000`.
+  </Step>
+
+  <Step title="Enter credentials">
+    Enter the service account `username` and `password`. Set `eauth` to the backend your Salt master uses (typically `pam`). If your salt-api uses a self-signed certificate, toggle **Verify TLS** off.
+  </Step>
+
+  <Step title="Test the connection">
+    Click **Test Connection**. If the status shows `ok: true` with a minion count, the credentials are valid.
+  </Step>
+
+  <Step title="Save">
+    Click **Save Salt Settings**. Halite immediately re-wires the live Salt client — you do not need to restart.
+  </Step>
+
+  <Step title="Enable pollers (optional)">
+    In the **Pollers** section, set non-zero values for the schedulers you want. For example, set `minion_state_presence_interval_seconds = 60` to get live online/offline status every minute. Click **Save Poller Settings**.
+  </Step>
+</Steps>
+
+## Permissions
+
+| Route | Required permission |
+|-------|-------------------|
+| `GET /api/admin/settings/status` | Authenticated session only |
+| `GET /api/admin/settings` | `edit:settings:*` |
+| `PUT /api/admin/settings/salt` | `edit:settings:*` |
+| `PUT /api/admin/settings/pollers` | `edit:settings:*` |
+| `PUT /api/admin/settings/logging` | `edit:settings:*` |
+| `POST /api/admin/settings/test-salt` | `edit:settings:*` |
+| `POST /api/admin/settings/test-salt-saved` | `edit:settings:*` |

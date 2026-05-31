@@ -1,0 +1,121 @@
+---
+title: "Backend"
+description: "Feature modules, RuntimeConfig, SaltAPIClient, and schedulers."
+---
+
+The backend is a FastAPI application whose source lives in `backend/src/halite/`. Every feature is a self-contained Python package; shared infrastructure lives at the top level.
+
+## Feature module shape
+
+Each feature follows the same internal layout:
+
+```text
+halite/
+  minions/
+    __init__.py
+    routes.py          # FastAPI router — thin, delegates to service
+    service.py         # business logic + DB queries
+    schemas.py         # Pydantic request/response models
+    snapshot_model.py  # SQLAlchemy model for the snapshot table
+    ingest.py          # reconciles snapshot table with Salt data
+    scheduler.py       # periodic task owned by RuntimeConfig
+```
+
+Features that serve only live Salt calls (like `run/` and `keys/`) omit `ingest.py` and `scheduler.py`. Features with additional sub-schemas (like `jobs/`) may add more files, but the core four — `routes.py`, `service.py`, `schemas.py`, and a model file — are always present.
+
+<Note>
+  When you add a new feature, keep it in this shape. The router is included in `main.py::create_app`; the scheduler (if any) is wired into `RuntimeConfig`.
+</Note>
+
+## Poll-into-DB features
+
+Features that maintain a snapshot follow the **poll-into-DB** pattern:
+
+1. A `scheduler.py` runs a background task at a configurable interval (set in `AppSettings`).
+2. On each tick, `ingest.py` calls Salt-API and reconciles the snapshot table — inserting new rows, updating changed rows, deleting vanished ones.
+3. `service.py` + `routes.py` serve the snapshot table directly; they do not call Salt live.
+
+This makes reads fast even when Salt-API is slow or temporarily unavailable. The current poll-based features are:
+
+| Feature | Scheduler | Snapshot table |
+|---|---|---|
+| `minions/` | `MinionStateScheduler` | `minion_snapshots` |
+| `fleet/` | `FleetIngestScheduler` | fleet index tables |
+| `inventory/` | `InventoryScheduler` | inventory index |
+| `jobs/` | `JobsIndexScheduler` | `jobs_index` |
+
+## SaltAPIClient
+
+`SaltAPIClient` (`salt/client.py`) is the single shared async client for salt-api's `rest_cherrypy` endpoint. `RuntimeConfig` holds the one instance; routes never construct their own.
+
+**Authentication** is lazy: the first real request triggers a login exchange. An `asyncio.Lock` guards the token refresh so N concurrent requests with an expired token trigger exactly one re-login, not N. The token is also refreshed proactively when fewer than 60 seconds remain on it.
+
+**Retry behaviour:**
+- 5xx responses are retried up to 3 times with exponential backoff (base 0.5 s, capped at 4 s).
+- A 401 response triggers one forced re-login and one immediate retry.
+
+**Errors:**
+- `SaltAPIError` — raised for non-2xx responses from salt-api.
+- `SaltAPIUnavailable` — raised when salt-api is unreachable (network, DNS, TLS failures after all retries are exhausted).
+
+**Convenience helpers** cover all the Salt client types Halite uses:
+
+| Method | Salt client type | Purpose |
+|---|---|---|
+| `local_call(target, fun, ...)` | `local` | Execution module calls targeting minions |
+| `wheel_call(fun, ...)` | `wheel` | Master-side operations (key management) |
+| `runner_call(fun, ...)` | `runner` | Master runner calls (manage, jobs, cache) |
+| `list_connected_minions()` | `runner` | Returns `{minion_id: ip}` via `manage.present` |
+
+## Wiring routes to the salt client
+
+Routes that need Salt access use the `salt_client_or_503` dependency from `salt/deps.py`:
+
+```python
+from halite.salt.deps import salt_client_or_503, wrap_salt_errors
+from halite.salt.client import SaltAPIClient
+from fastapi import Depends
+
+@router.post("/run")
+async def run_command(
+    client: SaltAPIClient = Depends(salt_client_or_503),
+):
+    try:
+        result = await client.local_call(...)
+    except Exception as exc:
+        raise wrap_salt_errors(exc)
+```
+
+`salt_client_or_503(request)` reads `request.app.state.runtime.salt` and raises **HTTP 503** if it is `None` (Salt unconfigured). `wrap_salt_errors(exc)` translates `SaltAPIUnavailable` into **503** and `SaltAPIError` into **502**.
+
+## RBAC guards
+
+Routes are protected by `require_perm(verb, resource)`, a dependency factory in `deps.py`:
+
+```python
+from halite.deps import require_perm
+
+@router.delete("/keys/{minion_id}")
+async def delete_key(
+    minion_id: str,
+    _: None = require_perm("delete", "key:*"),
+):
+    ...
+```
+
+`require_perm` checks whether the current user's `permissions_cache` contains a `(verb, resource_glob)` pair that matches `(verb, resource)` using anchored shell globs with `:` as the namespace separator. A mismatch raises **HTTP 403**.
+
+Every authorization decision is written to the audit log automatically.
+
+## Conventions
+
+- All backend modules start with `from __future__ import annotations`.
+- Tests live in `backend/tests/` as `test_<feature>_<layer>.py`.
+- New migrations go in `backend/alembic/versions/` with a `YYYYMMDD_NNNN_description` filename.
+- `config.py`'s `Settings` reads all infra config from environment variables at app-factory time — never at import time.
+
+## Related pages
+
+- [Architecture](/develop/architecture) — the two settings systems and the RuntimeConfig hub
+- [RBAC](/concepts/rbac) — how permissions and roles work
+- [How Halite Works](/concepts/how-it-works) — poll-into-DB and graceful degradation

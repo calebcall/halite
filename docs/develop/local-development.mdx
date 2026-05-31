@@ -1,0 +1,72 @@
+---
+title: "Local Development"
+description: "Run the backend and frontend locally."
+---
+
+<Note>
+  You typically run the backend and frontend in two separate terminal windows. The frontend dev server proxies all `/api` requests to the backend on port 8080.
+</Note>
+
+<Tabs>
+  <Tab title="Backend">
+    From the `backend/` directory:
+
+    <Steps>
+      <Step title="Create and activate a virtual environment">
+        ```sh
+        python3.13 -m venv .venv
+        source .venv/bin/activate
+        ```
+      </Step>
+      <Step title="Install the package in editable mode">
+        ```sh
+        pip install -e '.[dev]'
+        ```
+      </Step>
+      <Step title="Start the dev server">
+        ```sh
+        ../scripts/dev.sh
+        ```
+
+        The script sets up a throwaway SQLite database (`halite-dev.db`), runs `alembic upgrade head`, and starts uvicorn with `--reload` on `http://127.0.0.1:8080`. Default credentials are `admin` / `changeme`.
+      </Step>
+    </Steps>
+
+    The dev server restarts automatically when you change Python source files.
+  </Tab>
+  <Tab title="Frontend">
+    From the `frontend/` directory:
+
+    <Steps>
+      <Step title="Install dependencies">
+        ```sh
+        npm install
+        ```
+      </Step>
+      <Step title="Start the dev server">
+        ```sh
+        npm run dev
+        ```
+
+        Vite starts on `http://localhost:5173` and proxies all `/api` requests to the backend on `:8080`.
+      </Step>
+    </Steps>
+
+    The dev server supports hot module replacement — most changes appear instantly without a full reload.
+  </Tab>
+</Tabs>
+
+## Regenerating API types
+
+After changing any backend Pydantic schema or route, regenerate the frontend's TypeScript types from the root of the repository:
+
+```sh
+./scripts/gen-types.sh
+```
+
+This requires the backend's `.venv` to already exist. See [API Spec](/develop/api-spec) for details.
+
+## Related pages
+
+- [Testing](/develop/testing) — running the test suite
+- [API Spec](/develop/api-spec) — regenerating the OpenAPI spec and TypeScript types

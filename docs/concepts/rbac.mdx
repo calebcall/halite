@@ -1,0 +1,121 @@
+---
+title: "RBAC & Permissions"
+description: "Roles, verb:resource permission globs, and how checks resolve."
+---
+
+Halite uses role-based access control (RBAC). Permissions are attached to roles, users are assigned roles, and each request is checked against the union of the current user's accumulated permissions.
+
+## Permission model
+
+A permission is a `(verb, resource_glob)` pair. For example:
+
+- `("view", "minion:*")` — view any minion
+- `("accept", "key:*")` — accept any key
+- `("run", "*")` — run anything
+
+**A user accumulates the union of permissions across all their roles.** If a user has both the `viewer` and `operator` roles, they have the combined permissions of both.
+
+### How matching works
+
+The check function (`rbac/engine.py`) returns `true` if and only if:
+
+1. The user is **active** (`is_active = true`), **and**
+2. At least one of the user's permissions matches **both** the requested verb and resource.
+
+Matching uses **anchored shell-style globs** via `fnmatch.fnmatchcase` — the entire string must match, not just a substring. The `*` wildcard matches any sequence of characters; `?` matches any single character. The colon (`:`) is a namespace separator by convention (e.g. `key:web-*`, `minion:db-*`).
+
+```python
+# From rbac/engine.py
+def matches_glob(pattern: str, value: str) -> bool:
+    return fnmatch.fnmatchcase(value, pattern)
+
+def check(user, verb, resource) -> bool:
+    if not user.is_active:
+        return False
+    for p_verb, p_resource in user.permissions_cache:
+        if matches_glob(p_verb, verb) and matches_glob(p_resource, resource):
+            return True
+    return False
+```
+
+<Note>
+  Inactive users **always** fail permission checks, even if their roles would otherwise allow access.
+</Note>
+
+## Built-in roles
+
+Halite seeds three built-in roles on every boot. The seed is idempotent — new permissions added to a built-in role are picked up on the next restart without requiring a migration.
+
+### admin
+
+Full access to all features and administration.
+
+| Verb | Resource glob |
+|------|--------------|
+| `*` | `*` |
+
+### operator
+
+Run salt commands and manage keys, but no user administration.
+
+| Verb | Resource glob |
+|------|--------------|
+| `view` | `*` |
+| `run` | `*` |
+| `accept` | `key:*` |
+| `delete` | `key:*` |
+| `execute` | `salt:*` |
+| `kill` | `job:*` |
+| `reject` | `key:*` |
+
+### viewer
+
+Read-only access to everything except audit.
+
+| Verb | Resource glob |
+|------|--------------|
+| `view` | `minion:*` |
+| `view` | `key:*` |
+| `view` | `job:*` |
+| `view` | `grain:*` |
+| `view` | `pillar:*` |
+| `view` | `event:*` |
+| `view` | `setting:*` |
+| `view` | `inventory:*` |
+
+<Note>
+  The `viewer` role does **not** include `view audit:*` — access to the audit log is intentionally excluded from viewer-level access.
+</Note>
+
+## Custom roles
+
+You can create roles with arbitrary `(verb, resource_glob)` pairs through the [Users & Roles](/features/users-roles) page. Custom roles work identically to built-in roles — Halite resolves permissions the same way regardless of the `is_builtin` flag.
+
+## Worked examples
+
+The following table shows whether each built-in role passes a selection of example permission checks:
+
+| Request | `admin` | `operator` | `viewer` |
+|---------|---------|-----------|---------|
+| `view`, `minion:web-01` | Pass (`*`/`*`) | Pass (`view`/`*`) | Pass (`view`/`minion:*`) |
+| `run`, `salt:test.ping` | Pass | Pass (`run`/`*`) | Fail |
+| `accept`, `key:db-01` | Pass | Pass (`accept`/`key:*`) | Fail |
+| `kill`, `job:20240101000000000000` | Pass | Pass (`kill`/`job:*`) | Fail |
+| `view`, `audit:*` | Pass | Pass (`view`/`*`) | Fail (not in viewer perms) |
+| `delete`, `user:alice` | Pass | Fail | Fail |
+
+## Guarding endpoints
+
+Routes are protected with `require_perm(verb, resource)`, a FastAPI dependency factory defined in `deps.py`. It wraps `current_user` and calls `rbac.engine.check`. If the check fails, it raises **HTTP 403**.
+
+```python
+# Example: protect a route that views minions
+@router.get("/minions", dependencies=[require_perm("view", "minion:*")])
+async def list_minions(...):
+    ...
+```
+
+## Related pages
+
+- [Users & Roles](/features/users-roles) — manage users and assign roles in the UI
+- [Audit Logging](/concepts/audit-log) — every authorization decision is recorded

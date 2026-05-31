@@ -1,0 +1,158 @@
+---
+title: "API Overview"
+description: "Authenticate and call the Halite API."
+---
+
+All Halite API endpoints live under the `/api` path. Authentication uses a **signed session cookie** — there are no API keys or tokens. You log in once, receive a cookie, and include it with every subsequent request.
+
+For background on how sessions are managed, see [Authentication & Sessions](/concepts/authentication). For the permission model that governs which endpoints you can call, see [RBAC & Permissions](/concepts/rbac).
+
+## Authenticate
+
+<Steps>
+  <Step title="Log in and store the cookie">
+    Send your credentials as JSON. The response sets a signed `halite_session` cookie, which you must save and send with every subsequent request.
+
+    ```bash
+    curl -s -X POST http://localhost:8080/api/auth/login \
+      -H 'Content-Type: application/json' \
+      -d '{"username":"admin","password":"changeme"}' \
+      -c cookies.txt | jq
+    ```
+
+    A successful response returns a `UserOut` object:
+
+    ```json
+    {
+      "username": "admin",
+      "display_name": "Administrator",
+      "must_change_pw": true,
+      "permissions": [
+        { "verb": "*", "resource_glob": "*" }
+      ]
+    }
+    ```
+
+    If the credentials are wrong, Halite returns `401 Unauthorized`.
+  </Step>
+
+  <Step title="Confirm the session">
+    Verify the cookie is valid by calling `GET /api/auth/me`. This returns the same `UserOut` shape.
+
+    ```bash
+    curl -s http://localhost:8080/api/auth/me \
+      -b cookies.txt | jq
+    ```
+  </Step>
+
+  <Step title="Make an authorized API call">
+    Pass `-b cookies.txt` on every request. Halite reads the cookie, verifies the signature, looks up the session, and resolves the caller's permissions before executing the handler.
+
+    ```bash
+    curl -s "http://localhost:8080/api/audit?limit=10" \
+      -b cookies.txt | jq
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  The interactive "Try it" playground in the sidebar is disabled because Halite is self-hosted — there is no public server for Mintlify to call. Use the curl examples above against your own instance instead.
+</Note>
+
+## Errors
+
+The API uses a small set of status codes with consistent semantics.
+
+### 401 Unauthorized
+
+The request is missing a session cookie, the cookie signature is invalid, or the session has expired. Returned by the `current_user` dependency in `deps.py` in three distinct cases:
+
+- No cookie present in the request.
+- Cookie present but the signature does not verify (`codec.unsign()` returns `None`).
+- Cookie valid but the session is not found in the database or has expired.
+
+**Fix:** log in again at `POST /api/auth/login` to obtain a fresh cookie.
+
+### 403 Forbidden
+
+You are authenticated, but your roles do not grant the `verb:resource` permission required by this endpoint. Returned by the `require_perm` dependency in `deps.py`.
+
+See [RBAC & Permissions](/concepts/rbac) for the built-in roles, how permission globs are matched, and how to create custom roles.
+
+### 503 Service Unavailable
+
+Salt-API is either not configured (missing `SALT_API_URL`, `SALT_API_USERNAME`, or `SALT_API_PASSWORD` environment variables) or was unreachable when Halite tried to connect (`SaltAPIUnavailable`). Returned by `salt_client_or_503` and `wrap_salt_errors` in `salt/deps.py`.
+
+```json
+{
+  "detail": "Salt-API is not configured. Set SALT_API_URL, SALT_API_USERNAME, SALT_API_PASSWORD."
+}
+```
+
+<Note>
+  Despite the wording of this message, the Salt-API connection is configured on the in-app [Settings](/features/settings) page, not via environment variables.
+</Note>
+
+Or, when the client is configured but the master is down:
+
+```json
+{
+  "detail": "Salt-API unreachable: <reason>"
+}
+```
+
+### 502 Bad Gateway
+
+Salt-API responded but returned an error status. Halite extracts the error message from the Salt/CherryPy response body (JSON `detail`/`message`/`error` fields, or the first `<p>` in a CherryPy HTML error page) and includes it in the response. Returned by `wrap_salt_errors` in `salt/deps.py` on `SaltAPIError`.
+
+```json
+{
+  "detail": "Salt-API error 500: <message from Salt>"
+}
+```
+
+## Endpoint reference
+
+The full endpoint reference is in the sidebar under the **API Reference** tab, grouped by area:
+
+<CardGroup cols={3}>
+  <Card title="auth" icon="lock">
+    Login, logout, session check, change password
+  </Card>
+  <Card title="minions" icon="server">
+    List minions, fetch grains
+  </Card>
+  <Card title="keys" icon="key">
+    Accept, reject, and delete minion keys
+  </Card>
+  <Card title="jobs" icon="clock">
+    Browse jobs, inspect results, kill running jobs
+  </Card>
+  <Card title="run" icon="play">
+    Dispatch Salt execution module functions
+  </Card>
+  <Card title="inventory" icon="box">
+    Drill into installed packages across the fleet
+  </Card>
+  <Card title="fleet" icon="network">
+    Fleet-level aggregations and targeting
+  </Card>
+  <Card title="templates" icon="file-code">
+    Saved run configurations
+  </Card>
+  <Card title="salt-docs" icon="book">
+    Salt module documentation lookup
+  </Card>
+  <Card title="users" icon="user">
+    Create and manage user accounts
+  </Card>
+  <Card title="roles" icon="shield">
+    Create and manage RBAC roles
+  </Card>
+  <Card title="audit" icon="list">
+    Query the authorization audit log
+  </Card>
+  <Card title="settings" icon="settings">
+    Runtime configuration (Salt-API connection, etc.)
+  </Card>
+</CardGroup>

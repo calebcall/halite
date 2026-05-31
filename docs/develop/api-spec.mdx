@@ -1,0 +1,47 @@
+---
+title: "Regenerating the API Spec"
+description: "Keep the API reference in sync with the backend."
+---
+
+The OpenAPI spec at `docs/api/openapi.json` is generated from the live backend schema. After changing any Pydantic model or route, regenerate it and commit the updated file.
+
+## Regenerate the spec
+
+From the repository root:
+
+```sh
+./scripts/gen-openapi.sh
+```
+
+The script:
+1. Activates (or creates) the backend `.venv`.
+2. Boots the app against a throwaway SQLite database.
+3. Calls `app.openapi()` to extract the spec.
+4. Injects `x-mint: {metadata: {playground: none}}` to disable the Mintlify interactive playground (Halite is self-hosted; there is no public server to call against).
+5. Writes the result to `docs/api/openapi.json`.
+
+Commit the regenerated file as part of the same PR as your backend schema change.
+
+## Regenerate TypeScript types
+
+The frontend's typed API client is generated from the same schema. After running `gen-openapi.sh` (or independently after backend changes), regenerate the TypeScript types:
+
+```sh
+./scripts/gen-types.sh
+```
+
+This writes `frontend/src/shared/api/types.gen.ts`. Do not hand-edit that file — it will be overwritten on the next run.
+
+<Note>
+  The Mintlify docs preview (`mint dev` / `mint broken-links`) requires **Node ≤ 24**. The Mintlify CLI does not support Node 25+. Use an LTS Node release when working on the docs.
+
+  ```sh
+  export PATH="$HOME/.cache/halite-docs-node/node-v22.22.3-darwin-arm64/bin:$PATH"
+  cd docs && npx -y mint broken-links
+  ```
+</Note>
+
+## Related pages
+
+- [Frontend](/develop/frontend) — the generated types and where they live
+- [API Reference](/api/introduction) — the rendered API reference

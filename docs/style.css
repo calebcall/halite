@@ -1,0 +1,36 @@
+/* Halite brand — Plex-dark surfaces + amber accents.
+   Brand tokens: logos/brand/tokens/colors.json */
+:root {
+  --halite-amber: #e5a00d;
+  --halite-amber-light: #f5b938;
+  --halite-amber-dark: #a77100;
+  --halite-black: #0e0e0e;
+  --halite-graphite: #141414;
+  --halite-onyx: #1f1f1f;
+  --halite-slate: #2a2a2a;
+  --halite-fog: #999999;
+  --halite-bone: #ebebeb;
+}
+
+/* Dark-mode surface ramp to match the app's Plex aesthetic. */
+.dark body,
+html.dark {
+  background-color: var(--halite-black);
+}
+
+/* Cards / elevated surfaces in dark mode. */
+.dark .card,
+.dark [class*="rounded"][class*="border"] {
+  background-color: var(--halite-onyx);
+  border-color: var(--halite-slate);
+}
+
+/* Amber accent on inline code in dark mode. */
+.dark code {
+  color: var(--halite-amber-light);
+}
+
+/* Tighten headings to feel native to the Inter wordmark. */
+h1, h2, h3 {
+  letter-spacing: -0.015em;
+}

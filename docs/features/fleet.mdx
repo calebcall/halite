@@ -1,0 +1,117 @@
+---
+title: "Fleet Health"
+description: "Highstate compliance and fleet health."
+---
+
+The Fleet Health page shows the compliance state of every minion in your Salt fleet, tracks compliance over time, and surfaces the states that fail most often across the fleet. It is driven entirely by ingested `state.highstate` (and related state function) results — no live Salt connection is needed to view the dashboard.
+
+<Frame caption="Fleet health heatmap showing per-minion health status badges">
+  <img src="/images/fleet-health.png" alt="Grid of minion health badges colored by status: healthy, changed, unhealthy, blocked, stale, or unknown" />
+</Frame>
+
+## Health statuses
+
+Each minion has exactly one health status, derived from its most recent ingested run and its current online/offline state. The status values (from `HealthStatus` in `fleet/schemas.py`) are:
+
+| Status | Meaning |
+|--------|---------|
+| `healthy` | Minion is online, has a recent run, zero failures, zero changes |
+| `changed` | Minion is online, has a recent run, zero failures, but at least one change was applied |
+| `unhealthy` | Minion is online with a recent run that has at least one failure, **or** the minion is offline |
+| `blocked` | The most recent run returned a "Minion did not return" or "Salt request timed out" sentinel — the minion was unreachable when highstate ran |
+| `stale` | Minion is online but its most recent ingested run is more than **2 days** old |
+| `unknown` | Minion is online but no run has ever been ingested for it |
+
+<Note>
+  Offline minions (not in the `manage.present` set) are always `unhealthy`, regardless of their last run's result. A minion that has never had any run ingested but is currently online is `unknown`.
+</Note>
+
+## API endpoints
+
+### `GET /api/fleet/health`
+
+Returns the full fleet health snapshot as a `FleetHealthOut` list. Requires an authenticated session.
+
+Each row in `minions` contains:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `minion_id` | string | Salt minion ID |
+| `online` | bool | Whether the minion is in `manage.present` |
+| `run_id` | UUID or null | Database ID of the most recent ingested run |
+| `jid` | string or null | Salt JID of the most recent run |
+| `completed_at` | datetime or null | Timestamp of the most recent run |
+| `status` | `HealthStatus` | One of the six statuses above |
+| `pass_count` | int | Passing states in the most recent run |
+| `fail_count` | int | Failing states in the most recent run |
+| `change_count` | int | Changed states in the most recent run |
+| `total_count` | int | Total states in the most recent run |
+| `duration_ms` | int | Total run duration in milliseconds |
+
+Connected-minion presence comes from the fleet scheduler's cached `manage.present` result. On cold start (before the scheduler has ticked), the endpoint falls back to the set of minions with at least one ingested run.
+
+### `GET /api/fleet/compliance`
+
+Returns a compliance time series (oldest-first) for charting. Use the `limit` parameter to control how many recent runs are included (1–200, default 30). Each bucket corresponds to one highstate JID aggregated across all minions:
+
+| Field | Description |
+|-------|-------------|
+| `bucketed_at` | Completion timestamp of the JID |
+| `pass_count` | Fleet-wide sum of passing states |
+| `fail_count` | Fleet-wide sum of failing states |
+| `change_count` | Fleet-wide sum of changed states |
+| `blocked_count` | Number of minions that were blocked for this JID |
+
+<Frame caption="Compliance chart showing pass/fail/change trend over the last 30 highstate runs">
+  <img src="/images/fleet-compliance.png" alt="Stacked bar chart of fleet-wide highstate compliance over time" />
+</Frame>
+
+### `GET /api/fleet/top-failures`
+
+Returns the states that have failed most often across the most recent run per minion. Use `limit` to control how many entries are returned (1–50, default 10). Each entry contains:
+
+| Field | Description |
+|-------|-------------|
+| `state_id` | Salt state ID (from the lowstate key) |
+| `name` | State name argument |
+| `fun` | State function (e.g. `file.managed`) |
+| `failure_count` | Number of minions that have this state failing in their most recent run |
+
+### `GET /api/fleet/runs/{run_id}`
+
+Returns the full detail for a single ingested highstate run by its database UUID. The response includes the raw `state.highstate` return dictionary alongside the summarised counts.
+
+## How highstate runs are ingested
+
+The fleet scheduler polls for recent `state.*` jobs by reading the `jobs_index` table for JIDs whose `started_at` is within the configured lookback window. For each new JID found it calls `runner.jobs.list_job` on the Salt master and stores per-minion results.
+
+The parser (`fleet/parser.py`) validates each minion's return against the Salt lowstate key pattern (`module_|-state_id_|-name_|-fun`). Runs where the minion returned a "did not return" string sentinel are stored with `blocked = True` and zero counts. Runs that cannot be parsed as a valid lowstate dict are silently skipped.
+
+Ingestion is **idempotent on `(minion_id, jid)`** — re-processing the same JID does not create duplicate rows.
+
+## Example: investigating a failing state
+
+<Steps>
+  <Step title="Open Fleet Health">
+    Click **Fleet** in the left sidebar. Minions with a red `unhealthy` badge have at least one failing state in their last highstate.
+  </Step>
+
+  <Step title="Check Top Failures">
+    The **Top Failures** panel shows which state IDs are failing on the most minions. If `file_|-/etc/myapp/config_|-/etc/myapp/config_|-managed` appears at the top, the managed config file is the likely culprit.
+  </Step>
+
+  <Step title="Drill into a minion">
+    Click an unhealthy minion to open its detail panel. The most recent run is shown with per-state results — failing states are highlighted with the error comment from Salt.
+  </Step>
+</Steps>
+
+## Permissions
+
+All fleet endpoints require an authenticated session only — there is no additional `require_perm` call on any fleet route. Any logged-in Halite user can view fleet health data.
+
+| Route | Required |
+|-------|---------|
+| `GET /api/fleet/health` | Authenticated session |
+| `GET /api/fleet/compliance` | Authenticated session |
+| `GET /api/fleet/top-failures` | Authenticated session |
+| `GET /api/fleet/runs/{run_id}` | Authenticated session |
