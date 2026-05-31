@@ -1,6 +1,88 @@
 ---
-title: "Deployment"
-description: "Placeholder — filled in by a later task."
+title: "Installation & Deployment"
+description: "Deploy Halite with Postgres or SQLite, behind a TLS proxy."
 ---
 
-Coming soon.
+Halite ships as a single Docker image that serves both the built React SPA and the FastAPI backend on `LISTEN_PORT` (default `8080`). Two compose files are provided — choose the one that fits your environment.
+
+## Compose profiles
+
+<Tabs>
+  <Tab title="Postgres (compose.yml)">
+    **When to use:** Production-shaped deployments where you want a durable, externally manageable database.
+
+    `compose.yml` defines two services:
+
+    | Service | Image | Role |
+    |---------|-------|------|
+    | `db` | `postgres:18` | Database — data persisted to the `halite-pg` named volume |
+    | `app` | Built from `Dockerfile` | Backend + SPA — waits for `db` healthcheck before starting |
+
+    The `app` service requires `db` to pass its `pg_isready` healthcheck before it starts. The `halite-pg` volume persists Postgres data across container restarts.
+
+    ```bash
+    docker compose -f compose.yml up --build
+    ```
+
+    The `app` service exposes port `8080` on the host. `COOKIE_SECURE` defaults to `true` in this profile.
+  </Tab>
+  <Tab title="SQLite (homelab, compose.sqlite.yml)">
+    **When to use:** Homelab, personal use, or any single-host setup where you don't want to run a separate database process.
+
+    `compose.sqlite.yml` defines a single service:
+
+    | Service | Role |
+    |---------|------|
+    | `app` | Backend + SPA — SQLite database stored in the `halite-sqlite` named volume |
+
+    The SQLite database file lives at `/data/halite.db` inside the container, backed by the `halite-sqlite` named volume.
+
+    ```bash
+    docker compose -f compose.sqlite.yml up --build
+    ```
+
+    The `app` service exposes port `8080` on the host. `COOKIE_SECURE` defaults to `false` in this profile (suitable for plain-HTTP local testing).
+  </Tab>
+</Tabs>
+
+## The Docker image
+
+The `Dockerfile` uses a two-stage build:
+
+1. **Frontend stage** (`node:20-alpine`) — runs `npm ci && npm run build` to produce the compiled SPA in `/app/frontend/dist`.
+2. **Runtime stage** (`python:3.13-slim`) — installs the backend package, copies the built frontend assets, runs `alembic upgrade head` on startup, then launches `uvicorn`.
+
+Both compose files accept an optional `BUILD_HASH` build argument. When provided (e.g. `BUILD_HASH=$(git rev-parse HEAD) docker compose build`), the value is stamped into the frontend build and shown in the sidebar footer. When omitted, the UI displays "Dev".
+
+## TLS and reverse proxy
+
+Halite does not terminate TLS itself. Run it behind a reverse proxy (nginx, Caddy, Traefik, etc.) and set these environment variables:
+
+```bash
+# Require HTTPS for the session cookie — set this when fronted by TLS
+COOKIE_SECURE=true
+
+# Comma-separated list of trusted proxy IP addresses or CIDR ranges.
+# Needed for correct client-IP logging when X-Forwarded-For headers are present.
+TRUSTED_PROXIES=127.0.0.1
+```
+
+<Note>
+  `COOKIE_SECURE=true` means the browser will only send the session cookie over
+  HTTPS. If you set this on a plain-HTTP deployment, you will not be able to
+  log in.
+</Note>
+
+The app listens on `LISTEN_HOST` (default `0.0.0.0`) and `LISTEN_PORT` (default `8080`). Configure your proxy to forward to that port.
+
+## Healthcheck
+
+Both compose profiles configure the same healthcheck:
+
+```bash
+python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')"
+```
+
+The `/healthz` endpoint returns `200` once the app is ready to serve traffic. Use this URL for load-balancer or orchestrator health probes.
+
+See [Configuration](/configuration) for the full environment variable reference.

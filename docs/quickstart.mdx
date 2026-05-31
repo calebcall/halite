@@ -1,6 +1,112 @@
 ---
 title: "Quickstart"
-description: "Placeholder — filled in by a later task."
+description: "Run Halite locally with Docker in a few minutes."
 ---
 
-Coming soon.
+<Note>
+  **Prerequisites:** Docker and Docker Compose must be installed. A reachable
+  `salt-api` (`rest_cherrypy`) endpoint is optional for first boot — the UI
+  starts without Salt configured and degrades gracefully until you wire it up in
+  Settings.
+</Note>
+
+<Steps>
+  <Step title="Clone the repo and copy the env template">
+    ```bash
+    git clone <this repo>
+    cd halite
+    cp .env.example .env
+    ```
+  </Step>
+
+  <Step title="Generate a cookie secret">
+    Run the helper script and paste its output as the value of `COOKIE_SECRET` in your `.env` file.
+
+    ```bash
+    ./scripts/gen-bootstrap-secret.sh
+    # Paste the output as COOKIE_SECRET in .env
+    ```
+  </Step>
+
+  <Step title="Choose a database profile and bring it up">
+    <Tabs>
+      <Tab title="SQLite (homelab)">
+        Open `.env` and swap `DATABASE_URL` to the commented-out SQLite line:
+
+        ```bash
+        # DATABASE_URL=postgresql+asyncpg://halite:halite@db:5432/halite
+        DATABASE_URL=sqlite+aiosqlite:////data/halite.db
+        ```
+
+        Then start the stack:
+
+        ```bash
+        docker compose -f compose.sqlite.yml up --build
+        ```
+
+        The SQLite profile runs a single container with no external database dependency — ideal for a homelab or personal use.
+      </Tab>
+      <Tab title="Postgres">
+        Keep the default `DATABASE_URL` in `.env` as-is (it points to the `db` service in the compose stack):
+
+        ```bash
+        DATABASE_URL=postgresql+asyncpg://halite:halite@db:5432/halite
+        ```
+
+        Then start the stack:
+
+        ```bash
+        docker compose -f compose.yml up --build
+        ```
+
+        This profile brings up two services: `db` (Postgres 18) and `app`. The `app` service waits for `db` to pass its healthcheck before starting.
+      </Tab>
+    </Tabs>
+
+    `docker compose` automatically loads values from `.env` in the project directory — no shell `export`s are needed.
+  </Step>
+
+  <Step title="Sign in">
+    Browse to **http://localhost:8080/** and sign in with the bootstrap credentials:
+
+    - **Username:** `admin`
+    - **Password:** `changeme`
+
+    These are the `.env.example` defaults (`BOOTSTRAP_ADMIN_USERNAME` and `BOOTSTRAP_ADMIN_PASSWORD`). You can change them in `.env` before first start.
+  </Step>
+</Steps>
+
+## Verify without the browser
+
+You can confirm the stack is healthy with three `curl` calls:
+
+```bash
+# 1. Log in — stores the session cookie in cookies.txt
+curl -s -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"changeme"}' -c cookies.txt | jq
+
+# 2. Confirm the session resolves to your user
+curl -s http://localhost:8080/api/auth/me -b cookies.txt | jq
+
+# 3. Read the tail of the audit log
+curl -s "http://localhost:8080/api/audit?limit=10" -b cookies.txt | jq
+```
+
+<Warning>
+  Before exposing Halite to a network, change the bootstrap admin password and
+  set `COOKIE_SECURE=true` in your `.env` file. `COOKIE_SECURE=true` is required
+  for HTTPS-fronted deployments; with it set, the session cookie will not be sent
+  over plain HTTP.
+</Warning>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="settings" href="/configuration">
+    Full reference for every environment variable.
+  </Card>
+  <Card title="Settings" icon="sliders" href="/features/settings">
+    Configure the Salt-API connection and pollers from inside the app.
+  </Card>
+</CardGroup>
