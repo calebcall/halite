@@ -72,7 +72,7 @@ description: "Run Halite locally with Docker in a few minutes."
     - **Username:** `admin`
     - **Password:** `changeme`
 
-    These are the `.env.example` defaults (`BOOTSTRAP_ADMIN_USERNAME` and `BOOTSTRAP_ADMIN_PASSWORD`). You can change them in `.env` before first start.
+    These credentials are built into the app (`bootstrap.py`) and are created on first boot when no users exist in the database. On first login you are required to set a new password. The `BOOTSTRAP_ADMIN_*` entries in `.env.example` are stale — they are not read by the application.
   </Step>
 </Steps>
 

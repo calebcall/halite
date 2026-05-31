@@ -61,11 +61,9 @@ Halite does not terminate TLS itself. Run it behind a reverse proxy (nginx, Cadd
 ```bash
 # Require HTTPS for the session cookie — set this when fronted by TLS
 COOKIE_SECURE=true
-
-# Comma-separated list of trusted proxy IP addresses or CIDR ranges.
-# Needed for correct client-IP logging when X-Forwarded-For headers are present.
-TRUSTED_PROXIES=127.0.0.1
 ```
+
+`TRUSTED_PROXIES` is a recognized setting (comma-separated IP addresses or CIDR ranges) but is not currently wired into request handling. It is reserved for future use.
 
 <Note>
   `COOKIE_SECURE=true` means the browser will only send the session cookie over

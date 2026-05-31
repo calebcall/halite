@@ -1,9 +1,9 @@
 ---
 title: "Configuration"
-description: "Environment variables and in-app Salt-API settings."
+description: "Environment variables and in-app settings."
 ---
 
-Halite is configured through environment variables at startup and through in-app settings stored in the database. This page covers the environment variables. For the Salt-API connection and runtime poller tuning, see the [Settings](/features/settings) page.
+Halite is configured through environment variables at startup and through in-app settings stored in the database. This page covers both. For a guided walkthrough of the in-app Settings page, see [Settings](/features/settings).
 
 ## Environment variables
 
@@ -38,38 +38,30 @@ Set these in your `.env` file (which `docker compose` loads automatically) or pa
   The `compose.yml` profile defaults this to `true`; `compose.sqlite.yml` defaults it to `false`.
 </ParamField>
 
-### Inventory background scheduler
-
-<ParamField body="INVENTORY_REFRESH_MINUTES" type="integer" default="0">
-  When greater than `0`, the backend runs a periodic `refresh_packages(target='*')` every N minutes. Set to `0` to disable background refreshes — manual refreshes via the UI still work regardless of this setting.
-</ParamField>
-
-<ParamField body="INVENTORY_REFRESH_INITIAL_DELAY_S" type="integer" default="30">
-  Seconds between process start and the first scheduled inventory refresh. Keep this above your healthcheck's grace period so the first refresh does not run before the Salt master has finished its own startup.
-</ParamField>
-
-### Bootstrap admin
-
-<ParamField body="BOOTSTRAP_ADMIN_USERNAME" type="string" default="admin">
-  Username for the bootstrap admin account. Only honored when no users exist in the database (i.e., on first boot).
-</ParamField>
-
-<ParamField body="BOOTSTRAP_ADMIN_PASSWORD" type="string" default="changeme">
-  Password for the bootstrap admin account. Only honored when no users exist in the database. Change this before first start in any non-throwaway environment.
+<ParamField body="COOKIE_NAME" type="string" default="halite_session">
+  Name of the session cookie.
 </ParamField>
 
 ### Networking
 
 <ParamField body="LISTEN_HOST" type="string" default="0.0.0.0">
-  The host address the uvicorn server binds to.
+  The host address uvicorn binds to.
+
+  <Note>
+    The shipped Docker images launch uvicorn with a hardcoded `--host 0.0.0.0 --port 8080`, so this setting has no effect in the provided compose setups. To change the host port, remap the `ports:` entry in your compose file (e.g. `"9000:8080"`).
+  </Note>
 </ParamField>
 
 <ParamField body="LISTEN_PORT" type="integer" default="8080">
-  The port the uvicorn server listens on. Both compose profiles map this port to the host.
+  The port uvicorn listens on.
+
+  <Note>
+    The shipped Docker images launch uvicorn with a hardcoded `--host 0.0.0.0 --port 8080`, so this setting has no effect in the provided compose setups. To change the host port, remap the `ports:` entry in your compose file (e.g. `"9000:8080"`).
+  </Note>
 </ParamField>
 
 <ParamField body="TRUSTED_PROXIES" type="string" default="">
-  Comma-separated list of trusted proxy IP addresses or CIDR ranges used for `X-Forwarded-For` handling. Leave empty if Halite is accessed directly without a reverse proxy.
+  Recognized by the settings loader but not currently wired into request handling. Reserved for future use.
 </ParamField>
 
 ### Logging
@@ -78,28 +70,81 @@ Set these in your `.env` file (which `docker compose` loads automatically) or pa
   Logging verbosity. Standard Python log level names: `debug`, `info`, `warning`, `error`, `critical`.
 </ParamField>
 
-<ParamField body="LOG_FORMAT" type="string" default="json">
-  Log output format. `json` (structured, suited for log aggregators) or `text` (human-readable). A container restart is required to pick up a change to this value.
+### SPA serving
+
+<ParamField body="HALITE_STATIC_DIR" type="string">
+  Filesystem path to the built React SPA (`dist/`). When set, the backend serves the SPA from this directory. When unset, SPA serving is disabled (useful if you serve the frontend separately).
+
+  The provided Docker image sets this to `/app/frontend/dist` at build time.
 </ParamField>
 
-## Salt-API connection
+## In-app settings (database-backed)
+
+These settings are stored in a singleton `AppSettings` row in the database and managed on the [Settings](/features/settings) page. They are **not** environment variables — changing them does not require a container restart.
+
+### Salt-API connection
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `salt_api_url` | URL of your `salt-api` (`rest_cherrypy`) endpoint | — |
+| `salt_api_username` | Username for Salt-API authentication | — |
+| `salt_api_password_encrypted` | Salt-API password, encrypted at rest using `COOKIE_SECRET` | — |
+| `salt_api_verify` | Whether to verify the Salt-API TLS certificate | `true` |
+| `salt_api_eauth` | eauth backend (e.g. `pam`, `ldap`) | `"pam"` |
 
 <Note>
-  The Salt-API connection (URL, eauth backend, service credentials) is **not**
-  configured via environment variables in current builds. It is stored in the
-  database and managed through the in-app Settings page, where the password is
-  encrypted at rest using your `COOKIE_SECRET` as the encryption key.
-
-  The `SALT_API_*` lines in `.env.example` are commented out and marked "used
-  in later plans" — they are not read by the application today.
-
-  See [Settings](/features/settings) to configure the Salt-API connection and
-  [How It Works](/concepts/how-it-works) for the architecture overview.
+  The Salt-API connection is configured entirely through the in-app Settings page. The `SALT_API_*` lines in `.env.example` are stale placeholders not read by current builds.
 </Note>
 
-## Inventory background scheduler
+### Inventory refresh
 
-The background scheduler runs a fleet-wide package inventory refresh on a configurable interval. Two environment variables control its behavior:
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `inventory_refresh_minutes` | Run a background `refresh_packages(target='*')` every N minutes. `0` disables it; manual refreshes still work. | `0` |
+| `inventory_refresh_initial_delay_s` | Seconds before the first scheduled refresh fires after startup | `30` |
 
-- **`INVENTORY_REFRESH_MINUTES`** — set to a positive integer to enable automatic refreshes. `0` disables the scheduler entirely; you can still trigger refreshes manually from the Inventory page.
-- **`INVENTORY_REFRESH_INITIAL_DELAY_S`** — adds a startup delay before the first refresh fires. This prevents the scheduler from querying the Salt master before it has fully initialized after a container restart.
+### Pollers
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `fleet_poll_interval_seconds` | Interval for fleet-state polling. `0` disables the poller. | `0` |
+| `jobs_poll_interval_seconds` | Interval for jobs polling. `0` disables the poller. | `0` |
+| `minion_state_keys_interval_seconds` | Interval for minion accepted-keys refresh | `300` |
+| `minion_state_presence_interval_seconds` | Interval for minion presence refresh | `60` |
+| `minion_state_grains_interval_seconds` | Interval for minion grains refresh | `300` |
+| `minion_state_initial_delay_seconds` | Startup delay before the first minion-state poll | `10` |
+
+### Logging format
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `log_format` | Log output format: `json` (structured) or `text` (human-readable) | `"json"` |
+
+<Note>
+  The application startup currently calls `setup_logging` with a hardcoded `"json"` value, so current builds always emit JSON logs regardless of the `log_format` setting. The `LOG_FORMAT` entry in `.env.example` is stale and not read by the application.
+</Note>
+
+## Bootstrap admin
+
+On first boot, when no users exist in the database, Halite automatically creates a default admin account:
+
+- **Username:** `admin`
+- **Password:** `changeme`
+- **Forced password change:** Yes — you are required to set a new password on first login.
+
+This account is created unconditionally from values hardcoded in `bootstrap.py`. The `BOOTSTRAP_ADMIN_USERNAME` and `BOOTSTRAP_ADMIN_PASSWORD` lines in `.env.example` are stale and not read by the application.
+
+<Warning>
+  Change the bootstrap admin password on first login before exposing Halite to a network.
+</Warning>
+
+## Stale `.env.example` entries
+
+The following entries appear in `.env.example` but are **not read** by the application in current builds:
+
+| Entry | Actual location |
+|-------|----------------|
+| `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` | Hardcoded in `bootstrap.py` |
+| `SALT_API_*` | In-app Settings page (DB-backed) |
+| `INVENTORY_REFRESH_MINUTES` / `INVENTORY_REFRESH_INITIAL_DELAY_S` | In-app Settings page (DB-backed) |
+| `LOG_FORMAT` | In-app Settings page (DB-backed) |
