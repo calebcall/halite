@@ -46,6 +46,14 @@ A donut chart breaking down all known minions by their status: **online**, **off
 
 A bar chart grouping all keys by their approval state (accepted, pending, rejected, denied). This gives you an inventory-level view of fleet onboarding health. The data is served live from the Salt master via the same `/api/keys` endpoint used by the [Keys](./keys) page.
 
+## Recent activity
+
+When the [event stream](/features/settings#event-stream) is enabled, the Overview includes a **Recent activity** widget — a compact, live-updating list of the latest fleet events (jobs, keys, minions) that links through to the full [Activity](/features/activity) page.
+
+At the top of the widget, a **heartbeat** indicator with a pulsing dot shows how many events arrived in a recent window (for example, *"12 events · last 60 min"*). It is a quick pulse-check that the fleet — and the event stream — is alive.
+
+An admin tunes the widget from [Settings → Activity widget](/features/settings#activity-widget): which categories it shows, whether to hide dispatches or routine successes, how many events to list, and the heartbeat window. Those display settings are read by every user via `GET /api/activity/widget-config`; the underlying events are still filtered to the categories your role can view.
+
 ## Fleet heatmap and compliance sparkline
 
 Above the KPI row, the **fleet heatmap** shows every minion as a tile, colour-coded by online/offline status; clicking a tile opens a side panel where you can run a command directly against that minion. Below it, the **compliance sparkline** and **top-failures chart** surface recent highstate trends.
