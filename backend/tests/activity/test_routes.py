@@ -351,6 +351,161 @@ async def test_search_matches_initiator(app_db, app_session):
 
 
 @pytest.mark.asyncio
+async def test_hide_dispatch_excludes_job_new(app_db, app_session):
+    """hide_dispatch=true removes job.new rows while keeping job.ret and other events."""
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(app_session, [("*", "*")])
+    sess = await create_session(
+        app_session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60
+    )
+    await app_session.commit()
+    now = datetime.now(tz=UTC)
+    app_session.add(
+        ActivityEvent(
+            ts=now,
+            category="job",
+            event_type="job.new",
+            minion_id=None,
+            jid="20260527000000000020",
+            fun="state.apply",
+            success=None,
+            changed=None,
+            initiator="alice",
+            target="web*",
+            summary="dispatched",
+        )
+    )
+    app_session.add(
+        ActivityEvent(
+            ts=now,
+            category="job",
+            event_type="job.ret",
+            minion_id="web-1",
+            jid="20260527000000000021",
+            fun="state.apply",
+            success=True,
+            changed=True,
+            summary="web-1 returned",
+        )
+    )
+    app_session.add(
+        ActivityEvent(
+            ts=now,
+            category="key",
+            event_type="key_accept",
+            minion_id="db-1",
+            jid=None,
+            fun=None,
+            success=None,
+            summary="key accepted",
+        )
+    )
+    await app_session.commit()
+
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get(
+            "/api/activity?hide_dispatch=true",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    event_types = {e["event_type"] for e in body["events"]}
+    assert "job.new" not in event_types, "job.new should be excluded by hide_dispatch"
+    assert "job.ret" in event_types, "job.ret should be kept"
+    assert "key_accept" in event_types, "key events should be kept"
+    assert body["total"] == 2
+
+
+@pytest.mark.asyncio
+async def test_hide_dispatch_and_hide_routine_combine(app_db, app_session):
+    """hide_dispatch=true and hide_routine=true can be applied simultaneously."""
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(app_session, [("*", "*")])
+    sess = await create_session(
+        app_session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60
+    )
+    await app_session.commit()
+    now = datetime.now(tz=UTC)
+    # job.new — excluded by hide_dispatch
+    app_session.add(
+        ActivityEvent(
+            ts=now,
+            category="job",
+            event_type="job.new",
+            minion_id=None,
+            jid="20260527000000000030",
+            fun="test.ping",
+            success=None,
+            changed=None,
+            initiator="bob",
+            target="*",
+            summary="dispatched",
+        )
+    )
+    # routine job.ret (success, no change) — excluded by hide_routine
+    app_session.add(
+        ActivityEvent(
+            ts=now,
+            category="job",
+            event_type="job.ret",
+            minion_id="web-1",
+            jid="20260527000000000031",
+            fun="test.ping",
+            success=True,
+            changed=False,
+            summary="web-1 routine",
+        )
+    )
+    # non-routine job.ret (changed=True) — kept
+    app_session.add(
+        ActivityEvent(
+            ts=now,
+            category="job",
+            event_type="job.ret",
+            minion_id="web-2",
+            jid="20260527000000000032",
+            fun="state.apply",
+            success=True,
+            changed=True,
+            summary="web-2 changed",
+        )
+    )
+    # key event — kept (hide_routine only targets job.ret)
+    app_session.add(
+        ActivityEvent(
+            ts=now,
+            category="key",
+            event_type="key_accept",
+            minion_id="db-1",
+            jid=None,
+            fun=None,
+            success=None,
+            summary="key accepted",
+        )
+    )
+    await app_session.commit()
+
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get(
+            "/api/activity?hide_dispatch=true&hide_routine=true",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    event_types = [e["event_type"] for e in body["events"]]
+    assert "job.new" not in event_types, "job.new excluded by hide_dispatch"
+    assert body["total"] == 2
+    minions = {e["minion_id"] for e in body["events"]}
+    assert "web-1" not in minions, "routine job.ret excluded by hide_routine"
+    assert "web-2" in minions, "non-routine job.ret kept"
+    assert "db-1" in minions, "key event kept"
+
+
+@pytest.mark.asyncio
 async def test_since_minutes_bounds_by_time(app_db, app_session):
     """since_minutes only returns rows newer than the cutoff."""
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)

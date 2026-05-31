@@ -2229,6 +2229,7 @@ export interface operations {
                 event_type?: string | null;
                 search?: string | null;
                 hide_routine?: boolean;
+                hide_dispatch?: boolean;
                 since_minutes?: number | null;
                 limit?: number;
                 offset?: number;

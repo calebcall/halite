@@ -38,6 +38,7 @@ async def list_events(
     event_type: str | None = None,
     search: str | None = None,
     hide_routine: bool = False,
+    hide_dispatch: bool = False,
     since_minutes: int | None = None,
     limit: int = 100,
     offset: int = 0,
@@ -73,6 +74,8 @@ async def list_events(
             ActivityEvent.changed.is_not(True),
         )
         base = base.where(~routine)
+    if hide_dispatch:
+        base = base.where(ActivityEvent.event_type != "job.new")
     if since_minutes is not None:
         cutoff = datetime.now(tz=UTC) - timedelta(minutes=since_minutes)
         base = base.where(ActivityEvent.ts >= cutoff)
