@@ -1,6 +1,83 @@
 ---
-title: "Authentication"
-description: "Placeholder — filled in by a later task."
+title: "Authentication & Sessions"
+description: "Signed-cookie sessions and the bootstrap admin."
 ---
 
-Coming soon.
+Halite uses server-side sessions backed by signed cookies. There are no API tokens or OAuth flows — you log in with a username and password, receive a cookie, and every subsequent request is authenticated by presenting that cookie.
+
+## Passwords
+
+Passwords are hashed with **Argon2** via the `argon2-cffi` library (`auth/password.py`). Halite never stores plaintext passwords; the `password_hash` column on the `users` table holds the Argon2 hash.
+
+## Session cookies
+
+When you log in successfully, Halite creates a session record in the database and sends a `Set-Cookie` header. The cookie value is the opaque session ID **signed** with `itsdangerous.URLSafeSerializer` — tampering with the value invalidates the signature.
+
+Three environment variables (read from `config.py`) control cookie behavior:
+
+| Variable | Default | Effect |
+|---|---|---|
+| `COOKIE_SECRET` | *(required)* | Signing key; must be ≥ 32 characters |
+| `COOKIE_NAME` | `halite_session` | Name of the cookie |
+| `SESSION_TTL_MINUTES` | `480` (8 hours) | Session lifetime and cookie `max-age` |
+| `COOKIE_SECURE` | `true` | When `true`, cookie is `Secure` (HTTPS-only) |
+
+<Note>
+  `COOKIE_SECRET` is a required env var with no default. Generate a strong value with `./scripts/gen-bootstrap-secret.sh` and set it before starting Halite.
+</Note>
+
+<Warning>
+  Set `COOKIE_SECURE=false` only in local development. In production, always serve Halite over HTTPS and leave `COOKIE_SECURE=true`.
+</Warning>
+
+## The `current_user` dependency
+
+Every protected route depends on `current_user` (defined in `deps.py`). It:
+
+1. Reads the cookie from the request using the configured `COOKIE_NAME`.
+2. Calls `codec.unsign()` to verify the signature. Returns **401** if the signature is invalid.
+3. Looks up the session in the database; checks that `expires_at` is in the future and the user is active. Returns **401** if the session is expired or missing.
+4. Loads the user's accumulated RBAC permissions into `permissions_cache` on the user object, so permission checks during the request don't re-query the database.
+
+## Auth endpoints
+
+All auth routes live under `/api/auth`:
+
+<Steps>
+  <Step title="Login">
+    `POST /api/auth/login` — send `{"username": "...", "password": "..."}`. On success, receives a `UserOut` object (username, display\_name, must\_change\_pw, permissions) and the session cookie is set. On failure, returns 401.
+  </Step>
+  <Step title="Who am I">
+    `GET /api/auth/me` — returns the current user's `UserOut` using the existing session cookie.
+  </Step>
+  <Step title="Change password">
+    `POST /api/auth/change-password` — send `{"current_password": "...", "new_password": "..."}`. Requires the current password to be correct. On success, all other sessions for the user are revoked; the current session is kept.
+  </Step>
+  <Step title="Logout">
+    `POST /api/auth/logout` — deletes the session from the database and clears the cookie.
+  </Step>
+</Steps>
+
+All login attempts (successful and failed) are written to the [audit log](/concepts/audit-log).
+
+## Bootstrap admin
+
+On first boot, Halite checks whether any users exist in the database. If the `users` table is empty, `bootstrap_admin()` creates a default user:
+
+- **Username:** `admin`
+- **Password:** `changeme`
+- **Role:** `admin` (full access)
+- **`must_change_pw`:** `true`
+
+The `must_change_pw` flag causes the UI to redirect to the change-password screen immediately after the first login.
+
+<Warning>
+  Change the default `admin` password before exposing Halite to a network. The bootstrap credentials are hardcoded and well-known.
+</Warning>
+
+The bootstrap is idempotent — if any user already exists, `bootstrap_admin()` is a no-op. It is not driven by environment variables; the credentials are always `admin`/`changeme`.
+
+## Related pages
+
+- [RBAC & Permissions](/concepts/rbac) — roles and what permissions they grant
+- [API Reference](/api/introduction) — authenticate against the API

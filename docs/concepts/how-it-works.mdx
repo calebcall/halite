@@ -1,6 +1,82 @@
 ---
 title: "How Halite Works"
-description: "Placeholder — filled in by a later task."
+description: "The poll-into-DB architecture and graceful degradation."
 ---
 
-Coming soon.
+Halite is a read/console layer that sits on top of a running SaltStack master. It communicates exclusively with salt-api's `rest_cherrypy` endpoint — it never connects to the Salt master directly. Your Salt master orchestrates your minions; Halite gives you a web UI to observe and act on that fleet.
+
+## Topology
+
+```mermaid
+flowchart TD
+    subgraph Salt["Salt master"]
+        M[Salt master] -->|manages| Minions[Minions]
+        M --> SAPI["salt-api\n(rest_cherrypy)"]
+    end
+
+    subgraph Halite["Halite"]
+        SCH[Background schedulers] -->|poll| SAPI
+        SCH -->|ingest| DB[(Snapshot / index DB)]
+        API[API routes] -->|read| DB
+        UI[React UI] -->|requests| API
+    end
+
+    SAPI -->|data| SCH
+    UI -->|Run / keys / kill| API
+    API -->|live call| SAPI
+```
+
+Most read paths go through the database. Live Salt calls are reserved for **actions** — running a command, accepting or rejecting a key, or killing a job.
+
+## Poll-into-DB, serve-from-DB
+
+Salt-API can be slow or temporarily unavailable. To stay fast and resilient, Halite uses a **poll-into-DB** model:
+
+1. Background schedulers periodically call Salt-API and **ingest** the results into snapshot and index tables.
+2. API routes serve data from those tables — reads are fast database queries, not live Salt calls.
+
+Each feature that uses polling follows the same shape:
+
+- `scheduler.py` — a periodic task owned by `RuntimeConfig`
+- `ingest.py` — reconciles a snapshot table against fresh Salt data (insert new rows / update changed rows / delete vanished rows)
+- Model files — the SQLAlchemy snapshot or index tables
+- `service.py` + `routes.py` — query the snapshot and serve it
+
+For example, the minions ingest (`minions/ingest.py`) calls `wheel.key.list_all` to reconcile key status, `runner.manage.present` to update online presence, and `runner.cache.grains` to refresh grain data — all stored in `minion_snapshots`. The jobs ingest (`jobs/ingest.py`) calls `runner.jobs.list_jobs` with a time-windowed `start_time` and upserts rows into `jobs_index`.
+
+## RuntimeConfig — the hub
+
+`RuntimeConfig` (`runtime.py`) owns the single live `SaltAPIClient` and all background schedulers. It is the central coordination point for Salt connectivity.
+
+**At boot**, `RuntimeConfig.boot()` reads the `AppSettings` row from the database. If all three of `salt_api_url`, `salt_api_username`, and the decrypted password are present, it creates a `SaltAPIClient`, logs in immediately to verify the credentials, then starts the schedulers. **If any of those values are missing, or if the login fails, `runtime.salt` is set to `None` and no schedulers start.**
+
+**On a settings change**, the Settings route writes the new values to the database, then calls `runtime.reload(db)`. `reload()` tears down all running schedulers and the existing client atomically, then rebuilds them from the updated row — no process restart required.
+
+<Note>
+  Routes never hold a direct reference to the salt client. They call `salt_client_or_503(request)` from `salt/deps.py`, which always reads the current `runtime.salt`. This makes hot-reloads transparent to in-flight requests.
+</Note>
+
+## Graceful degradation
+
+When Salt is unconfigured or unreachable, Halite does not crash — it degrades gracefully:
+
+- Salt-backed **read** endpoints return empty data (the snapshot tables are simply empty).
+- Salt-backed **action** endpoints (`run/`, `keys/` accept/reject, kill job) return **HTTP 503** via `salt_client_or_503()`.
+- The `wrap_salt_errors()` helper in `salt/deps.py` translates `SaltAPIUnavailable` (network/DNS/TLS errors) into 503 and `SaltAPIError` (non-2xx responses from salt-api) into 502.
+
+This means you can deploy Halite, create users and roles, and explore the UI before your Salt credentials are configured. Visit [Settings](/features/settings) to connect it to your Salt master.
+
+## SaltAPIClient internals
+
+`SaltAPIClient` (`salt/client.py`) is an async client built on `httpx`. A few design decisions worth knowing:
+
+- **Lazy login with concurrency safety** — the first real request triggers a login. An `asyncio.Lock` ensures that N concurrent requests with an expired token trigger exactly one re-login, not N.
+- **Token proactive refresh** — the token is refreshed when fewer than 60 seconds remain on it, rather than waiting for a 401.
+- **5xx retries** — transient 5xx responses are retried up to 3 times with exponential backoff (base 0.5 s, max 4 s). 401 responses are retried once after a forced re-login.
+- **Helpers** — `wheel_call`, `local_call`, `runner_call`, and `list_connected_minions` cover all the Salt client types Halite uses.
+
+## Related pages
+
+- [Settings](/features/settings) — configure the Salt-API connection and poller intervals
+- [RBAC & Permissions](/concepts/rbac) — how Halite controls who can do what
+- [Audit Logging](/concepts/audit-log) — how every action is recorded
