@@ -1,13 +1,13 @@
 import pytest
 
-from halite.auth.service import _find_user_by_username
 from halite.auth.password import verify_password
+from halite.auth.permissions_cache import load_permissions_for
+from halite.auth.service import _find_user_by_username
+from halite.bootstrap import bootstrap_admin
 from halite.config import Settings
 from halite.demo import seed_demo
 from halite.rbac.engine import check
 from halite.rbac.seed import seed_builtin_roles
-from halite.bootstrap import bootstrap_admin
-from halite.auth.permissions_cache import load_permissions_for
 from halite.settings.service import app_settings_row
 
 
@@ -20,9 +20,12 @@ def _settings():
 
 @pytest.mark.asyncio
 async def test_seed_creates_demo_user_with_readonly_role(session):
-    await seed_builtin_roles(session); await session.commit()
-    await bootstrap_admin(session); await session.commit()
-    await seed_demo(session, _settings()); await session.commit()
+    await seed_builtin_roles(session)
+    await session.commit()
+    await bootstrap_admin(session)
+    await session.commit()
+    await seed_demo(session, _settings())
+    await session.commit()
 
     demo = await _find_user_by_username(session, "demo")
     assert demo is not None and demo.is_active and not demo.must_change_pw
@@ -37,9 +40,12 @@ async def test_seed_creates_demo_user_with_readonly_role(session):
 
 @pytest.mark.asyncio
 async def test_seed_sets_admin_password_for_operator_login(session):
-    await seed_builtin_roles(session); await session.commit()
-    await bootstrap_admin(session); await session.commit()
-    await seed_demo(session, _settings()); await session.commit()
+    await seed_builtin_roles(session)
+    await session.commit()
+    await bootstrap_admin(session)
+    await session.commit()
+    await seed_demo(session, _settings())
+    await session.commit()
 
     admin = await _find_user_by_username(session, "admin")
     assert admin is not None and not admin.must_change_pw
@@ -50,9 +56,12 @@ async def test_seed_sets_admin_password_for_operator_login(session):
 
 @pytest.mark.asyncio
 async def test_seed_configures_salt_and_enables_features(session):
-    await seed_builtin_roles(session); await session.commit()
-    await bootstrap_admin(session); await session.commit()
-    await seed_demo(session, _settings()); await session.commit()
+    await seed_builtin_roles(session)
+    await session.commit()
+    await bootstrap_admin(session)
+    await session.commit()
+    await seed_demo(session, _settings())
+    await session.commit()
 
     row = await app_settings_row(session)
     assert row.salt_api_url == "http://mock-salt-api:8000"
@@ -66,9 +75,13 @@ async def test_seed_configures_salt_and_enables_features(session):
 
 @pytest.mark.asyncio
 async def test_seed_is_idempotent(session):
-    await seed_builtin_roles(session); await session.commit()
-    await bootstrap_admin(session); await session.commit()
-    await seed_demo(session, _settings()); await session.commit()
-    await seed_demo(session, _settings()); await session.commit()
+    await seed_builtin_roles(session)
+    await session.commit()
+    await bootstrap_admin(session)
+    await session.commit()
+    await seed_demo(session, _settings())
+    await session.commit()
+    await seed_demo(session, _settings())
+    await session.commit()
     demo = await _find_user_by_username(session, "demo")
     assert demo is not None

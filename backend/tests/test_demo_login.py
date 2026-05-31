@@ -20,9 +20,12 @@ def _app(settings):
 
 @pytest.mark.asyncio
 async def test_demo_login_issues_session(app_db, session):
-    await seed_builtin_roles(session); await session.commit()
-    await bootstrap_admin(session); await session.commit()
-    await seed_demo(session, _settings(app_db, demo=True)); await session.commit()
+    await seed_builtin_roles(session)
+    await session.commit()
+    await bootstrap_admin(session)
+    await session.commit()
+    await seed_demo(session, _settings(app_db, demo=True))
+    await session.commit()
     settings = _settings(app_db, demo=True)
     app = _app(settings)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
@@ -45,10 +48,13 @@ async def test_demo_login_404_when_not_demo(app_db, session):
 
 @pytest.mark.asyncio
 async def test_change_password_blocked_in_demo(app_db, session):
-    await seed_builtin_roles(session); await session.commit()
-    await bootstrap_admin(session); await session.commit()
+    await seed_builtin_roles(session)
+    await session.commit()
+    await bootstrap_admin(session)
+    await session.commit()
     settings = _settings(app_db, demo=True)
-    await seed_demo(session, settings); await session.commit()
+    await seed_demo(session, settings)
+    await session.commit()
     app = _app(settings)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
         login = await ac.post("/api/auth/login",
