@@ -24,14 +24,18 @@ flowchart TD
     RT["RuntimeConfig\nruntime.py"]
     SC["SaltAPIClient\nsalt/client.py"]
     SCH["Schedulers\n(minion, fleet, inventory, jobs)"]
+    CON["Event consumer\nactivity/consumer.py"]
     DB[("Database\nPostgres or SQLite")]
     SAPI["salt-api\n(rest_cherrypy)"]
 
     API --> RT
     RT --> SC
     RT --> SCH
+    RT --> CON
     SCH -->|"poll & ingest"| SAPI
     SCH -->|"write snapshots"| DB
+    CON -->|"stream /events"| SAPI
+    CON -->|"write events"| DB
     API -->|"queries"| DB
     S --> RT
     AS --> RT
@@ -55,17 +59,18 @@ Halite has two separate settings systems that serve different purposes:
 
 ## RuntimeConfig — the hub
 
-`RuntimeConfig` (`runtime.py`) is the central coordination object. It owns exactly **one** `SaltAPIClient` and all background schedulers.
+`RuntimeConfig` (`runtime.py`) is the central coordination object. It owns exactly **one** `SaltAPIClient`, all background schedulers, and — when the event stream is enabled — the `EventHub` and event consumer.
 
 **At boot**, the lifespan handler calls `RuntimeConfig.boot(db)`, which:
 1. Reads the `AppSettings` row.
 2. Decrypts the salt password.
 3. If all three of `salt_api_url`, `salt_api_username`, and password are present, creates a `SaltAPIClient` and calls `login()` to verify the credentials immediately.
 4. Starts whichever schedulers have non-zero intervals configured.
+5. If `event_stream_enabled` is set, creates the `EventHub` and starts the `EventStreamConsumer`.
 
-**If any credential is missing, or if the login fails, `runtime.salt` is `None` and no schedulers start.** Every salt-backed endpoint degrades gracefully (503 or empty data) rather than crashing.
+**If any credential is missing, or if the login fails, `runtime.salt` is `None` and no schedulers or consumer start.** Every salt-backed endpoint degrades gracefully (503 or empty data) rather than crashing.
 
-**On a settings change**, `runtime.reload(db)` tears down all running schedulers and the existing client atomically, then rebuilds them from the updated row.
+**On a settings change**, `runtime.reload(db)` tears down all running schedulers, the event consumer, and the existing client atomically, then rebuilds them from the updated row.
 
 ```python
 # Routes never hold a direct reference to the salt client.
@@ -80,6 +85,8 @@ The four schedulers `RuntimeConfig` manages are:
 - `FleetIngestScheduler` — builds the fleet compliance picture
 - `InventoryScheduler` — populates the inventory index
 - `JobsIndexScheduler` — upserts recent jobs into `jobs_index`
+
+Alongside them, the optional `EventStreamConsumer` (`activity/consumer.py`) is not a polling scheduler but a long-lived task that streams salt-api's `/events` bus, persisting events to `activity_events` and publishing them to the in-process `EventHub` for live SSE delivery. See [How Halite Works](/concepts/how-it-works#the-live-event-stream) for the full flow.
 
 ## App entry point
 

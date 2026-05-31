@@ -39,6 +39,8 @@ class AuditEntry(Base):
 
 This gives you a real `BIGINT` autoincrement on Postgres and an `INTEGER` autoincrement on SQLite.
 
+The same pattern applies to JSON columns. The `activity_events` table stores each raw Salt event in a column typed `JSON().with_variant(JSONB(), "postgresql")` — `JSONB` on Postgres, generic `JSON` on SQLite — so the model stays portable without any PG-only JSON operators in queries.
+
 ## Alembic migrations
 
 All schema changes go through **Alembic**. Migrations live in `backend/alembic/versions/` and use a dated filename convention:
@@ -49,6 +51,9 @@ All schema changes go through **Alembic**. Migrations live in `backend/alembic/v
 20260519_0003_audit_log.py
 20260525_0004_inventory.py
 20260526_0005_command_templates.py
+...
+20260529_0011_activity_events.py
+20260531_0014_widget_config.py
 ```
 
 The prefix is `YYYYMMDD_NNNN_description` — the date the migration was written, a four-digit sequence number, and a short snake-case description.

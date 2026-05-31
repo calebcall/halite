@@ -44,6 +44,24 @@ This makes reads fast even when Salt-API is slow or temporarily unavailable. The
 | `inventory/` | `InventoryScheduler` | inventory index |
 | `jobs/` | `JobsIndexScheduler` | `jobs_index` |
 
+## Event-stream ingestion
+
+The `activity/` module is the exception to the poll-into-DB shape. Instead of a scheduler that polls on a timer, it ingests Salt's event bus live and uses a different set of files:
+
+```text
+halite/
+  activity/
+    routes.py          # /api/activity list + /stream (SSE) + /widget-config
+    service.py         # event persistence, list/filter queries, pruning
+    api_schemas.py     # Pydantic response models
+    models.py          # the activity_events table
+    normalize.py       # raw Salt tag/data -> NormalizedEvent (or dropped)
+    consumer.py        # EventStreamConsumer — long-lived /events tailer
+    hub.py             # EventHub — in-process ring buffer + subscriber queues
+```
+
+The flow: `EventStreamConsumer` (started by `RuntimeConfig` when the stream is enabled) calls `SaltAPIClient.stream_events()`, runs each raw event through `normalize_event()`, persists the keepers via `service.persist_event()`, and publishes them to the `EventHub`. The SSE route subscribes to the hub to push events to browsers. See [How Halite Works](/concepts/how-it-works#the-live-event-stream) for the architecture and the single-worker constraint.
+
 ## SaltAPIClient
 
 `SaltAPIClient` (`salt/client.py`) is the single shared async client for salt-api's `rest_cherrypy` endpoint. `RuntimeConfig` holds the one instance; routes never construct their own.
@@ -66,6 +84,7 @@ This makes reads fast even when Salt-API is slow or temporarily unavailable. The
 | `wheel_call(fun, ...)` | `wheel` | Master-side operations (key management) |
 | `runner_call(fun, ...)` | `runner` | Master runner calls (manage, jobs, cache) |
 | `list_connected_minions()` | `runner` | Returns `{minion_id: ip}` via `manage.present` |
+| `stream_events()` | — | Async generator yielding `(tag, data)` from the `/events` SSE bus (used by the activity consumer) |
 
 ## Wiring routes to the salt client
 
