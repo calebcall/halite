@@ -63,8 +63,22 @@ const dispatchEvent = {
   summary: 'Dispatched state.apply → web/*',
 }
 
-// Tracks the hide_dispatch param seen on the recent-list query
+// Default widget config (mirrors the backend WidgetConfigOut defaults).
+const defaultWidgetConfig = {
+  widget_hide_dispatch: true,
+  widget_hide_routine: false,
+  widget_show_jobs: true,
+  widget_show_keys: true,
+  widget_show_minions: true,
+  widget_event_count: 6,
+  widget_heartbeat_minutes: 60,
+}
+
+// Tracks params seen on the recent-list query
 let lastHideDispatch: string | null = null
+let lastLimit: string | null = null
+let lastCategories: string | null = null
+let lastSinceMinutes: string | null = null
 
 const server = setupServer(
   http.get('/api/auth/me', () =>
@@ -75,16 +89,20 @@ const server = setupServer(
       permissions: [{ verb: 'view', resource_glob: 'job:*' }],
     }),
   ),
+  http.get('/api/activity/widget-config', () => HttpResponse.json(defaultWidgetConfig)),
   // The card calls /api/activity twice:
-  //   heartbeat: since_minutes=60, limit=1  → reads `total` only
-  //   recent list: hide_dispatch=true, limit=6 → reads `events`
+  //   heartbeat: since_minutes=<window>, limit=1  → reads `total` only
+  //   recent list: hide_dispatch, limit, categories → reads `events`
   // Branch on since_minutes to distinguish the two requests.
   http.get('/api/activity', ({ request }) => {
     const url = new URL(request.url)
-    if (url.searchParams.get('since_minutes') === '60') {
+    if (url.searchParams.get('since_minutes')) {
+      lastSinceMinutes = url.searchParams.get('since_minutes')
       return HttpResponse.json({ total: 142, events: [] })
     }
     lastHideDispatch = url.searchParams.get('hide_dispatch')
+    lastLimit = url.searchParams.get('limit')
+    lastCategories = url.searchParams.get('categories')
     // hide_dispatch=true → return only non-dispatch events (simulate server filtering)
     // hide_dispatch not set → include the job.new dispatch event too
     const hideDispatch = lastHideDispatch === 'true'
@@ -99,6 +117,9 @@ beforeAll(() => server.listen())
 afterEach(() => {
   server.resetHandlers()
   lastHideDispatch = null
+  lastLimit = null
+  lastCategories = null
+  lastSinceMinutes = null
 })
 afterAll(() => server.close())
 
@@ -115,7 +136,7 @@ describe('RecentActivityCard', () => {
   it('renders the heartbeat count for the last hour', async () => {
     renderCard()
     expect(await screen.findByText('142')).toBeInTheDocument()
-    expect(screen.getByText(/events · last hour/i)).toBeInTheDocument()
+    expect(screen.getByText(/events · last hour/i)).toBeInTheDocument() // default config: 60 min → "last hour"
   })
 
   it('renders a recent notable event', async () => {
@@ -132,10 +153,56 @@ describe('RecentActivityCard', () => {
     expect(link).toHaveAttribute('href', '/activity')
   })
 
-  it('sends hide_dispatch=true on the recent-list request', async () => {
+  it('applies hide_dispatch from the widget config on the recent-list request', async () => {
     renderCard()
     await screen.findByText('web-01')
     expect(lastHideDispatch).toBe('true')
+  })
+
+  it('applies widget_event_count from config as the recent-list limit', async () => {
+    renderCard()
+    await screen.findByText('web-01')
+    // Default config event count is 6.
+    expect(lastLimit).toBe('6')
+  })
+
+  it('requests a non-default limit when the config specifies one', async () => {
+    server.use(
+      http.get('/api/activity/widget-config', () =>
+        HttpResponse.json({ ...defaultWidgetConfig, widget_event_count: 12 }),
+      ),
+    )
+    renderCard()
+    await screen.findByText('web-01')
+    expect(lastLimit).toBe('12')
+  })
+
+  it('omits the categories param when all three categories are enabled', async () => {
+    renderCard()
+    await screen.findByText('web-01')
+    expect(lastCategories).toBeNull()
+  })
+
+  it('sends a categories CSV when some categories are disabled', async () => {
+    server.use(
+      http.get('/api/activity/widget-config', () =>
+        HttpResponse.json({ ...defaultWidgetConfig, widget_show_minions: false }),
+      ),
+    )
+    renderCard()
+    await screen.findByText('web-01')
+    expect(lastCategories).toBe('job,key')
+  })
+
+  it('uses the configured heartbeat window for the heartbeat query', async () => {
+    server.use(
+      http.get('/api/activity/widget-config', () =>
+        HttpResponse.json({ ...defaultWidgetConfig, widget_heartbeat_minutes: 120 }),
+      ),
+    )
+    renderCard()
+    await screen.findByText('142')
+    expect(lastSinceMinutes).toBe('120')
   })
 
   it('does not render job.new dispatch events when hide_dispatch=true', async () => {
@@ -148,13 +215,7 @@ describe('RecentActivityCard', () => {
 
   it('shows "No notable activity" when the recent feed is empty', async () => {
     server.use(
-      http.get('/api/activity', ({ request }) => {
-        const url = new URL(request.url)
-        if (url.searchParams.get('since_minutes') === '60') {
-          return HttpResponse.json({ total: 0, events: [] })
-        }
-        return HttpResponse.json({ total: 0, events: [] })
-      }),
+      http.get('/api/activity', () => HttpResponse.json({ total: 0, events: [] })),
     )
     renderCard()
     expect(await screen.findByText(/no notable activity/i)).toBeInTheDocument()

@@ -44,4 +44,26 @@ class AppSettings(Base):
 
     log_format: Mapped[str] = mapped_column(String(8), nullable=False, default="json")
 
+    widget_hide_dispatch: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=sa.true()
+    )
+    widget_hide_routine: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa.false()
+    )
+    widget_show_jobs: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=sa.true()
+    )
+    widget_show_keys: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=sa.true()
+    )
+    widget_show_minions: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=sa.true()
+    )
+    widget_event_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=6, server_default="6"
+    )
+    widget_heartbeat_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=60, server_default="60"
+    )
+
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

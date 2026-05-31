@@ -34,6 +34,16 @@ class PollerSettingsOut(BaseModel):
     event_stream_retention_days: int
 
 
+class WidgetSettingsOut(BaseModel):
+    widget_hide_dispatch: bool
+    widget_hide_routine: bool
+    widget_show_jobs: bool
+    widget_show_keys: bool
+    widget_show_minions: bool
+    widget_event_count: int
+    widget_heartbeat_minutes: int
+
+
 class LoggingSettingsOut(BaseModel):
     log_format: LogFormat
 
@@ -41,6 +51,7 @@ class LoggingSettingsOut(BaseModel):
 class SettingsOut(BaseModel):
     salt: SaltSettingsOut
     pollers: PollerSettingsOut
+    widget: WidgetSettingsOut
     logging: LoggingSettingsOut
     updated_at: datetime
 
@@ -87,6 +98,18 @@ class PollerSettingsIn(BaseModel):
     minion_state_initial_delay_seconds: int | None = Field(default=None, ge=0, le=3600)
     event_stream_enabled: bool | None = Field(default=None)
     event_stream_retention_days: int | None = Field(default=None, ge=1, le=365)
+
+
+class WidgetSettingsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    widget_hide_dispatch: bool | None = None
+    widget_hide_routine: bool | None = None
+    widget_show_jobs: bool | None = None
+    widget_show_keys: bool | None = None
+    widget_show_minions: bool | None = None
+    widget_event_count: int | None = Field(default=None, ge=1, le=50)
+    widget_heartbeat_minutes: int | None = Field(default=None, ge=5, le=1440)
 
 
 class LoggingSettingsIn(BaseModel):

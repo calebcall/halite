@@ -19,13 +19,14 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { MustChangePassword } from '@/features/auth/guards'
 import type { components } from '@/shared/api/types.gen'
-import { useSettings, useTestSalt, useTestSaltSaved, useUpdateLogging, useUpdatePollers, useUpdateSalt } from './use-settings'
+import { useSettings, useTestSalt, useTestSaltSaved, useUpdateLogging, useUpdatePollers, useUpdateSalt, useUpdateWidget } from './use-settings'
 
 // ─── Type aliases ────────────────────────────────────────────────────────────
 
 type SaltSettingsOut = components['schemas']['SaltSettingsOut']
 type PollerSettingsOut = components['schemas']['PollerSettingsOut']
 type LoggingSettingsOut = components['schemas']['LoggingSettingsOut']
+type WidgetSettingsOut = components['schemas']['WidgetSettingsOut']
 type TestSaltConnectionOut = components['schemas']['TestSaltConnectionOut']
 
 // ─── Page shell ──────────────────────────────────────────────────────────────
@@ -70,6 +71,7 @@ function SettingsPageInner() {
 
       <SaltSection initial={data.salt} />
       <PollersSection initial={data.pollers} />
+      <WidgetSection initial={data.widget} />
       <LoggingSection initial={data.logging} />
     </div>
   )
@@ -636,6 +638,208 @@ function PollersSection({ initial }: { initial: PollerSettingsOut }) {
               </div>
             )}
           </section>
+
+          <div className="flex flex-wrap items-center gap-3 border-t pt-4">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                'Save'
+              )}
+            </Button>
+
+            {saveMsg !== null && (
+              <span
+                className={
+                  saveMsg.ok
+                    ? 'text-sm text-emerald-600 dark:text-emerald-400'
+                    : 'text-sm text-destructive'
+                }
+              >
+                {saveMsg.text}
+              </span>
+            )}
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ─── Activity widget section ──────────────────────────────────────────────────
+
+const widgetSchema = z.object({
+  widget_hide_dispatch: z.boolean(),
+  widget_hide_routine: z.boolean(),
+  widget_show_jobs: z.boolean(),
+  widget_show_keys: z.boolean(),
+  widget_show_minions: z.boolean(),
+  widget_event_count: z.coerce.number().int().min(1).max(50),
+  widget_heartbeat_minutes: z.coerce.number().int().min(5).max(1440),
+})
+
+type WidgetFormValues = z.infer<typeof widgetSchema>
+
+function WidgetToggle({
+  id,
+  label,
+  description,
+  checked,
+  onCheckedChange,
+}: {
+  id: string
+  label: string
+  description: string
+  checked: boolean
+  onCheckedChange: (v: boolean) => void
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-md border p-3">
+      <div className="space-y-0.5">
+        <Label htmlFor={id} className="text-sm font-medium">
+          {label}
+        </Label>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} aria-label={label} />
+    </div>
+  )
+}
+
+function WidgetSection({ initial }: { initial: WidgetSettingsOut }) {
+  const updateMut = useUpdateWidget()
+  const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<WidgetFormValues>({
+    defaultValues: {
+      widget_hide_dispatch: initial.widget_hide_dispatch,
+      widget_hide_routine: initial.widget_hide_routine,
+      widget_show_jobs: initial.widget_show_jobs,
+      widget_show_keys: initial.widget_show_keys,
+      widget_show_minions: initial.widget_show_minions,
+      widget_event_count: initial.widget_event_count,
+      widget_heartbeat_minutes: initial.widget_heartbeat_minutes,
+    },
+    resolver: zodResolver(widgetSchema),
+  })
+
+  const hideDispatch = watch('widget_hide_dispatch')
+  const hideRoutine = watch('widget_hide_routine')
+  const showJobs = watch('widget_show_jobs')
+  const showKeys = watch('widget_show_keys')
+  const showMinions = watch('widget_show_minions')
+
+  async function onSubmit(values: WidgetFormValues) {
+    setSaveMsg(null)
+    try {
+      await updateMut.mutateAsync(values)
+      setSaveMsg({ ok: true, text: 'Activity widget settings saved.' })
+    } catch (e) {
+      setSaveMsg({ ok: false, text: e instanceof Error ? e.message : 'Save failed.' })
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Activity widget</CardTitle>
+        <CardDescription>
+          Controls the live event widget on the Overview dashboard — which event
+          categories appear, what gets filtered out, and how much is shown.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form className="space-y-4" noValidate onSubmit={handleSubmit(onSubmit)}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <WidgetToggle
+              id="widget-hide-dispatch"
+              label="Hide dispatch events"
+              description="Exclude job.new dispatch events from the recent list."
+              checked={hideDispatch}
+              onCheckedChange={(v) => setValue('widget_hide_dispatch', v, { shouldDirty: true })}
+            />
+            <WidgetToggle
+              id="widget-hide-routine"
+              label="Hide routine successes"
+              description="Exclude routine successful returns to highlight notable activity."
+              checked={hideRoutine}
+              onCheckedChange={(v) => setValue('widget_hide_routine', v, { shouldDirty: true })}
+            />
+            <WidgetToggle
+              id="widget-show-jobs"
+              label="Show job events"
+              description="Include job activity in the widget feed."
+              checked={showJobs}
+              onCheckedChange={(v) => setValue('widget_show_jobs', v, { shouldDirty: true })}
+            />
+            <WidgetToggle
+              id="widget-show-keys"
+              label="Show key events"
+              description="Include key accept/reject/delete activity."
+              checked={showKeys}
+              onCheckedChange={(v) => setValue('widget_show_keys', v, { shouldDirty: true })}
+            />
+            <WidgetToggle
+              id="widget-show-minions"
+              label="Show minion events"
+              description="Include minion presence/state activity."
+              checked={showMinions}
+              onCheckedChange={(v) => setValue('widget_show_minions', v, { shouldDirty: true })}
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="widget-event-count" className="text-xs">
+                Events shown
+              </Label>
+              <Input
+                id="widget-event-count"
+                type="number"
+                min={1}
+                max={50}
+                step={1}
+                className="h-8"
+                {...register('widget_event_count')}
+              />
+              <p className="text-xs text-muted-foreground">
+                How many recent events the widget lists. Min 1, max 50.
+              </p>
+              {errors.widget_event_count && (
+                <p className="text-xs text-destructive">{errors.widget_event_count.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="widget-heartbeat-minutes" className="text-xs">
+                Heartbeat window (minutes)
+              </Label>
+              <Input
+                id="widget-heartbeat-minutes"
+                type="number"
+                min={5}
+                max={1440}
+                step={1}
+                className="h-8"
+                {...register('widget_heartbeat_minutes')}
+              />
+              <p className="text-xs text-muted-foreground">
+                Time window for the widget's event-rate counter. Min 5, max 1440.
+              </p>
+              {errors.widget_heartbeat_minutes && (
+                <p className="text-xs text-destructive">{errors.widget_heartbeat_minutes.message}</p>
+              )}
+            </div>
+          </div>
 
           <div className="flex flex-wrap items-center gap-3 border-t pt-4">
             <Button type="submit" disabled={isSubmitting}>

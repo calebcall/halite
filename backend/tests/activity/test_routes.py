@@ -506,6 +506,122 @@ async def test_hide_dispatch_and_hide_routine_combine(app_db, app_session):
 
 
 @pytest.mark.asyncio
+async def test_categories_filter_narrows_to_set(app_db, app_session):
+    """?categories=job,key returns only those categories for an all-perms user."""
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(app_session, [("*", "*")])
+    sess = await create_session(
+        app_session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60
+    )
+    await app_session.commit()
+    await _seed_events(app_session)
+
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get(
+            "/api/activity?categories=job,key",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["total"] == 2
+    assert {e["category"] for e in body["events"]} == {"job", "key"}
+
+
+@pytest.mark.asyncio
+async def test_categories_filter_respects_permissions(app_db, app_session):
+    """?categories=job,key is intersected with allowed cats; a job-only user
+    asking for job,key still only sees job events."""
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(app_session, [("view", "job:*")])
+    sess = await create_session(
+        app_session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60
+    )
+    await app_session.commit()
+    await _seed_events(app_session)
+
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get(
+            "/api/activity?categories=job,key",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["total"] == 1
+    assert {e["category"] for e in body["events"]} == {"job"}
+
+
+@pytest.mark.asyncio
+async def test_widget_config_returns_defaults_for_non_admin(app_db, app_session):
+    """A plain authenticated user (no settings:* perm) can read the widget
+    display config and gets the seeded defaults."""
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(app_session, [])  # no permissions at all
+    sess = await create_session(
+        app_session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60
+    )
+    await app_session.commit()
+
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.get(
+            "/api/activity/widget-config",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["widget_hide_dispatch"] is True
+    assert body["widget_hide_routine"] is False
+    assert body["widget_show_jobs"] is True
+    assert body["widget_show_keys"] is True
+    assert body["widget_show_minions"] is True
+    assert body["widget_event_count"] == 6
+    assert body["widget_heartbeat_minutes"] == 60
+
+
+@pytest.mark.asyncio
+async def test_empty_categories_param_returns_all_events(app_db, app_session):
+    """?categories= (empty string) must behave identically to omitting the param.
+
+    Previously an empty string parsed to [] which was intersected with the
+    allowed-categories set to produce an empty set, returning zero events.
+    The fix treats an empty parsed list as None (no filter).
+    """
+    settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)
+    codec = CookieCodec(settings.cookie_secret)
+    user = await _user_with(app_session, [("*", "*")])
+    sess = await create_session(
+        app_session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60
+    )
+    await app_session.commit()
+    await _seed_events(app_session)  # job + key + minion = 3 events
+
+    app = create_app(settings=settings, codec=codec)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r_empty = await ac.get(
+            "/api/activity?categories=",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
+        r_omit = await ac.get(
+            "/api/activity",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+        )
+    assert r_empty.status_code == 200, r_empty.text
+    body_empty = r_empty.json()
+    body_omit = r_omit.json()
+    # ?categories= must return the same count as omitting the param
+    assert body_empty["total"] == body_omit["total"], (
+        f"?categories= returned {body_empty['total']} events but omitting returned "
+        f"{body_omit['total']} — empty categories should not filter anything"
+    )
+    assert {e["category"] for e in body_empty["events"]} == {"job", "key", "minion"}
+
+
+@pytest.mark.asyncio
 async def test_since_minutes_bounds_by_time(app_db, app_session):
     """since_minutes only returns rows newer than the cutoff."""
     settings = Settings(database_url=app_db, cookie_secret="x" * 64, cookie_secure=False)

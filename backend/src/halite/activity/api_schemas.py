@@ -24,3 +24,13 @@ class ActivityEventOut(BaseModel):
 class ActivityListOut(BaseModel):
     total: int
     events: list[ActivityEventOut]
+
+
+class WidgetConfigOut(BaseModel):
+    widget_hide_dispatch: bool
+    widget_hide_routine: bool
+    widget_show_jobs: bool
+    widget_show_keys: bool
+    widget_show_minions: bool
+    widget_event_count: int
+    widget_heartbeat_minutes: int
