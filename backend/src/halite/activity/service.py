@@ -34,6 +34,7 @@ async def list_events(
     *,
     allowed_categories: set[str],
     category: str | None = None,
+    categories: list[str] | None = None,
     minion_id: str | None = None,
     event_type: str | None = None,
     search: str | None = None,
@@ -45,7 +46,13 @@ async def list_events(
 ):
     if not allowed_categories:
         return 0, []
-    cats = allowed_categories if category is None else (allowed_categories & {category})
+    # Start from what the user is permitted to see, then narrow by the optional
+    # multi-category set and the single-category filter (both intersected in).
+    cats = set(allowed_categories)
+    if categories is not None:
+        cats &= set(categories)
+    if category is not None:
+        cats &= {category}
     if not cats:
         return 0, []
     base = select(ActivityEvent).where(ActivityEvent.category.in_(cats))

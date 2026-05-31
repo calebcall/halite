@@ -200,6 +200,49 @@ async def test_put_pollers_validates_ranges(app_db, session):
 
 
 @pytest.mark.asyncio
+async def test_put_widget_persists_and_audits(app_db, session):
+    app, settings, codec = _make_app(app_db)
+    user = await _settings_admin(session, "alice")
+    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.put(
+            "/api/admin/settings/widget",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+            json={"widget_hide_dispatch": False, "widget_event_count": 12},
+        )
+
+    assert r.status_code == 200, r.text
+    widget = r.json()["widget"]
+    assert widget["widget_hide_dispatch"] is False
+    assert widget["widget_event_count"] == 12
+    # Untouched field keeps its default.
+    assert widget["widget_heartbeat_minutes"] == 60
+
+    row = (await session.execute(select(AppSettings))).scalar_one()
+    assert row.widget_hide_dispatch is False
+    assert row.widget_event_count == 12
+
+
+@pytest.mark.asyncio
+async def test_put_widget_validates_ranges(app_db, session):
+    app, settings, codec = _make_app(app_db)
+    user = await _settings_admin(session, "alice")
+    sess = await create_session(session, user, user_agent="ua", ip="1.2.3.4", ttl_minutes=60)
+    await session.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
+        r = await ac.put(
+            "/api/admin/settings/widget",
+            cookies={settings.cookie_name: codec.sign(sess.id)},
+            json={"widget_event_count": 99},
+        )
+
+    assert r.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_put_logging_changes_format(app_db, session):
     app, settings, codec = _make_app(app_db)
     user = await _settings_admin(session, "alice")

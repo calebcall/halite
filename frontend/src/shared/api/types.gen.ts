@@ -123,6 +123,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/activity/widget-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Widget Config Route
+         * @description Read-only widget display config for any authenticated user. The full
+         *     admin settings are gated behind ``settings:*``, but the Overview widget is
+         *     shown to every user — so this exposes only the 7 display fields.
+         */
+        get: operations["widget_config_route_api_activity_widget_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/activity/stream": {
         parameters: {
             query?: never;
@@ -697,6 +719,23 @@ export interface paths {
         get?: never;
         /** Put Pollers Route */
         put: operations["put_pollers_route_api_admin_settings_pollers_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/settings/widget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Widget Route */
+        put: operations["put_widget_route_api_admin_settings_widget_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1792,6 +1831,7 @@ export interface components {
         SettingsOut: {
             salt: components["schemas"]["SaltSettingsOut"];
             pollers: components["schemas"]["PollerSettingsOut"];
+            widget: components["schemas"]["WidgetSettingsOut"];
             logging: components["schemas"]["LoggingSettingsOut"];
             /**
              * Updated At
@@ -2068,6 +2108,57 @@ export interface components {
             /** Value */
             value: string;
         };
+        /** WidgetConfigOut */
+        WidgetConfigOut: {
+            /** Widget Hide Dispatch */
+            widget_hide_dispatch: boolean;
+            /** Widget Hide Routine */
+            widget_hide_routine: boolean;
+            /** Widget Show Jobs */
+            widget_show_jobs: boolean;
+            /** Widget Show Keys */
+            widget_show_keys: boolean;
+            /** Widget Show Minions */
+            widget_show_minions: boolean;
+            /** Widget Event Count */
+            widget_event_count: number;
+            /** Widget Heartbeat Minutes */
+            widget_heartbeat_minutes: number;
+        };
+        /** WidgetSettingsIn */
+        WidgetSettingsIn: {
+            /** Widget Hide Dispatch */
+            widget_hide_dispatch?: boolean | null;
+            /** Widget Hide Routine */
+            widget_hide_routine?: boolean | null;
+            /** Widget Show Jobs */
+            widget_show_jobs?: boolean | null;
+            /** Widget Show Keys */
+            widget_show_keys?: boolean | null;
+            /** Widget Show Minions */
+            widget_show_minions?: boolean | null;
+            /** Widget Event Count */
+            widget_event_count?: number | null;
+            /** Widget Heartbeat Minutes */
+            widget_heartbeat_minutes?: number | null;
+        };
+        /** WidgetSettingsOut */
+        WidgetSettingsOut: {
+            /** Widget Hide Dispatch */
+            widget_hide_dispatch: boolean;
+            /** Widget Hide Routine */
+            widget_hide_routine: boolean;
+            /** Widget Show Jobs */
+            widget_show_jobs: boolean;
+            /** Widget Show Keys */
+            widget_show_keys: boolean;
+            /** Widget Show Minions */
+            widget_show_minions: boolean;
+            /** Widget Event Count */
+            widget_event_count: number;
+            /** Widget Heartbeat Minutes */
+            widget_heartbeat_minutes: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -2225,6 +2316,7 @@ export interface operations {
         parameters: {
             query?: {
                 category?: string | null;
+                categories?: string | null;
                 minion_id?: string | null;
                 event_type?: string | null;
                 search?: string | null;
@@ -2256,6 +2348,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_config_route_api_activity_widget_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetConfigOut"];
                 };
             };
         };
@@ -3296,6 +3408,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PollerSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_widget_route_api_admin_settings_widget_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WidgetSettingsIn"];
             };
         };
         responses: {

@@ -17,6 +17,18 @@ from halite.settings.schemas import (
     SaltSettingsOut,
     SettingsOut,
     SettingsStatusOut,
+    WidgetSettingsIn,
+    WidgetSettingsOut,
+)
+
+_WIDGET_FIELDS = (
+    "widget_hide_dispatch",
+    "widget_hide_routine",
+    "widget_show_jobs",
+    "widget_show_keys",
+    "widget_show_minions",
+    "widget_event_count",
+    "widget_heartbeat_minutes",
 )
 
 log = logging.getLogger(__name__)
@@ -31,6 +43,16 @@ async def _row(db: AsyncSession) -> AppSettings:
         db.add(row)
         await db.flush()
     return row
+
+
+async def app_settings_row(db: AsyncSession) -> AppSettings:
+    """Public accessor for the singleton AppSettings row.
+
+    Delegates to :func:`_row` so callers outside this module can load the
+    row (including the defensive seed behaviour) without importing a
+    private symbol.
+    """
+    return await _row(db)
 
 
 async def get_settings(db: AsyncSession) -> SettingsOut:
@@ -54,6 +76,15 @@ async def get_settings(db: AsyncSession) -> SettingsOut:
             minion_state_initial_delay_seconds=row.minion_state_initial_delay_seconds,
             event_stream_enabled=row.event_stream_enabled,
             event_stream_retention_days=row.event_stream_retention_days,
+        ),
+        widget=WidgetSettingsOut(
+            widget_hide_dispatch=row.widget_hide_dispatch,
+            widget_hide_routine=row.widget_hide_routine,
+            widget_show_jobs=row.widget_show_jobs,
+            widget_show_keys=row.widget_show_keys,
+            widget_show_minions=row.widget_show_minions,
+            widget_event_count=row.widget_event_count,
+            widget_heartbeat_minutes=row.widget_heartbeat_minutes,
         ),
         logging=LoggingSettingsOut(log_format=row.log_format),  # type: ignore[arg-type]
         updated_at=row.updated_at,
@@ -106,6 +137,16 @@ async def update_pollers(db: AsyncSession, patch: PollerSettingsIn) -> AppSettin
         "event_stream_enabled",
         "event_stream_retention_days",
     ):
+        v = getattr(patch, field)
+        if v is not None:
+            setattr(row, field, v)
+    row.updated_at = datetime.now(tz=UTC)
+    return row
+
+
+async def update_widget(db: AsyncSession, patch: WidgetSettingsIn) -> AppSettings:
+    row = await _row(db)
+    for field in _WIDGET_FIELDS:
         v = getattr(patch, field)
         if v is not None:
             setattr(row, field, v)

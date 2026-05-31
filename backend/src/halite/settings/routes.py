@@ -18,6 +18,7 @@ from halite.settings.schemas import (
     SettingsStatusOut,
     TestSaltConnectionIn,
     TestSaltConnectionOut,
+    WidgetSettingsIn,
 )
 from halite.settings.service import (
     decrypt_salt_password,
@@ -26,6 +27,7 @@ from halite.settings.service import (
     update_logging,
     update_pollers,
     update_salt,
+    update_widget,
 )
 
 log = logging.getLogger(__name__)
@@ -102,6 +104,31 @@ async def put_pollers_route(
     )
     await db.commit()
     await request.app.state.runtime.reload(db)
+    return await get_settings(db)
+
+
+@router.put(
+    "/widget",
+    response_model=SettingsOut,
+    dependencies=[require_perm("edit", "settings:*")],
+)
+async def put_widget_route(
+    body: WidgetSettingsIn, request: Request, db: SessionDep, actor: CurrentUser
+) -> SettingsOut:
+    actor_id = actor.id
+    await update_widget(db, body)
+    await audit_record(
+        db,
+        user_id=actor_id,
+        action="settings.widget.update",
+        resource="settings:widget",
+        args_json=body.model_dump(exclude_unset=True),
+        salt_jid=None,
+        decision="allow",
+        result_code=200,
+    )
+    await db.commit()
+    # Display-only config; no scheduler/runtime impact, so no runtime.reload.
     return await get_settings(db)
 
 
