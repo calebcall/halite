@@ -65,6 +65,44 @@ class Fleet:
         return [m.id for m in self.minions.values()
                 if m.key_state == "accepted" and m.online]
 
+    def set_key_state(self, minion_id: str, state: str) -> bool:
+        m = self.minions.get(minion_id)
+        if m is None:
+            return False
+        m.key_state = state
+        if state == "accepted":
+            m.online = True
+        return True
+
+    def delete_minion(self, minion_id: str) -> bool:
+        self.packages.pop(minion_id, None)
+        return self.minions.pop(minion_id, None) is not None
+
+    def dispatch_job(self, fun: str, tgt: str, tgt_type: str, user: str,
+                     arg: list, target_ids: list[str]) -> "Job":
+        jid = now_jid()
+        while jid in self.jobs:
+            jid = now_jid(-0.001)
+        job = Job(jid=jid, fun=fun, tgt=tgt, tgt_type=tgt_type, user=user,
+                  arg=list(arg or []), start_time=datetime.now(tz=UTC),
+                  minions=list(target_ids), active=True)
+        self.jobs[jid] = job
+        return job
+
+    def complete_job_for(self, jid: str, minion_id: str) -> dict:
+        job = self.jobs[jid]
+        if job.fun == "test.ping":
+            ret = {"return": True, "retcode": 0, "success": True}
+        elif job.fun.startswith("state."):
+            ret = {"return": {"file_|-demo_|-/etc/demo_|-managed":
+                              {"result": True, "changes": {}, "duration": 12.5,
+                               "comment": "OK"}},
+                   "retcode": 0, "success": True}
+        else:
+            ret = {"return": "", "retcode": 0, "success": True}
+        job.returns[minion_id] = ret
+        return ret
+
 
 def _grains(rng: random.Random, mid: str, os_name: str, family: str, release: str) -> dict:
     ip = f"10.0.{rng.randint(0, 9)}.{rng.randint(2, 250)}"

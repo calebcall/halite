@@ -119,6 +119,46 @@ def _sys_list_functions(fleet: Fleet, tgt: str | None, tgt_type: str | None) -> 
     return {"return": [{mid: list(_FUNCTION_CATALOG) for mid in ids}]}
 
 
+_KEY_ACTS = {"key.accept": ("accepted", "accept"), "key.reject": ("rejected", "reject")}
+
+
+async def _key_action(fleet: Fleet, bus, fun: str, match: str | None) -> dict[str, Any]:
+    if not match:
+        return {"return": [{"data": {"success": True, "return": {}}}]}
+    if fun == "key.delete":
+        fleet.delete_minion(match)
+        act = "delete"
+    else:
+        state, act = _KEY_ACTS[fun]
+        fleet.set_key_state(match, state)
+    if bus is not None:
+        await bus.publish("salt/key", {"id": match, "act": act})
+        if act == "accept":
+            await bus.publish(f"salt/minion/{match}/start", {"id": match})
+    return {"return": [{"data": {"success": True, "return": {match: act}}}]}
+
+
+async def _local_async(fleet: Fleet, bus, lowstate: dict[str, Any]) -> dict[str, Any]:
+    fun = lowstate.get("fun") or "test.ping"
+    tgt = lowstate.get("tgt") or "*"
+    tgt_type = lowstate.get("tgt_type") or "glob"
+    arg = lowstate.get("arg") or []
+    targets = _resolve_targets(fleet, tgt, tgt_type)
+    job = fleet.dispatch_job(fun, tgt, tgt_type, "demo", arg, targets)
+    if bus is not None:
+        await bus.publish(f"salt/job/{job.jid}/new",
+                          {"fun": fun, "minions": list(targets), "user": "demo", "tgt": tgt})
+        for mid in targets:
+            ret = fleet.complete_job_for(job.jid, mid)
+            await bus.publish(
+                f"salt/job/{job.jid}/ret/{mid}",
+                {"id": mid, "fun": fun, "retcode": ret["retcode"],
+                 "return": ret["return"], "user": "demo", "tgt": tgt},
+            )
+    job.active = False
+    return {"return": [{"jid": job.jid, "minions": list(targets)}]}
+
+
 def _resolve_targets(fleet: Fleet, tgt: str, tgt_type: str) -> list[str]:
     """Map a salt target to present accepted minion ids. Good enough for the demo:
     glob '*' = all present; 'list' = comma/list match; otherwise substring match."""
@@ -144,6 +184,8 @@ async def dispatch(fleet: Fleet, bus, lowstate: dict[str, Any]) -> dict[str, Any
     if client == "wheel":
         if fun == "key.list_all":
             return _key_list_all(fleet)
+        if fun in ("key.accept", "key.reject", "key.delete"):
+            return await _key_action(fleet, bus, fun, lowstate.get("match"))
     elif client == "runner":
         if fun == "manage.present":
             return _manage_present(fleet, bool(lowstate.get("show_ip")))
@@ -155,6 +197,11 @@ async def dispatch(fleet: Fleet, bus, lowstate: dict[str, Any]) -> dict[str, Any
             return _jobs_list_job(fleet, lowstate.get("jid"))
         if fun == "jobs.active":
             return _jobs_active(fleet)
+        if fun == "saltutil.kill_job":
+            job = fleet.jobs.get(lowstate.get("jid") or "")
+            if job is not None:
+                job.active = False
+            return {"return": [{}]}
     elif client == "local":
         if fun == "pkg.list_pkgs":
             return _pkg_list_pkgs(fleet, tgt, tgt_type)
@@ -164,5 +211,7 @@ async def dispatch(fleet: Fleet, bus, lowstate: dict[str, Any]) -> dict[str, Any
             return _grains_items(fleet, tgt, tgt_type)
         if fun == "sys.list_functions":
             return _sys_list_functions(fleet, tgt, tgt_type)
+    elif client == "local_async":
+        return await _local_async(fleet, bus, lowstate)
 
     return {"return": [{}]}
