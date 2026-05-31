@@ -17,6 +17,7 @@
   },
   "favicon": "/favicon.svg",
   "fonts": { "family": "Inter" },
+  "icons": { "library": "lucide" },
   "styling": { "codeblocks": "dark" },
   "navigation": {
     "tabs": [
