@@ -141,7 +141,7 @@ def build_fleet(seed: int = 1337, size: int = 40) -> Fleet:
         role = _ROLES[i % len(_ROLES)]
         mid = f"{role}{i:02d}.demo.halite"
         key_state = specials.get(i, "accepted")
-        online = key_state == "accepted" and not (i in (7, 12, 19))
+        online = key_state == "accepted" and i not in (7, 12, 19)
         last_seen = datetime.now(tz=UTC) - (
             timedelta(days=3) if i == 7 else timedelta(minutes=rng.randint(0, 30))
         )
