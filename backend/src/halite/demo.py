@@ -8,6 +8,7 @@ pollers enabled so the demo is live out of the box.
 """
 from __future__ import annotations
 
+import secrets
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -57,7 +58,10 @@ async def _ensure_demo_user(session: AsyncSession, role: Role) -> None:
     if user is None:
         user = User(
             username_lower=_DEMO_USER, username=_DEMO_USER,
-            password_hash=hash_password("demo"), display_name="Demo User",
+            # No usable password: the demo user is reached only via the
+            # passwordless /api/auth/demo-login route. A random hash prevents
+            # logging in as "demo" through the normal login form.
+            password_hash=hash_password(secrets.token_urlsafe(32)), display_name="Demo User",
             is_active=True, is_builtin=True, must_change_pw=False,
             created_at=datetime.now(tz=UTC),
         )
