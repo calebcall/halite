@@ -18,13 +18,6 @@ html.dark {
   background-color: var(--halite-black);
 }
 
-/* Cards / elevated surfaces in dark mode. */
-.dark .card,
-.dark [class*="rounded"][class*="border"] {
-  background-color: var(--halite-onyx);
-  border-color: var(--halite-slate);
-}
-
 /* Amber accent on inline code in dark mode. */
 .dark code {
   color: var(--halite-amber-light);
