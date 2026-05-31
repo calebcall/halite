@@ -10,6 +10,8 @@ from halite.auth.cookies import CookieCodec
 from halite.auth.password import hash_password as _hash_password
 from halite.auth.password import verify_password as _verify_password
 from halite.auth.permissions_cache import load_permissions_for
+from halite.auth.service import create_session
+from halite.auth.service import _find_user_by_username  # noqa: PLC2701
 from halite.auth.service import end_session, end_sessions_for_user
 from halite.auth.service import login as _login
 from halite.config import Settings
@@ -102,6 +104,36 @@ async def login_route(
     )
 
 
+@router.post("/demo-login")
+async def demo_login_route(
+    request: Request,
+    response: Response,
+    db: SessionDep,
+    codec: Annotated[CookieCodec, Depends(get_codec)],
+    settings: Annotated[Settings, Depends(get_settings_state)],
+) -> UserOut:
+    """Passwordless login as the seeded `demo` user. Only available in demo mode."""
+    if not settings.demo_mode:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found")
+    user = await _find_user_by_username(db, "demo")
+    if user is None or not user.is_active:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Demo user not available")
+    ua, ip = _client_meta(request)
+    sess = await create_session(db, user, user_agent=ua, ip=ip,
+                                ttl_minutes=settings.session_ttl_minutes)
+    user.permissions_cache = await load_permissions_for(db, user)
+    await db.commit()
+    response.set_cookie(
+        settings.cookie_name, codec.sign(sess.id),
+        max_age=settings.session_ttl_minutes * 60, httponly=True,
+        secure=settings.cookie_secure, samesite="lax", path="/",
+    )
+    return UserOut(
+        username=user.username, display_name=user.display_name,
+        must_change_pw=user.must_change_pw, permissions=_perms_of(user),
+    )
+
+
 @router.post("/logout", status_code=204)
 async def logout_route(
     request: Request,
@@ -144,6 +176,8 @@ async def change_password_route(
     codec: Annotated[CookieCodec, Depends(get_codec)],
     settings: Annotated[Settings, Depends(get_settings_state)],
 ):
+    if settings.demo_mode:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Disabled in the demo")
     if not _verify_password(actor.password_hash, payload.current_password):
         await audit_record(
             db, user_id=actor.id, action="auth.change_password",
