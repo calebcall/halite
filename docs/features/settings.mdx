@@ -80,12 +80,12 @@ These fields control how often background tasks run. Set any interval to `0` to 
 ## Logging
 
 <ParamField body="log_format" type="string" default="json">
-  The backend log format. Accepted values: `json` (structured JSON lines, best for log aggregators) or `text` (human-readable). Changing this setting and saving it does **not** hot-reload the logger — restart the container for the new format to take effect.
+  The backend log format. Accepted values: `json` (structured JSON lines, best for log aggregators) or `text` (human-readable). Note that current builds initialize logging with a hardcoded `json` format at startup, so this setting is not applied to the running process — a container restart would be required once it is wired up.
 </ParamField>
 
 ## How live reload works
 
-When you save any settings section (Salt, Pollers, or Logging — except logging), Halite calls `runtime.reload(db)`:
+When you save the **Salt** or **Pollers** sections, Halite calls `runtime.reload(db)` to rewire the live Salt client and schedulers with no restart. Saving the **Logging** section does **not** trigger a reload.
 
 1. All running schedulers (minion, fleet, inventory, jobs) are cancelled and awaited.
 2. The Salt client is closed.

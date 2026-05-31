@@ -98,7 +98,7 @@ from halite.deps import require_perm
 @router.delete("/keys/{minion_id}")
 async def delete_key(
     minion_id: str,
-    _: None = require_perm("delete", "key"),
+    _: None = require_perm("delete", "key:*"),
 ):
     ...
 ```

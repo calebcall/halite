@@ -70,6 +70,12 @@ Set these in your `.env` file (which `docker compose` loads automatically) or pa
   Logging verbosity. Standard Python log level names: `debug`, `info`, `warning`, `error`, `critical`.
 </ParamField>
 
+### Audit
+
+<ParamField body="AUDIT_AUDIT_READS" type="boolean" default="false">
+  Recognized by the settings loader but not currently wired into request handling. Reserved for future use — intended to enable recording of read-only requests in the audit log, but the flag is not consumed anywhere in the current codebase.
+</ParamField>
+
 ### SPA serving
 
 <ParamField body="HALITE_STATIC_DIR" type="string">

@@ -93,8 +93,8 @@ uvicorn halite.main:create_app --factory --reload --host 127.0.0.1 --port 8080
 
 The lifespan handler runs in this order on startup:
 1. `init_engine(settings.database_url)` — creates the SQLAlchemy async engine.
-2. `seed_builtin_roles(s)` — ensures the built-in `admin` and `viewer` roles exist.
-3. `bootstrap_admin(s)` — creates the admin user from `BOOTSTRAP_ADMIN_*` env vars if it does not already exist.
+2. `seed_builtin_roles(s)` — ensures the three built-in roles (`admin`, `operator`, `viewer`) exist.
+3. `bootstrap_admin(s)` — creates the default `admin` / `changeme` user (flagged `must_change_pw=True`) when no users exist yet. The credentials are hardcoded in `bootstrap.py`; the `BOOTSTRAP_ADMIN_*` lines in `.env.example` are stale and not read.
 4. `RuntimeConfig.boot(db)` — wires up the salt client and schedulers.
 
 When `settings.static_dir` is set (i.e., `HALITE_STATIC_DIR` is configured), the SPA build is mounted. A catch-all route returns `index.html` for client-side routes; real static files (favicon, touch icon, robots.txt) are served first so browsers get the correct content type.

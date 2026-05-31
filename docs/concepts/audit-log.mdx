@@ -38,11 +38,11 @@ Examples of audited actions:
 
 ### Auditing reads
 
-By default, read-only requests (e.g. listing minions or jobs) are **not** written to the audit log. The `AUDIT_AUDIT_READS` env var (`config.py`, default `false`) can be set to `true` to change this. When enabled, read operations that pass a permission check are also recorded. This produces a much higher log volume and is intended for compliance environments that require full access logging.
+By default, read-only requests (e.g. listing minions or jobs) are **not** written to the audit log. A reserved `AUDIT_AUDIT_READS` setting exists (default `false`) but is not currently wired into request handling.
 
 ## Querying the log
 
-The audit log is available at `GET /api/audit`. Access requires the `view audit:*` permission, which only the `admin` role holds by default (see [RBAC & Permissions](/concepts/rbac)).
+The audit log is available at `GET /api/audit`. Access requires the `view:audit:*` permission, which only the `admin` role holds by default (see [RBAC & Permissions](/concepts/rbac)).
 
 ### Query parameters
 
