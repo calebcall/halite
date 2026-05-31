@@ -8,7 +8,7 @@ Halite is a read/console layer that sits on top of a running SaltStack master. I
 ## Topology
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, ui-sans-serif, system-ui, -apple-system, sans-serif','fontSize':'14px','primaryColor':'#1f1f1f','primaryTextColor':'#ebebeb','primaryBorderColor':'#e5a00d','lineColor':'#8a8a8a','clusterBkg':'#141414','clusterBorder':'#2a2a2a','titleColor':'#e5a00d','edgeLabelBackground':'#0e0e0e'}}}%%
+%%{init: {'theme':'base','flowchart':{'curve':'step'},'themeVariables':{'fontFamily':'Inter, ui-sans-serif, system-ui, -apple-system, sans-serif','fontSize':'14px','primaryColor':'#1f1f1f','primaryTextColor':'#ebebeb','primaryBorderColor':'#e5a00d','lineColor':'#8a8a8a','clusterBkg':'#141414','clusterBorder':'#2a2a2a','titleColor':'#e5a00d','edgeLabelBackground':'#0e0e0e'}}}%%
 flowchart TD
     subgraph Salt["SaltStack deployment"]
         M[Salt master] -->|manages| Minions[Minions]
@@ -16,13 +16,12 @@ flowchart TD
     end
 
     subgraph Halite["Halite"]
-        SCH[Background schedulers] -->|poll| SAPI
-        SCH -->|ingest| DB[(Snapshot / index DB)]
+        SCH[Background schedulers] -->|ingest| DB[(Snapshot / index DB)]
         API[API routes] -->|read| DB
         UI[React UI] -->|requests| API
     end
 
-    SAPI -->|data| SCH
+    SAPI <-->|poll / data| SCH
     UI -->|Run / keys / kill| API
     API -->|live call| SAPI
 
