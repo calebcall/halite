@@ -1,7 +1,8 @@
 import { Navigate } from '@tanstack/react-router'
-import { type ReactNode } from 'react'
+import { type ReactNode, useEffect, useRef } from 'react'
 
-import { useCurrentUser } from './use-current-user'
+import { useSiteConfig } from './use-site-config'
+import { useAuthActions, useCurrentUser } from './use-current-user'
 
 function FullPageSpinner() {
   return (
@@ -13,8 +14,22 @@ function FullPageSpinner() {
 
 export function LoginRequired({ children }: { children: ReactNode }) {
   const { data, isPending } = useCurrentUser()
+  const { data: config } = useSiteConfig()
+  const { demoLogin } = useAuthActions()
+  const tried = useRef(false)
+
+  const needDemoLogin = !isPending && !data && config?.demo === true
+  useEffect(() => {
+    if (needDemoLogin && !tried.current) {
+      tried.current = true
+      void demoLogin().catch(() => {})
+    }
+  }, [needDemoLogin, demoLogin])
+
   if (isPending) return <FullPageSpinner />
-  if (!data) return <Navigate to="/login" replace />
+  if (!data) {
+    return config?.demo ? <FullPageSpinner /> : <Navigate to="/login" replace />
+  }
   return <>{children}</>
 }
 

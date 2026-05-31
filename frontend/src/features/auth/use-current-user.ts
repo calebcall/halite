@@ -28,6 +28,11 @@ export function useAuthActions() {
       qc.setQueryData(ME_QUERY_KEY, user)
       return user
     },
+    async demoLogin() {
+      const user = await authApi.demoLogin()
+      qc.setQueryData(ME_QUERY_KEY, user)
+      return user
+    },
     async logout() {
       await authApi.logout()
       qc.setQueryData(ME_QUERY_KEY, null)

@@ -75,6 +75,9 @@ export function errorDetail(e: unknown): string | null {
 }
 
 export const api = {
+  config: {
+    get: () => request<{ demo: boolean }>({ method: 'GET', path: '/api/config' }),
+  },
   auth: {
     login: (body: { username: string; password: string }) =>
       request<paths['/api/auth/login']['post']['responses']['200']['content']['application/json']>({
@@ -82,6 +85,9 @@ export const api = {
         path: '/api/auth/login',
         body,
       }),
+    demoLogin: () =>
+      request<paths['/api/auth/login']['post']['responses']['200']['content']['application/json']>(
+        { method: 'POST', path: '/api/auth/demo-login' }),
     logout: () => request<void>({ method: 'POST', path: '/api/auth/logout' }),
     me: () =>
       request<paths['/api/auth/me']['get']['responses']['200']['content']['application/json']>({
