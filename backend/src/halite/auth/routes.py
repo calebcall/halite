@@ -10,9 +10,12 @@ from halite.auth.cookies import CookieCodec
 from halite.auth.password import hash_password as _hash_password
 from halite.auth.password import verify_password as _verify_password
 from halite.auth.permissions_cache import load_permissions_for
-from halite.auth.service import create_session
-from halite.auth.service import _find_user_by_username  # noqa: PLC2701
-from halite.auth.service import end_session, end_sessions_for_user
+from halite.auth.service import (
+    _find_user_by_username,  # noqa: PLC2701
+    create_session,
+    end_session,
+    end_sessions_for_user,
+)
 from halite.auth.service import login as _login
 from halite.config import Settings
 from halite.db import SessionDep
