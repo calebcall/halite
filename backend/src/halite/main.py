@@ -38,6 +38,12 @@ def create_app(
             await bootstrap_admin(s)
             await s.commit()
 
+        if settings.demo_mode:
+            from halite.demo import seed_demo
+            async with db_module._sessionmaker() as s:
+                await seed_demo(s, settings)
+                await s.commit()
+
         # RuntimeConfig owns the salt client + all schedulers. At boot it
         # reads the AppSettings row from the DB. If no credentials are stored,
         # salt is None and schedulers stay off — all endpoints degrade
