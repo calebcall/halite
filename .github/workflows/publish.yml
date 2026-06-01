@@ -1,4 +1,4 @@
-name: Publish images
+name: Publish images to Docker Hub
 
 # Builds the Halite app image and the mock-salt-api image and pushes them to
 # Docker Hub under the calebcall org. Requires two repo secrets:
@@ -47,7 +47,7 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ var.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Derive tags and labels
