@@ -12,7 +12,7 @@ The page is organised as a three-level drill-down:
 3. **Row-level search** — use the advanced query endpoint to find all minions where a specific package version satisfies a comparison (`=`, `≠`, `<`, `≤`, `>`, `≥`).
 
 <Frame caption="Inventory package list showing fleet-wide package aggregate with version and minion counts">
-  <img src="/images/inventory-packages.png" alt="Table of packages with name, minion count, version count, and last-seen timestamp" />
+  <img src="/images/inventory-packages-v2.png" alt="Table of packages with name, minion count, version count, and last-seen timestamp" />
 </Frame>
 
 ## Level 1 — fleet-wide package list
@@ -33,7 +33,7 @@ Use the `q` query parameter for a case-insensitive substring search on package n
 Click a package row to call `GET /api/inventory/packages/{name}/versions`. The response contains one row per distinct `(version, arch, source)` combination, sorted by `minion_count` descending so the most-deployed version appears first.
 
 <Frame caption="Per-package version list sorted by minion count descending">
-  <img src="/images/inventory-versions.png" alt="Version drill-down showing version string, architecture, source, and minion count" />
+  <img src="/images/inventory-versions-v2.png" alt="Version drill-down showing version string, architecture, source, and minion count" />
 </Frame>
 
 ## Level 3 — row-level search

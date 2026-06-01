@@ -8,7 +8,7 @@ The Jobs page lets you browse recent Salt jobs, drill into per-minion results, a
 Job data is served from the `jobs_index` database table, which Halite's background poller keeps current. Running-job status is derived from an in-memory active-JID cache that the scheduler refreshes alongside each poll cycle. Live data can also be fetched directly from the Salt master for cases where you need results immediately after dispatching a command.
 
 <Frame caption="Jobs list showing recent jobs with status badges, function names, and targets">
-  <img src="/images/jobs-list.png" alt="Table of recent Salt jobs with JID, function, target, user, and status columns" />
+  <img src="/images/jobs-list-v2.png" alt="Table of recent Salt jobs with JID, function, target, user, and status columns" />
 </Frame>
 
 ## Browsing jobs
@@ -51,7 +51,7 @@ Append `?live=true` to the URL (or toggle the **Live** switch in the UI) to bypa
 </Steps>
 
 <Frame caption="Job detail panel showing per-minion results and highstate state table">
-  <img src="/images/jobs-detail.png" alt="Job detail view with per-minion result rows and highstate parsing" />
+  <img src="/images/jobs-detail-v2.png" alt="Job detail view with per-minion result rows and highstate parsing" />
 </Frame>
 
 ## Highstate result parsing

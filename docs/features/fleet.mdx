@@ -6,7 +6,7 @@ description: "Highstate compliance and fleet health."
 The Fleet Health page shows the compliance state of every minion in your Salt fleet, tracks compliance over time, and surfaces the states that fail most often across the fleet. It is driven entirely by ingested `state.highstate` (and related state function) results — no live Salt connection is needed to view the dashboard.
 
 <Frame caption="Fleet health heatmap showing per-minion health status badges">
-  <img src="/images/fleet-health.png" alt="Grid of minion health badges colored by status: healthy, changed, unhealthy, blocked, stale, or unknown" />
+  <img src="/images/fleet-health-v2.png" alt="Grid of minion health badges colored by status: healthy, changed, unhealthy, blocked, stale, or unknown" />
 </Frame>
 
 ## Health statuses
@@ -63,7 +63,7 @@ Returns a compliance time series (oldest-first) for charting. Use the `limit` pa
 | `blocked_count` | Number of minions that were blocked for this JID |
 
 <Frame caption="Compliance chart showing pass/fail/change trend over the last 30 highstate runs">
-  <img src="/images/fleet-compliance.png" alt="Stacked bar chart of fleet-wide highstate compliance over time" />
+  <img src="/images/fleet-compliance-v2.png" alt="Stacked bar chart of fleet-wide highstate compliance over time" />
 </Frame>
 
 ### `GET /api/fleet/top-failures`

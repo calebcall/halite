@@ -9,6 +9,10 @@ The Activity page is a chronological feed of what is happening across your fleet
   Activity is only populated when the **event stream** is enabled in [Settings](/features/settings#event-stream). Until then, the page loads but shows no events. See [How Halite Works](/concepts/how-it-works#the-live-event-stream) for the architecture.
 </Note>
 
+<Frame caption="Halite Activity page showing the recent activity from the event stream">
+  <img src="/images/aactivity-list-v2.png" alt="THalite Activity page showing the recent activity from the event stream" />
+</Frame>
+
 ## Where the data comes from
 
 When the event stream is enabled, Halite holds a long-lived connection to salt-api's `/events` endpoint and tails the Salt event bus. Each relevant event is normalized, stored in the `activity_events` table, and pushed to connected browsers over Server-Sent Events (SSE). The page therefore serves **history from the database** and **new events live from the stream** at the same time.
