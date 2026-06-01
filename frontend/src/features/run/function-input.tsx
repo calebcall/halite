@@ -27,6 +27,7 @@ export function FunctionInput({
 }: FunctionInputProps) {
   const [open, setOpen] = useState(false)
   const [highlighted, setHighlighted] = useState(0)
+  const [prevMatchCount, setPrevMatchCount] = useState(0)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   // Filter: case-insensitive substring match; cap at MAX_RESULTS.
@@ -58,10 +59,12 @@ export function FunctionInput({
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [open])
 
-  // Reset highlight when the matches set changes.
-  useEffect(() => {
+  // Reset highlight when the matches set changes. Adjusting state during
+  // render (rather than in an effect) avoids a cascading re-render.
+  if (matches.length !== prevMatchCount) {
+    setPrevMatchCount(matches.length)
     setHighlighted(0)
-  }, [matches.length])
+  }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Escape') {

@@ -14,7 +14,7 @@ import {
   Users,
 } from 'lucide-react'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -135,13 +135,16 @@ export function Sidebar() {
 export function MobileSidebar() {
   const [open, setOpen] = useState(false)
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const [prevPathname, setPrevPathname] = useState(pathname)
 
   // Close on route change. Watching pathname rather than wiring up an onClick
   // on every NavLink because TanStack's <Link> may navigate without a
-  // synchronous click (e.g. programmatic navigate from elsewhere).
-  useEffect(() => {
+  // synchronous click (e.g. programmatic navigate from elsewhere). Adjusting
+  // state during render (not in an effect) avoids a cascading re-render.
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname)
     setOpen(false)
-  }, [pathname])
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

@@ -124,7 +124,7 @@ function SaltSection({ initial }: { initial: SaltSettingsOut }) {
   // the user to enter one if password_set is false; if it is set allow test
   // using stored creds by sending empty password only when it was already set.
   const canTest =
-    (Boolean(watchedPassword)
+    (watchedPassword
       ? Boolean(watchedUrl) && Boolean(watchedUsername)
       : initial.password_set) &&
     !testMut.isPending &&
