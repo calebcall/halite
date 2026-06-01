@@ -26,7 +26,7 @@
         "groups": [
           { "group": "Get Started", "pages": ["index", "quickstart", "deployment", "configuration"] },
           { "group": "Concepts", "pages": ["concepts/how-it-works", "concepts/authentication", "concepts/rbac", "concepts/audit-log"] },
-          { "group": "Features", "pages": ["features/overview", "features/activity", "features/minions", "features/keys", "features/jobs", "features/run", "features/templates", "features/inventory", "features/fleet", "features/users-roles", "features/audit", "features/settings", "features/about"] },
+          { "group": "Features", "pages": ["features/overview", "features/activity", "features/minions", "features/keys", "features/jobs", "features/timeline", "features/run", "features/templates", "features/inventory", "features/fleet", "features/users-roles", "features/audit", "features/settings", "features/about"] },
           { "group": "Develop", "pages": ["develop/architecture", "develop/backend", "develop/database", "develop/frontend", "develop/local-development", "develop/testing", "develop/api-spec"] }
         ]
       },
@@ -39,6 +39,9 @@
       }
     ]
   },
-  "navbar": { "links": [ { "label": "GitHub", "href": "https://github.com/calebcall/halite" } ] },
+  "navbar": {
+    "links": [ { "label": "GitHub", "href": "https://github.com/calebcall/halite" } ],
+    "primary": { "type": "button", "label": "Live Demo", "href": "https://demo.halite-app.com" }
+  },
   "footer": { "socials": { "github": "https://github.com/calebcall/halite" } }
 }
