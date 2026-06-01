@@ -23,7 +23,7 @@ services:
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       HALITE_STATIC_DIR: /app/frontend/dist
       HALITE_DEMO_MODE: "true"
-      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:?Set DEMO_ADMIN_PASSWORD to a strong admin password for the demo}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-password}
       DEMO_SALT_URL: http://mock-salt-api:8000
       DEMO_SALT_USERNAME: halite-demo
       DEMO_SALT_PASSWORD: demo
@@ -35,8 +35,12 @@ services:
       - "8080:8080"
     healthcheck:
       test:
-        ["CMD", "python", "-c",
-         "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')"]
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')",
+        ]
       interval: 10s
       timeout: 3s
       retries: 6
