@@ -18,7 +18,7 @@ dependencies = [
     "structlog==24.4.*",
     "greenlet==3.1.*",
     "email-validator==2.*",
-    "cryptography>=42",
+    "cryptography>=50.0.0",
 ]
 
 [project.optional-dependencies]
